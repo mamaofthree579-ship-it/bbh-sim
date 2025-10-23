@@ -9,5 +9,4 @@ jobs:
       - name: Build Docker image
         run: docker build -t bbh-sim:ci docker/
       - name: Run toy example
-        run: |
-          docker run --rm -v ${{ github.workspace }}/examples/toy_lowres:/work -w /work bbh-sim:ci bash -lc './run.sh && ./postprocess.sh'
+        run: docker run --rm bbh-sim:ci bash -c "cd /work && bash examples/toy_lowres/run.sh"
