@@ -1,0 +1,4 @@
+simulation_name: BBH_q1_chi0_toy
+units: geometric
+G: 1
+c: 1
