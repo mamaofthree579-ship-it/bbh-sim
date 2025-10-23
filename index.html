@@ -1,82 +1,83 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌀 BBH Simulation – Dual Polarization Chirp</title>
+  <title>🌀 BBH Simulation – 3D Spacetime Ripple</title>
 
   <style>
     body {
-      font-family: system-ui, sans-serif;
       margin: 0;
-      background: #0a0a0a;
+      background: radial-gradient(circle at center, #0a0a0a 60%, #000 100%);
       color: #e6e6e6;
+      font-family: system-ui, sans-serif;
       text-align: center;
-      padding: 1.5rem;
-      overflow-x: hidden;
+      overflow: hidden;
     }
     h1 {
+      position: absolute;
+      top: 12px;
+      width: 100%;
+      text-align: center;
       color: #00b4ff;
       font-size: 1.6rem;
-      margin-bottom: 0.3rem;
+      z-index: 10;
+      text-shadow: 0 0 8px #00b4ff80;
     }
-    #waveCanvas {
+    #canvas3D {
       display: block;
-      margin: 1.2rem auto;
-      background: #111;
-      border-radius: 12px;
-      max-width: 800px;
-      width: 95%;
-      height: 400px;
+      margin: 0 auto;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
     }
     button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       background: #00b4ff;
       color: white;
       border: none;
-      padding: 0.6rem 1.2rem;
-      border-radius: 8px;
+      padding: 0.7rem 1.3rem;
+      border-radius: 10px;
       font-size: 1rem;
       cursor: pointer;
-      margin-top: 0.6rem;
-      transition: background 0.2s;
+      transition: background 0.3s;
+      z-index: 10;
     }
     button:hover {
-      background: #008ed1;
-    }
-    footer {
-      margin-top: 2rem;
-      font-size: 0.9rem;
-      color: #888;
+      background: #0093d1;
     }
   </style>
 </head>
 <body>
-  <h1>🌀 Binary Black Hole Merger</h1>
-  <p>(Dual Polarization Gravitational Wave Animation)</p>
-  <canvas id="waveCanvas" width="800" height="400"></canvas>
-  <button id="startBtn">▶️ Play Animation</button>
-
-  <footer>
-    <p>BBH-Sim Open Project • Dual Polarization Visualization</p>
-  </footer>
+  <h1>🌀 Spacetime Ripple from a Binary Black Hole Merger</h1>
+  <canvas id="canvas3D"></canvas>
+  <button id="startBtn">▶️ Play Simulation</button>
 
   <script>
-    const canvas = document.getElementById("waveCanvas");
+    const canvas = document.getElementById("canvas3D");
     const ctx = canvas.getContext("2d");
-    const w = canvas.width;
-    const h = canvas.height;
+    let w, h;
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
 
+    const gridSize = 30;
+    const spacing = 25;
+    const originX = w / 2;
+    const originY = h / 2;
     const N = 2000;
     const dt = 0.0005;
     const t = Array.from({ length: N }, (_, i) => i * dt);
 
-    const f_start = 30;
-    const f_end = 250;
-
+    const f_start = 30, f_end = 250;
     const f_t = t.map(x => f_start + (f_end - f_start) * Math.pow(x / t[t.length - 1], 2));
     const amp_scale = t.map(x => Math.pow(x / t[t.length - 1], 3));
-
-    // Two polarizations
     const hPlus = t.map((x, i) => amp_scale[i] * Math.sin(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
     const hCross = t.map((x, i) => amp_scale[i] * Math.cos(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
 
@@ -84,58 +85,62 @@
     let playing = false;
     let animId;
 
-    function drawFrame(endIndex) {
-      ctx.fillStyle = "#111";
+    function drawGrid(strainPlus, strainCross) {
+      ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#0af";
+      ctx.lineWidth = 1.2;
 
-      // Gridlines
-      ctx.strokeStyle = "#333";
-      for (let i = 0; i < 10; i++) {
-        const y = (i / 10) * h;
+      const angle = Math.PI / 6; // viewing angle
+      const scale = 1.2;
+
+      for (let i = -gridSize; i <= gridSize; i++) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
+        for (let j = -gridSize; j <= gridSize; j++) {
+          const x = i * spacing;
+          const y = j * spacing;
+
+          const dx = x * strainPlus - y * strainCross;
+          const dy = y * strainPlus + x * strainCross;
+
+          const sx = originX + (x + dx) * scale;
+          const sy = originY + (y + dy) * Math.cos(angle) - 80 * Math.sin(angle) * Math.sin((i + j + frame / 40));
+
+          if (j === -gridSize) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
         ctx.stroke();
       }
 
-      const segmentP = hPlus.slice(0, endIndex);
-      const segmentC = hCross.slice(0, endIndex);
-      const stepX = w / segmentP.length;
-      const maxVal = Math.max(...segmentP.map(Math.abs), ...segmentC.map(Math.abs));
-      const scaleY = h / (2.5 * maxVal);
+      for (let j = -gridSize; j <= gridSize; j++) {
+        ctx.beginPath();
+        for (let i = -gridSize; i <= gridSize; i++) {
+          const x = i * spacing;
+          const y = j * spacing;
 
-      // h+ polarization
-      ctx.beginPath();
-      ctx.strokeStyle = "#00ffcc";
-      ctx.lineWidth = 2;
-      segmentP.forEach((v, i) => {
-        const x = i * stepX;
-        const y = h / 2 - v * scaleY;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.stroke();
+          const dx = x * strainPlus - y * strainCross;
+          const dy = y * strainPlus + x * strainCross;
 
-      // h× polarization
-      ctx.beginPath();
-      ctx.strokeStyle = "#ff66ff";
-      ctx.lineWidth = 1.8;
-      segmentC.forEach((v, i) => {
-        const x = i * stepX;
-        const y = h / 2 - v * scaleY - 60; // slight vertical offset
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.stroke();
+          const sx = originX + (x + dx) * scale;
+          const sy = originY + (y + dy) * Math.cos(angle) - 80 * Math.sin(angle) * Math.sin((i + j + frame / 40));
 
-      // Labels
-      ctx.fillStyle = "#e6e6e6";
-      ctx.font = "16px system-ui";
-      ctx.fillText(`Time: ${(endIndex * dt * 1000).toFixed(1)} ms`, 20, 25);
-      ctx.fillText("h₊ (teal) & h× (magenta) polarizations", w - 340, 25);
+          if (i === -gridSize) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#0ff";
+      ctx.font = "18px system-ui";
+      ctx.fillText(`Time: ${(frame * dt * 1000).toFixed(1)} ms`, 20, 30);
     }
 
     function animate() {
       if (!playing) return;
-      drawFrame(frame);
+      const strainPlus = hPlus[frame] * 4;
+      const strainCross = hCross[frame] * 4;
+
+      drawGrid(strainPlus, strainCross);
       frame += 10;
       if (frame < N) {
         animId = requestAnimationFrame(animate);
@@ -154,11 +159,11 @@
       } else {
         cancelAnimationFrame(animId);
         playing = false;
-        document.getElementById("startBtn").textContent = "▶️ Play Animation";
+        document.getElementById("startBtn").textContent = "▶️ Play Simulation";
       }
     });
 
-    drawFrame(1); // initial preview
+    drawGrid(0, 0);
   </script>
 </body>
 </html>
