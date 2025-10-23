@@ -22,7 +22,6 @@ COPY scripts/ ./scripts/
 COPY tools/ ./tools/
 COPY params/ ./params/
 COPY examples/ ./examples/
-COPY README.md LICENSE ./
 
 # --- Environment ---
 ENV PATH="/work/scripts:${PATH}"
