@@ -1,1 +1,11 @@
-{"required": ["metadata","initial"]}
+{
+  "required": ["metadata","initial","evolution","extraction","waveforms","diagnostics"],
+  "metadata": {
+    "type":"object",
+    "required":["code_name","version","git_commit","simulation_name","creation_date"]
+  },
+  "initial":{
+    "type":"object",
+    "required":["m1","m2","spin1","spin2","q","separation"]
+  }
+}
