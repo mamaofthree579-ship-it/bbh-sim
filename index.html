@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌀 BBH Simulation – Time & Frequency (with Units)</title>
+  <title>🌀 BBH Simulation – Chirping Waveform</title>
 
   <style>
     body {
@@ -16,7 +16,7 @@
     }
     h1 {
       color: #00b4ff;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       margin-bottom: 0.5rem;
     }
     canvas {
@@ -41,8 +41,8 @@
   </style>
 </head>
 <body>
-  <h1>🌀 Binary Black Hole Mock Waveform</h1>
-  <p>(Time & Frequency Domain – with Units)</p>
+  <h1>🌀 Binary Black Hole Chirp</h1>
+  <p>(Time and Frequency Domain – Realistic Inspiral & Ringdown)</p>
 
   <canvas id="timePlot" width="800" height="400"></canvas>
   <div class="label">Time [ms]</div>
@@ -50,16 +50,24 @@
   <div class="label">Frequency [Hz]</div>
 
   <script>
-    // --- Generate waveform data ---
+    // --- Generate a chirping waveform ---
     const N = 2000;
     const dt = 0.0005; // seconds per sample (2 kHz sampling)
     const t = Array.from({ length: N }, (_, i) => i * dt); // seconds
-    const f0 = 150; // base frequency (Hz)
-    const decay = 100; // decay constant
-    const hPlus = t.map(x => Math.sin(2 * Math.PI * f0 * x) * Math.exp(-x * decay));
-    const hCross = t.map(x => Math.cos(2 * Math.PI * f0 * x) * Math.exp(-x * decay));
+    const f_start = 30;  // start frequency (Hz)
+    const f_end = 250;   // end frequency (Hz)
+    const tau = 0.5;     // controls how fast frequency increases
+    const amp_scale = t.map(x => Math.pow(x / t[t.length - 1], 3)); // amplitude rise
+    const f_t = t.map(x => f_start + (f_end - f_start) * Math.pow(x / (t[t.length - 1]), 2)); // chirp
 
-    // --- FFT function (naive) ---
+    const hPlus = t.map((x, i) =>
+      amp_scale[i] * Math.sin(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100)
+    );
+    const hCross = t.map((x, i) =>
+      amp_scale[i] * Math.cos(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100)
+    );
+
+    // --- FFT function ---
     function fftMag(signal) {
       const N = signal.length;
       const re = new Array(N).fill(0);
@@ -74,7 +82,7 @@
       return re.map((r, i) => Math.sqrt(r*r + im[i]*im[i]) / N).slice(0, N/2);
     }
 
-    // --- Draw helper ---
+    // --- Drawing helpers ---
     function drawWave(ctx, data, color, offset, scaleY) {
       const w = ctx.canvas.width, h = ctx.canvas.height;
       ctx.beginPath();
@@ -89,7 +97,7 @@
       ctx.stroke();
     }
 
-    // --- Time domain plot ---
+    // --- Time-domain plot ---
     const ctxT = document.getElementById('timePlot').getContext('2d');
     const w = ctxT.canvas.width, h = ctxT.canvas.height;
     const maxVal = Math.max(...hPlus.map(Math.abs), ...hCross.map(Math.abs));
@@ -113,7 +121,7 @@
     ctxT.fillText("h× (white)", 20, 45);
     ctxT.fillText("Time Domain", w - 170, 25);
 
-    // --- Frequency domain plot ---
+    // --- Frequency-domain plot ---
     const fft = fftMag(hPlus);
     const freq = Array.from({ length: N / 2 }, (_, i) => i / (N * dt));
     const ctxF = document.getElementById('freqPlot').getContext('2d');
@@ -144,11 +152,11 @@
     ctxF.fillStyle = "#e6e6e6";
     ctxF.font = "16px system-ui";
     ctxF.fillText("Frequency Domain", wf - 200, 25);
-    ctxF.fillText("Peak ~150 Hz", 20, 25);
+    ctxF.fillText("Power peaks near 250 Hz", 20, 25);
   </script>
 
   <footer>
-    <p>BBH-Sim Open Project • Offline Visualization (Time & Frequency with Units)</p>
+    <p>BBH-Sim Open Project • Chirping Waveform Visualization</p>
   </footer>
 </body>
 </html>
