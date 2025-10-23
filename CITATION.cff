@@ -1,2 +1,10 @@
 cff-version: 1.2.0
-title: BBH-Sim: Reproducible Binary Black Hole Simulation Pipeline
+message: "If you use BBH-Sim for research, please cite this repository."
+title: "BBH-Sim: Reproducible Binary Black Hole Simulation Pipeline"
+version: 0.1.0
+authors:
+  - family-names: YourName
+    given-names: FirstName
+    affiliation: Example Institution
+date-released: 2025-10-23
+url: https://github.com/yourorg/bbh-sim
