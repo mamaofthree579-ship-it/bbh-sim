@@ -3,123 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BBH-Sim: Open-Source Binary Black Hole Simulation</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
+  <title>🌀 BBH Simulation – Offline Mock Gravitational Wave</title>
+
+  <!-- 🧠 Embedded Plotly (offline version) -->
+  <script type="text/javascript">
+  /*! Plotly.js basic build (minified) */
+  // The minified Plotly library is very large (over 1 MB), so instead of pasting the whole thing here,
+  // this simplified version will use a fallback inline script.
+  // If offline, we generate the plot manually with simple Canvas drawing.
+  </script>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      background: #0b0b0b;
+      color: #e6e6e6;
+      text-align: center;
+      padding: 1.5rem;
+    }
+    h1 {
+      color: #00b4ff;
+      font-size: 1.5rem;
+    }
+    canvas {
+      display: block;
+      margin: 1rem auto;
+      background: #111;
+      border-radius: 12px;
+      max-width: 800px;
+      width: 95%;
+      height: 400px;
+    }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-900 leading-relaxed">
+<body>
+  <h1>🌀 Mock Gravitational Wave Strain</h1>
+  <p>(Offline version – no internet required)</p>
+  <canvas id="gwCanvas" width="800" height="400"></canvas>
 
-  <!-- HEADER -->
-  <header class="bg-black text-white py-10 text-center shadow-lg">
-    <h1 class="text-5xl font-bold tracking-wide">BBH-Sim</h1>
-    <p class="text-lg text-gray-300 mt-3">Reproducible Open-Source Binary Black Hole Simulation Framework</p>
-    <div class="flex justify-center space-x-4 mt-6">
-      <a href="https://github.com/mamaofthree579-ship-it/bbh-sim" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">View on GitHub</a>
-      <a href="#quickstart" class="bg-gray-800 px-4 py-2 rounded hover:bg-gray-700">Get Started</a>
-    </div>
-  </header>
+  <script>
+    // Simple offline plotting using Canvas API
+    const canvas = document.getElementById('gwCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
 
-  <!-- MAIN CONTENT -->
-  <main class="max-w-5xl mx-auto p-8 space-y-12">
+    // Generate mock waveform data
+    const N = 2000;
+    const t = Array.from({ length: N }, (_, i) => i * 0.05);
+    const hPlus = t.map(x => Math.sin(0.2 * x) * Math.exp(-0.002 * x));
+    const hCross = t.map(x => Math.cos(0.2 * x) * Math.exp(-0.002 * x));
 
-    <!-- Overview -->
-    <section>
-      <h2 class="text-3xl font-semibold border-b pb-2">Overview</h2>
-      <p class="mt-4 text-lg">
-        <strong>BBH-Sim</strong> provides a reproducible pipeline for
-        <em>numerical-relativity simulations of binary black-hole (BBH) mergers</em>.
-        It defines standard parameter files, solver settings, and output formats for open-source reproducibility,
-        enabling comparisons across codes such as the Einstein Toolkit, SpEC, BAM, and GRChombo.
-      </p>
-    </section>
+    // Normalize for plotting
+    const maxVal = Math.max(...hPlus.map(Math.abs), ...hCross.map(Math.abs));
+    const scaleY = height / (2.2 * maxVal);
 
-    <!-- Repository Structure -->
-    <section>
-      <h2 class="text-3xl font-semibold border-b pb-2">Repository Structure</h2>
-      <pre class="bg-gray-100 rounded p-4 overflow-x-auto text-sm">
-bbh-sim/
-├── README.md
-├── LICENSE
-├── params/
-│   └── example_minimal.yaml
-├── scripts/
-│   ├── generate_initial_data.sh
-│   ├── run_simulation.sh
-│   └── postprocess.sh
-├── docker/
-│   ├── Dockerfile
-│   └── singularity.def
-├── examples/
-│   └── toy_lowres/
-│       └── run.sh
-├── tools/
-│   ├── hdf5_schema.json
-│   └── hdf5_validator.py
-└── .github/
-    └── workflows/
-        └── ci.yml
-      </pre>
-    </section>
+    function drawWave(yData, color, offset) {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      const stepX = width / N;
+      for (let i = 0; i < N; i++) {
+        const x = i * stepX;
+        const y = height / 2 - (yData[i] * scaleY) + offset;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
 
-    <!-- Example Parameter File -->
-    <section id="params">
-      <h2 class="text-3xl font-semibold border-b pb-2">Example Parameter File</h2>
-      <p class="mt-4">A minimal, quasi-circular equal-mass BBH setup:</p>
-      <pre><code class="language-yaml">simulation_name: BBH_q1_chi0
-units: geometric
-G: 1
-c: 1
+    // Draw background grid
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 10; i++) {
+      const y = (i / 10) * height;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
 
-initial_data:
-  type: TwoPunctures
-  m1: 0.5
-  m2: 0.5
-  spin1: [0.0, 0.0, 0.0]
-  spin2: [0.0, 0.0, 0.0]
-  separation: 12.0
-  momentum1: [-0.05, 0.0, 0.0]
-  momentum2: [0.05, 0.0, 0.0]
+    // Draw both polarizations
+    drawWave(hPlus, "#00b4ff", -5);
+    drawWave(hCross, "#ffffff", +5);
 
-evolution:
-  system: BSSN
-  gauge:
-    lapse: "1+log"
-    shift: "Gamma-driver"
-  grid:
-    domain_radius: 1000.0
-    amr_levels: 8
-    dx_fine: 0.0125
-  time:
-    integrator: RK4
-    t_final: 5000.0
-</code></pre>
-    </section>
+    // Add labels
+    ctx.fillStyle = "#e6e6e6";
+    ctx.font = "16px system-ui";
+    ctx.fillText("h₊ (blue)", 20, 25);
+    ctx.fillText("h× (white, dotted)", 20, 45);
+  </script>
 
-    <!-- Quickstart -->
-    <section id="quickstart">
-      <h2 class="text-3xl font-semibold border-b pb-2">Quick Start</h2>
-      <ol class="list-decimal ml-6 mt-4 space-y-2">
-        <li>Clone the repository:<br><code class="text-blue-700">git clone https://github.com/your-org/bbh-sim.git</code></li>
-        <li>Build the Docker image:<br><code class="text-blue-700">docker build -t bbh-sim docker/</code></li>
-        <li>Run the toy example:<br><code class="text-blue-700">bash examples/toy_lowres/run.sh</code></li>
-      </ol>
-    </section>
-
-    <!-- Visualization Placeholder -->
-    <section id="waveforms">
-      <h2 class="text-3xl font-semibold border-b pb-2">Waveform Visualization (Coming Soon)</h2>
-      <div class="bg-gray-200 rounded-lg p-8 text-center text-gray-500 italic">
-        Interactive plots of <code>h<sub>lm</sub>(t)</code> and <code>Ψ₄</code> waveforms will appear here.
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="text-center text-gray-500 pt-12 border-t">
-      <p>&copy; 2025 BBH-Sim Contributors • MIT License</p>
-      <p class="text-sm mt-2">Last updated: October 2025</p>
-    </footer>
-
-  </main>
+  <footer>
+    <p>BBH-Sim Open Project • Offline Mock Visualization</p>
+  </footer>
 </body>
 </html>
+
