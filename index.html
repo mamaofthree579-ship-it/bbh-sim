@@ -3,15 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌀 BBH Simulation – Offline Mock Gravitational Wave</title>
-
-  <!-- 🧠 Embedded Plotly (offline version) -->
-  <script type="text/javascript">
-  /*! Plotly.js basic build (minified) */
-  // The minified Plotly library is very large (over 1 MB), so instead of pasting the whole thing here,
-  // this simplified version will use a fallback inline script.
-  // If offline, we generate the plot manually with simple Canvas drawing.
-  </script>
+  <title>🌀 BBH Simulation – Time & Frequency</title>
 
   <style>
     body {
@@ -25,10 +17,11 @@
     h1 {
       color: #00b4ff;
       font-size: 1.5rem;
+      margin-bottom: 0.5rem;
     }
     canvas {
       display: block;
-      margin: 1rem auto;
+      margin: 1.2rem auto;
       background: #111;
       border-radius: 12px;
       max-width: 800px;
@@ -43,68 +36,113 @@
   </style>
 </head>
 <body>
-  <h1>🌀 Mock Gravitational Wave Strain</h1>
-  <p>(Offline version – no internet required)</p>
-  <canvas id="gwCanvas" width="800" height="400"></canvas>
+  <h1>🌀 Mock Gravitational Wave – Time & Frequency</h1>
+  <p>(Offline version – works without internet)</p>
+
+  <canvas id="timePlot" width="800" height="400"></canvas>
+  <canvas id="freqPlot" width="800" height="400"></canvas>
 
   <script>
-    // Simple offline plotting using Canvas API
-    const canvas = document.getElementById('gwCanvas');
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    // --- Helper math functions ---
+    function fftReIm(signal) {
+      // Naive FFT implementation (slow but okay for demo)
+      const N = signal.length;
+      const outRe = new Array(N).fill(0);
+      const outIm = new Array(N).fill(0);
+      for (let k = 0; k < N; k++) {
+        for (let n = 0; n < N; n++) {
+          const angle = (2 * Math.PI * k * n) / N;
+          outRe[k] += signal[n] * Math.cos(angle);
+          outIm[k] -= signal[n] * Math.sin(angle);
+        }
+      }
+      const mag = outRe.map((re, i) => Math.sqrt(re * re + outIm[i] * outIm[i]) / N);
+      return mag.slice(0, N / 2);
+    }
 
-    // Generate mock waveform data
+    // --- Generate waveform data ---
     const N = 2000;
     const t = Array.from({ length: N }, (_, i) => i * 0.05);
     const hPlus = t.map(x => Math.sin(0.2 * x) * Math.exp(-0.002 * x));
     const hCross = t.map(x => Math.cos(0.2 * x) * Math.exp(-0.002 * x));
 
-    // Normalize for plotting
+    // --- Draw time-domain plot ---
+    const timeCanvas = document.getElementById('timePlot');
+    const ctxT = timeCanvas.getContext('2d');
+    const w = timeCanvas.width;
+    const h = timeCanvas.height;
     const maxVal = Math.max(...hPlus.map(Math.abs), ...hCross.map(Math.abs));
-    const scaleY = height / (2.2 * maxVal);
+    const scaleY = h / (2.2 * maxVal);
+    const stepX = w / N;
 
-    function drawWave(yData, color, offset) {
+    function drawWave(ctx, data, color, offset) {
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      const stepX = width / N;
-      for (let i = 0; i < N; i++) {
+      data.forEach((v, i) => {
         const x = i * stepX;
-        const y = height / 2 - (yData[i] * scaleY) + offset;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
+        const y = h / 2 - v * scaleY + offset;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
       ctx.stroke();
     }
 
-    // Draw background grid
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 1;
+    ctxT.fillStyle = "#111";
+    ctxT.fillRect(0, 0, w, h);
+    ctxT.strokeStyle = "#333";
     for (let i = 0; i < 10; i++) {
-      const y = (i / 10) * height;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
+      const y = (i / 10) * h;
+      ctxT.beginPath();
+      ctxT.moveTo(0, y);
+      ctxT.lineTo(w, y);
+      ctxT.stroke();
     }
+    drawWave(ctxT, hPlus, "#00b4ff", -5);
+    drawWave(ctxT, hCross, "#ffffff", +5);
+    ctxT.fillStyle = "#e6e6e6";
+    ctxT.font = "16px system-ui";
+    ctxT.fillText("h₊ (blue)", 20, 25);
+    ctxT.fillText("h× (white)", 20, 45);
+    ctxT.fillText("Time Domain", w - 180, 25);
 
-    // Draw both polarizations
-    drawWave(hPlus, "#00b4ff", -5);
-    drawWave(hCross, "#ffffff", +5);
+    // --- Frequency-domain ---
+    const hPlusFFT = fftReIm(hPlus);
+    const freq = Array.from({ length: N / 2 }, (_, i) => i / (N * 0.05));
+    const maxAmp = Math.max(...hPlusFFT);
+    const fCanvas = document.getElementById('freqPlot');
+    const ctxF = fCanvas.getContext('2d');
+    const wf = fCanvas.width;
+    const hf = fCanvas.height;
+    const scaleYf = hf / (1.2 * maxAmp);
+    const stepXf = wf / (N / 2);
 
-    // Add labels
-    ctx.fillStyle = "#e6e6e6";
-    ctx.font = "16px system-ui";
-    ctx.fillText("h₊ (blue)", 20, 25);
-    ctx.fillText("h× (white, dotted)", 20, 45);
+    ctxF.fillStyle = "#111";
+    ctxF.fillRect(0, 0, wf, hf);
+    ctxF.strokeStyle = "#333";
+    for (let i = 0; i < 10; i++) {
+      const y = (i / 10) * hf;
+      ctxF.beginPath();
+      ctxF.moveTo(0, y);
+      ctxF.lineTo(wf, y);
+      ctxF.stroke();
+    }
+    ctxF.beginPath();
+    ctxF.strokeStyle = "#00ff88";
+    ctxF.lineWidth = 2;
+    hPlusFFT.forEach((v, i) => {
+      const x = i * stepXf;
+      const y = hf - v * scaleYf;
+      i === 0 ? ctxF.moveTo(x, y) : ctxF.lineTo(x, y);
+    });
+    ctxF.stroke();
+    ctxF.fillStyle = "#e6e6e6";
+    ctxF.font = "16px system-ui";
+    ctxF.fillText("Frequency Domain (FFT)", wf - 260, 25);
+    ctxF.fillText("Amplitude Spectrum", 20, 25);
   </script>
 
   <footer>
-    <p>BBH-Sim Open Project • Offline Mock Visualization</p>
+    <p>BBH-Sim Open Project • Offline Visualization (Time & Frequency)</p>
   </footer>
 </body>
 </html>
-
