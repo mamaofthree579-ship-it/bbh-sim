@@ -1,0 +1,13 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test-toy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t bbh-sim:ci docker/
+      - name: Run toy example
+        run: |
+          docker run --rm -v ${{ github.workspace }}/examples/toy_lowres:/work -w /work bbh-sim:ci bash -lc './run.sh && ./postprocess.sh'
