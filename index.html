@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌀 BBH Simulation – Chirping Waveform</title>
+  <title>🌀 BBH Simulation – Real-Time Chirp Animation</title>
 
   <style>
     body {
@@ -13,13 +13,14 @@
       color: #e6e6e6;
       text-align: center;
       padding: 1.5rem;
+      overflow-x: hidden;
     }
     h1 {
       color: #00b4ff;
       font-size: 1.6rem;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
     }
-    canvas {
+    #waveCanvas {
       display: block;
       margin: 1.2rem auto;
       background: #111;
@@ -28,10 +29,19 @@
       width: 95%;
       height: 400px;
     }
-    .label {
-      color: #aaa;
-      font-size: 0.9rem;
-      margin-top: -0.5rem;
+    button {
+      background: #00b4ff;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 0.6rem;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #008ed1;
     }
     footer {
       margin-top: 2rem;
@@ -41,122 +51,97 @@
   </style>
 </head>
 <body>
-  <h1>🌀 Binary Black Hole Chirp</h1>
-  <p>(Time and Frequency Domain – Realistic Inspiral & Ringdown)</p>
+  <h1>🌀 Binary Black Hole Merger</h1>
+  <p>(Animated Chirping Gravitational Wave)</p>
+  <canvas id="waveCanvas" width="800" height="400"></canvas>
+  <button id="startBtn">▶️ Play Animation</button>
 
-  <canvas id="timePlot" width="800" height="400"></canvas>
-  <div class="label">Time [ms]</div>
-  <canvas id="freqPlot" width="800" height="400"></canvas>
-  <div class="label">Frequency [Hz]</div>
+  <footer>
+    <p>BBH-Sim Open Project • Real-Time Chirp Visualization</p>
+  </footer>
 
   <script>
-    // --- Generate a chirping waveform ---
+    const canvas = document.getElementById("waveCanvas");
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width;
+    const h = canvas.height;
+
     const N = 2000;
-    const dt = 0.0005; // seconds per sample (2 kHz sampling)
-    const t = Array.from({ length: N }, (_, i) => i * dt); // seconds
-    const f_start = 30;  // start frequency (Hz)
-    const f_end = 250;   // end frequency (Hz)
-    const tau = 0.5;     // controls how fast frequency increases
-    const amp_scale = t.map(x => Math.pow(x / t[t.length - 1], 3)); // amplitude rise
-    const f_t = t.map(x => f_start + (f_end - f_start) * Math.pow(x / (t[t.length - 1]), 2)); // chirp
+    const dt = 0.0005;
+    const t = Array.from({ length: N }, (_, i) => i * dt);
 
-    const hPlus = t.map((x, i) =>
-      amp_scale[i] * Math.sin(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100)
-    );
-    const hCross = t.map((x, i) =>
-      amp_scale[i] * Math.cos(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100)
-    );
+    const f_start = 30;
+    const f_end = 250;
 
-    // --- FFT function ---
-    function fftMag(signal) {
-      const N = signal.length;
-      const re = new Array(N).fill(0);
-      const im = new Array(N).fill(0);
-      for (let k = 0; k < N; k++) {
-        for (let n = 0; n < N; n++) {
-          const angle = (2 * Math.PI * k * n) / N;
-          re[k] += signal[n] * Math.cos(angle);
-          im[k] -= signal[n] * Math.sin(angle);
-        }
+    // Precompute full chirp waveform
+    const f_t = t.map(x => f_start + (f_end - f_start) * Math.pow(x / t[t.length - 1], 2));
+    const amp_scale = t.map(x => Math.pow(x / t[t.length - 1], 3));
+    const hPlus = t.map((x, i) => amp_scale[i] * Math.sin(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
+
+    let frame = 0;
+    let playing = false;
+    let animId;
+
+    function drawFrame(endIndex) {
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = "#333";
+      for (let i = 0; i < 10; i++) {
+        const y = (i / 10) * h;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
       }
-      return re.map((r, i) => Math.sqrt(r*r + im[i]*im[i]) / N).slice(0, N/2);
-    }
 
-    // --- Drawing helpers ---
-    function drawWave(ctx, data, color, offset, scaleY) {
-      const w = ctx.canvas.width, h = ctx.canvas.height;
+      const segment = hPlus.slice(0, endIndex);
+      const stepX = w / segment.length;
+      const maxVal = Math.max(...segment.map(Math.abs));
+      const scaleY = h / (2.5 * maxVal);
+
       ctx.beginPath();
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = "#00ffcc";
       ctx.lineWidth = 2;
-      const stepX = w / data.length;
-      data.forEach((v, i) => {
+      segment.forEach((v, i) => {
         const x = i * stepX;
-        const y = h / 2 - v * scaleY + offset;
+        const y = h / 2 - v * scaleY;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.stroke();
+
+      ctx.fillStyle = "#e6e6e6";
+      ctx.font = "16px system-ui";
+      ctx.fillText(`Time: ${(endIndex * dt * 1000).toFixed(1)} ms`, 20, 25);
+      ctx.fillText("h₊ polarization (mock waveform)", w - 290, 25);
     }
 
-    // --- Time-domain plot ---
-    const ctxT = document.getElementById('timePlot').getContext('2d');
-    const w = ctxT.canvas.width, h = ctxT.canvas.height;
-    const maxVal = Math.max(...hPlus.map(Math.abs), ...hCross.map(Math.abs));
-    const scaleY = h / (2.5 * maxVal);
-
-    ctxT.fillStyle = "#111";
-    ctxT.fillRect(0, 0, w, h);
-    ctxT.strokeStyle = "#333";
-    for (let i = 0; i < 10; i++) {
-      const y = (i / 10) * h;
-      ctxT.beginPath();
-      ctxT.moveTo(0, y);
-      ctxT.lineTo(w, y);
-      ctxT.stroke();
+    function animate() {
+      if (!playing) return;
+      drawFrame(frame);
+      frame += 10;
+      if (frame < N) {
+        animId = requestAnimationFrame(animate);
+      } else {
+        playing = false;
+        document.getElementById("startBtn").textContent = "🔁 Replay";
+      }
     }
-    drawWave(ctxT, hPlus, "#00b4ff", -5, scaleY);
-    drawWave(ctxT, hCross, "#ffffff", +5, scaleY);
-    ctxT.fillStyle = "#e6e6e6";
-    ctxT.font = "16px system-ui";
-    ctxT.fillText("h₊ (blue)", 20, 25);
-    ctxT.fillText("h× (white)", 20, 45);
-    ctxT.fillText("Time Domain", w - 170, 25);
 
-    // --- Frequency-domain plot ---
-    const fft = fftMag(hPlus);
-    const freq = Array.from({ length: N / 2 }, (_, i) => i / (N * dt));
-    const ctxF = document.getElementById('freqPlot').getContext('2d');
-    const wf = ctxF.canvas.width, hf = ctxF.canvas.height;
-    const maxAmp = Math.max(...fft);
-    const scaleYf = hf / (1.2 * maxAmp);
-    const stepXf = wf / (N / 2);
-
-    ctxF.fillStyle = "#111";
-    ctxF.fillRect(0, 0, wf, hf);
-    ctxF.strokeStyle = "#333";
-    for (let i = 0; i < 10; i++) {
-      const y = (i / 10) * hf;
-      ctxF.beginPath();
-      ctxF.moveTo(0, y);
-      ctxF.lineTo(wf, y);
-      ctxF.stroke();
-    }
-    ctxF.beginPath();
-    ctxF.strokeStyle = "#00ff88";
-    ctxF.lineWidth = 2;
-    fft.forEach((v, i) => {
-      const x = i * stepXf;
-      const y = hf - v * scaleYf;
-      i === 0 ? ctxF.moveTo(x, y) : ctxF.lineTo(x, y);
+    document.getElementById("startBtn").addEventListener("click", () => {
+      if (!playing) {
+        playing = true;
+        frame = 0;
+        document.getElementById("startBtn").textContent = "⏸️ Playing...";
+        animate();
+      } else {
+        cancelAnimationFrame(animId);
+        playing = false;
+        document.getElementById("startBtn").textContent = "▶️ Play Animation";
+      }
     });
-    ctxF.stroke();
-    ctxF.fillStyle = "#e6e6e6";
-    ctxF.font = "16px system-ui";
-    ctxF.fillText("Frequency Domain", wf - 200, 25);
-    ctxF.fillText("Power peaks near 250 Hz", 20, 25);
-  </script>
 
-  <footer>
-    <p>BBH-Sim Open Project • Chirping Waveform Visualization</p>
-  </footer>
+    drawFrame(1); // initial preview
+  </script>
 </body>
 </html>
