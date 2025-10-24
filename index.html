@@ -55,6 +55,7 @@
     <canvas id="freqCanvas" style="height:240px;margin-top:12px"></canvas>
     <div class="controls">
       <button id="refreshStatic" class="small ghost">Refresh</button>
+      <button id="downloadTime" class="small">📥 Download Plot</button>
     </div>
     <div class="muted">Static waveform (top) and FFT frequency spectrum (bottom)</div>
   </section>
@@ -67,6 +68,7 @@
     <div class="controls">
       <button id="playChirp">▶ Play</button>
       <button id="resetChirp" class="ghost small">Reset</button>
+      <button id="downloadChirp" class="small">📥 Download Plot</button>
     </div>
     <div class="muted">Single polarization chirp (time-domain)</div>
   </section>
@@ -79,6 +81,7 @@
     <div class="controls">
       <button id="playDual">▶ Play</button>
       <button id="pauseDual" class="ghost small">Pause</button>
+      <button id="downloadDual" class="small">📥 Download Plot</button>
     </div>
     <div class="muted">Dual polarization animation (phase-shifted)</div>
   </section>
@@ -98,7 +101,15 @@ const amp=t.map(x=>(x/t[t.length-1])**3);
 const hPlus=t.map((x,i)=>amp[i]*Math.sin(2*Math.PI*f_t[i]*x)*Math.exp(-x*80));
 const hCross=t.map((x,i)=>amp[i]*Math.cos(2*Math.PI*f_t[i]*x)*Math.exp(-x*80));
 
-// ---------- Draw Time/Freq ----------
+// ---------- utility ----------
+function saveCanvas(canvas,name){
+  const link=document.createElement('a');
+  link.download=name+'.png';
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ---------- FFT & drawing ----------
 function fftMag(sig){
   const n=sig.length;const re=new Array(n).fill(0),im=new Array(n).fill(0);
   for(let k=0;k<n;k++){for(let j=0;j<n;j++){const a=2*Math.PI*k*j/n;re[k]+=sig[j]*Math.cos(a);im[k]-=sig[j]*Math.sin(a);}}
@@ -145,6 +156,7 @@ function drawTimeFreq(){
   function step(){draw(i);i+=8;if(i<N&&run)requestAnimationFrame(step);else run=false;}
   document.getElementById('playChirp').onclick=()=>{if(!run){run=true;i=0;step();}};
   document.getElementById('resetChirp').onclick=()=>{i=0;draw(0);run=false;};
+  document.getElementById('downloadChirp').onclick=()=>saveCanvas(c,'chirp_plot');
   draw(0);
 })();
 
@@ -163,6 +175,7 @@ function drawTimeFreq(){
   function step(){draw(i);i+=8;if(i<N&&run)requestAnimationFrame(step);else run=false;}
   document.getElementById('playDual').onclick=()=>{if(!run){run=true;i=0;step();}};
   document.getElementById('pauseDual').onclick=()=>{run=false;};
+  document.getElementById('downloadDual').onclick=()=>saveCanvas(c,'dual_plot');
   draw(0);
 })();
 
@@ -179,7 +192,12 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
   });
 });
 
-// Initial draw
+// ---------- Download for Time/Freq ----------
+document.getElementById('downloadTime').onclick=()=>{
+  const canvas=document.getElementById('timeCanvas');
+  saveCanvas(canvas,'time_frequency_plot');
+};
+
 drawTimeFreq();
 
 });
