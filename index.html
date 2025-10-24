@@ -85,10 +85,15 @@
     </div>
     <div class="muted">Dual polarization animation (phase-shifted)</div>
   </section>
+
+  <div class="controls" style="margin-top:16px">
+    <button id="downloadAll" class="small">📦 Download All Plots</button>
+  </div>
 </main>
 
 <footer>BBH-Sim demo — mock waveform visualizer © 2025</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -108,6 +113,7 @@ function saveCanvas(canvas,name){
   link.href=canvas.toDataURL('image/png');
   link.click();
 }
+function toData(canvas){return canvas.toDataURL('image/png').split(',')[1];}
 
 // ---------- FFT & drawing ----------
 function fftMag(sig){
@@ -196,6 +202,20 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
 document.getElementById('downloadTime').onclick=()=>{
   const canvas=document.getElementById('timeCanvas');
   saveCanvas(canvas,'time_frequency_plot');
+};
+
+// ---------- Download All ----------
+document.getElementById('downloadAll').onclick=async()=>{
+  const zip=new JSZip();
+  drawTimeFreq(); // make sure static one is drawn
+  zip.file('time_frequency.png', toData(document.getElementById('timeCanvas')), {base64:true});
+  zip.file('chirp.png', toData(document.getElementById('chirpCanvas')), {base64:true});
+  zip.file('dual.png', toData(document.getElementById('dualCanvas')), {base64:true});
+  const blob=await zip.generateAsync({type:"blob"});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='bbh_sim_plots.zip';
+  a.click();
 };
 
 drawTimeFreq();
