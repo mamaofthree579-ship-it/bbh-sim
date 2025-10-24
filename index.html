@@ -1,245 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH-Sim Visualizer</title>
-<style>
-  :root {
-    --bg:#0b0b0b; --panel:#111; --accent:#00b4ff;
-    --muted:#888; --text:#e6e6e6;
-    --hplus:#00ffcc; --hcross:#ff66ff;
-  }
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;}
-  header{padding:14px 16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08)}
-  h1{margin:0;font-size:1.25rem;color:var(--accent)}
-  p.lead{margin:6px 0 0;color:var(--muted);font-size:0.95rem}
-  .toolbar{display:flex;gap:8px;justify-content:center;padding:12px;flex-wrap:wrap}
-  .tabbtn{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text);
-          padding:8px 12px;border-radius:8px;font-weight:600}
-  .tabbtn.active{background:linear-gradient(90deg,rgba(0,180,255,0.15),rgba(0,140,210,0.1));
-                 border-color:rgba(0,180,255,0.4)}
-  main{padding:12px;display:flex;flex-direction:column;align-items:center;gap:12px}
-  .panel{background:var(--panel);width:95%;max-width:920px;border-radius:12px;padding:12px}
-  canvas{display:block;width:100%;height:360px;border-radius:8px;background:#000}
-  .controls{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:8px;flex-wrap:wrap}
-  button{background:var(--accent);color:#000;border:none;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
-  button.ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.1)}
-  .small{font-size:0.9rem;padding:6px 8px}
-  .muted{color:var(--muted);font-size:0.9rem;text-align:center;margin-top:6px}
-  .legend{position:absolute;top:8px;right:12px;font-size:0.8rem;background:rgba(0,0,0,0.4);
-          padding:4px 8px;border-radius:6px;color:#eee}
-  .legend span{display:inline-block;width:12px;height:12px;margin-right:4px;border-radius:3px}
-  footer{padding:14px;text-align:center;color:var(--muted);font-size:0.85rem}
-  .panel-wrap{position:relative;width:100%;display:flex;flex-direction:column;align-items:center}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBH-SIM | Black Hole Simulation Framework</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0b0f19;
+            color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        header {
+            padding: 80px 20px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            animation: fadeIn 2.5s ease-in-out;
+        }
+
+        p.subtitle {
+            font-size: 1.2rem;
+            color: #8fa6d9;
+            max-width: 700px;
+            margin: 10px auto 20px;
+        }
+
+        .badges img {
+            margin: 5px;
+            height: 24px;
+        }
+
+        nav a {
+            display: inline-block;
+            margin: 15px;
+            padding: 12px 22px;
+            border-radius: 6px;
+            background: #14213d;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: background 0.3s;
+        }
+
+        nav a:hover {
+            background: #1f2d52;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: #6b82a7;
+        }
+
+        /* Subtle fade-in anim */
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
+
 <header>
-  <h1>BBH-Sim Visualizer</h1>
-  <p class="lead">Interactive mock gravitational wave demonstration</p>
+    <h1>BBH-SIM</h1>
+    <p class="subtitle">A framework for exploring gravitational behavior, binary black hole dynamics, and particle interactions.</p>
+
+    <div class="badges">
+        <img src="https://img.shields.io/github/actions/workflow/status/mamaofthree579/bbh-sim/ci.yml?label=CI" alt="CI Status">
+        <img src="https://img.shields.io/github/deployments/mamaofthree579/bbh-sim/github-pages?label=Docs" alt="Docs Deploy">
+        <img src="https://img.shields.io/github/license/mamaofthree579/bbh-sim" alt="License">
+    </div>
+
+    <nav>
+        <a href="docs/index.html">Documentation</a>
+        <a href="notebooks/intro_to_cf.html">Interactive Notebook</a>
+        <a href="https://github.com/mamaofthree579/bbh-sim">GitHub Repo</a>
+    </nav>
 </header>
 
-<div class="toolbar">
-  <button class="tabbtn active" data-view="timefreq">Time & Frequency</button>
-  <button class="tabbtn" data-view="chirp">Animated Chirp</button>
-  <button class="tabbtn" data-view="dual">Dual Polarization</button>
-</div>
+<footer>
+    © 2025 BBH-SIM — Open Physics for Everyone 🌌
+</footer>
 
-<main>
-  <section id="timefreq" class="panel view">
-    <div class="panel-wrap">
-      <div class="legend"><span style="background:var(--accent)"></span>h₊  |  <span style="background:#fff"></span>h×</div>
-      <canvas id="timeCanvas"></canvas>
-    </div>
-    <canvas id="freqCanvas" style="height:240px;margin-top:12px"></canvas>
-    <div class="controls">
-      <button id="refreshStatic" class="small ghost">Refresh</button>
-      <button id="downloadTime" class="small">📥 Download Plot</button>
-    </div>
-    <div class="muted">Static waveform (top) and FFT frequency spectrum (bottom)</div>
-  </section>
-
-  <section id="chirp" class="panel view" style="display:none">
-    <div class="panel-wrap">
-      <div class="legend"><span style="background:var(--accent)"></span>h₊</div>
-      <canvas id="chirpCanvas"></canvas>
-    </div>
-    <div class="controls">
-      <button id="playChirp">▶ Play</button>
-      <button id="resetChirp" class="ghost small">Reset</button>
-      <button id="downloadChirp" class="small">📥 Download Plot</button>
-    </div>
-    <div class="muted">Single polarization chirp (time-domain)</div>
-  </section>
-
-  <section id="dual" class="panel view" style="display:none">
-    <div class="panel-wrap">
-      <div class="legend"><span style="background:var(--hplus)"></span>h₊  |  <span style="background:var(--hcross)"></span>h×</div>
-      <canvas id="dualCanvas"></canvas>
-    </div>
-    <div class="controls">
-      <button id="playDual">▶ Play</button>
-      <button id="pauseDual" class="ghost small">Pause</button>
-      <button id="downloadDual" class="small">📥 Download Plot</button>
-    </div>
-    <div class="muted">Dual polarization animation (phase-shifted)</div>
-  </section>
-
-  <div class="controls" style="margin-top:16px">
-    <button id="downloadAll" class="small">📦 Download All Plots</button>
-  </div>
-</main>
-
-<footer>BBH-Sim demo — mock waveform visualizer © 2025</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-
-// ---------- mock data ----------
-const N=1500, dt=0.0005;
-const t=Array.from({length:N},(_,i)=>i*dt);
-const f_start=30, f_end=250;
-const f_t=t.map(x=>f_start+(f_end-f_start)*(x/t[t.length-1])**2);
-const amp=t.map(x=>(x/t[t.length-1])**3);
-const hPlus=t.map((x,i)=>amp[i]*Math.sin(2*Math.PI*f_t[i]*x)*Math.exp(-x*80));
-const hCross=t.map((x,i)=>amp[i]*Math.cos(2*Math.PI*f_t[i]*x)*Math.exp(-x*80));
-
-// ---------- utilities ----------
-function saveCanvas(canvas,name){
-  const link=document.createElement('a');
-  link.download=name+'.png';
-  link.href=canvas.toDataURL('image/png');
-  link.click();
-}
-function toData(canvas){return canvas.toDataURL('image/png').split(',')[1];}
-
-// ---------- FFT & drawing ----------
-function fftMag(sig){
-  const n=sig.length;const re=new Array(n).fill(0),im=new Array(n).fill(0);
-  for(let k=0;k<n;k++){for(let j=0;j<n;j++){const a=2*Math.PI*k*j/n;re[k]+=sig[j]*Math.cos(a);im[k]-=sig[j]*Math.sin(a);}}
-  return re.map((r,i)=>Math.sqrt(r*r+im[i]*im[i])/n).slice(0,n/2);
-}
-function drawAxes(ctx,w,h,label){
-  ctx.strokeStyle='rgba(255,255,255,0.2)';
-  ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.font='12px system-ui';ctx.fillText(label,8,14);
-}
-function drawTimeFreq(){
-  const timeC=document.getElementById('timeCanvas');
-  const freqC=document.getElementById('freqCanvas');
-  const ctxT=timeC.getContext('2d'), ctxF=freqC.getContext('2d');
-  const w=timeC.width=timeC.clientWidth, h=timeC.height=360;
-  ctxT.fillStyle='#000';ctxT.fillRect(0,0,w,h);
-  drawAxes(ctxT,w,h,"Time-domain Strain");
-  ctxT.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--accent');
-  ctxT.beginPath();
-  for(let i=0;i<N;i++){const x=i/N*w, y=h/2-hPlus[i]*160; i?ctxT.lineTo(x,y):ctxT.moveTo(x,y);}ctxT.stroke();
-  ctxT.strokeStyle='#fff';ctxT.beginPath();
-  for(let i=0;i<N;i++){const x=i/N*w, y=h/2-hCross[i]*160; i?ctxT.lineTo(x,y):ctxT.moveTo(x,y);}ctxT.stroke();
-
-  const mag=fftMag(hPlus);
-  const wf=freqC.width=freqC.clientWidth, hf=freqC.height=240;
-  const ctx2=freqC.getContext('2d');
-  ctx2.fillStyle='#000';ctx2.fillRect(0,0,wf,hf);
-  drawAxes(ctx2,wf,hf,"Frequency-domain (FFT)");
-  ctx2.strokeStyle='#00ff88';ctx2.beginPath();
-  for(let i=0;i<mag.length;i++){const x=i/mag.length*wf, y=hf-(mag[i]/Math.max(...mag))*200; i?ctx2.lineTo(x,y):ctx2.moveTo(x,y);}
-  ctx2.stroke();
-}
-
-// ---------- Animated Chirp ----------
-(function(){
-  const c=document.getElementById('chirpCanvas'), ctx=c.getContext('2d');
-  let i=0, run=false;
-  function draw(k){const w=c.width=c.clientWidth,h=c.height=360;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-    drawAxes(ctx,w,h,"Time-domain Strain (h₊)");
-    ctx.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--accent');
-    ctx.beginPath();
-    for(let j=0;j<k;j++){const x=j/N*w,y=h/2-hPlus[j]*160;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
-  function step(){draw(i);i+=8;if(i<N&&run)requestAnimationFrame(step);else run=false;}
-  document.getElementById('playChirp').onclick=()=>{if(!run){run=true;i=0;step();}};
-  document.getElementById('resetChirp').onclick=()=>{i=0;draw(0);run=false;};
-  document.getElementById('downloadChirp').onclick=()=>saveCanvas(c,'chirp_plot');
-  draw(0);
-})();
-
-// ---------- Dual Polarization ----------
-(function(){
-  const c=document.getElementById('dualCanvas'), ctx=c.getContext('2d');
-  let i=0, run=false;
-  function draw(k){const w=c.width=c.clientWidth,h=c.height=360;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-    drawAxes(ctx,w,h,"Dual Polarization (h₊, h×)");
-    ctx.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--hplus');
-    ctx.beginPath();
-    for(let j=0;j<k;j++){const x=j/N*w,y=h/2-hPlus[j]*160;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
-    ctx.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--hcross');
-    ctx.beginPath();
-    for(let j=0;j<k;j++){const x=j/N*w,y=h/2-hCross[j]*160-40;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
-  function step(){draw(i);i+=8;if(i<N&&run)requestAnimationFrame(step);else run=false;}
-  document.getElementById('playDual').onclick=()=>{if(!run){run=true;i=0;step();}};
-  document.getElementById('pauseDual').onclick=()=>{run=false;};
-  document.getElementById('downloadDual').onclick=()=>saveCanvas(c,'dual_plot');
-  draw(0);
-})();
-
-// ---------- Tabs ----------
-document.querySelectorAll('.tabbtn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const v=btn.dataset.view;
-    document.querySelectorAll('.view').forEach(sec=>{
-      sec.style.display = (sec.id===v)?'block':'none';
-    });
-    if(v==='timefreq') drawTimeFreq();
-  });
-});
-
-// ---------- Download All with Timestamp ----------
-document.getElementById('downloadAll').onclick=async()=>{
-  const zip=new JSZip();
-  drawTimeFreq(); // ensure fresh render
-  zip.file('time_frequency.png', toData(document.getElementById('timeCanvas')), {base64:true});
-  zip.file('chirp.png', toData(document.getElementById('chirpCanvas')), {base64:true});
-  zip.file('dual.png', toData(document.getElementById('dualCanvas')), {base64:true});
-
-  const now=new Date();
-  const timestamp=now.toLocaleString();
-  const readmeText =
-`# BBH-Sim Visualizer — Plot Descriptions
-
-Created on: ${timestamp}
-
-1. time_frequency.png
-   • Mock gravitational-wave strains (h₊, h×) vs time.
-   • Top: time-domain signal.
-   • Bottom: frequency spectrum (FFT).
-
-2. chirp.png
-   • Animated version of a single polarization h₊.
-   • Demonstrates the “chirp” pattern during a merger.
-
-3. dual.png
-   • Shows both h₊ (cyan) and h× (magenta) polarizations.
-   • Illustrates phase-shifted oscillations.
-
-All plots are synthetic (mock) for visualization only.
-Generated by BBH-Sim Visualizer © 2025.`;
-
-  zip.file('README.txt', readmeText);
-  const blob=await zip.generateAsync({type:"blob"});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='bbh_sim_plots.zip';
-  a.click();
-};
-
-drawTimeFreq();
-
-});
-</script>
 </body>
 </html>
