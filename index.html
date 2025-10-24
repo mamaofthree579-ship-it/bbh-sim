@@ -1,11 +1,15 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>BBH-Sim Visualizer</title>
 <style>
-  :root { --bg:#0b0b0b; --panel:#111; --accent:#00b4ff; --muted:#888; --text:#e6e6e6;}
+  :root {
+    --bg:#0b0b0b; --panel:#111; --accent:#00b4ff;
+    --muted:#888; --text:#e6e6e6;
+    --hplus:#00ffcc; --hcross:#ff66ff;
+  }
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;}
   header{padding:14px 16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08)}
   h1{margin:0;font-size:1.25rem;color:var(--accent)}
@@ -23,13 +27,17 @@
   button.ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.1)}
   .small{font-size:0.9rem;padding:6px 8px}
   .muted{color:var(--muted);font-size:0.9rem;text-align:center;margin-top:6px}
+  .legend{position:absolute;top:8px;right:12px;font-size:0.8rem;background:rgba(0,0,0,0.4);
+          padding:4px 8px;border-radius:6px;color:#eee}
+  .legend span{display:inline-block;width:12px;height:12px;margin-right:4px;border-radius:3px}
   footer{padding:14px;text-align:center;color:var(--muted);font-size:0.85rem}
+  .panel-wrap{position:relative;width:100%;display:flex;flex-direction:column;align-items:center}
 </style>
 </head>
 <body>
 <header>
   <h1>BBH-Sim Visualizer</h1>
-  <p class="lead">Switch between Time/Frequency & Animated views</p>
+  <p class="lead">Interactive mock gravitational wave demonstration</p>
 </header>
 
 <div class="toolbar">
@@ -40,37 +48,43 @@
 
 <main>
   <section id="timefreq" class="panel view">
-    <h2 style="color:var(--accent);margin-top:0">Time & Frequency</h2>
-    <canvas id="timeCanvas"></canvas>
-    <canvas id="freqCanvas" style="height:240px"></canvas>
+    <div class="panel-wrap">
+      <div class="legend"><span style="background:var(--accent)"></span>h₊  |  <span style="background:#fff"></span>h×</div>
+      <canvas id="timeCanvas"></canvas>
+    </div>
+    <canvas id="freqCanvas" style="height:240px;margin-top:12px"></canvas>
     <div class="controls">
       <button id="refreshStatic" class="small ghost">Refresh</button>
     </div>
-    <div class="muted">Static plots of mock waveform and FFT spectrum</div>
+    <div class="muted">Static waveform (top) and FFT frequency spectrum (bottom)</div>
   </section>
 
   <section id="chirp" class="panel view" style="display:none">
-    <h2 style="color:var(--accent);margin-top:0">Animated Chirp</h2>
-    <canvas id="chirpCanvas"></canvas>
+    <div class="panel-wrap">
+      <div class="legend"><span style="background:var(--accent)"></span>h₊</div>
+      <canvas id="chirpCanvas"></canvas>
+    </div>
     <div class="controls">
       <button id="playChirp">▶ Play</button>
       <button id="resetChirp" class="ghost small">Reset</button>
     </div>
-    <div class="muted">Single polarization (h₊)</div>
+    <div class="muted">Single polarization chirp (time-domain)</div>
   </section>
 
   <section id="dual" class="panel view" style="display:none">
-    <h2 style="color:var(--accent);margin-top:0">Dual Polarization</h2>
-    <canvas id="dualCanvas"></canvas>
+    <div class="panel-wrap">
+      <div class="legend"><span style="background:var(--hplus)"></span>h₊  |  <span style="background:var(--hcross)"></span>h×</div>
+      <canvas id="dualCanvas"></canvas>
+    </div>
     <div class="controls">
       <button id="playDual">▶ Play</button>
       <button id="pauseDual" class="ghost small">Pause</button>
     </div>
-    <div class="muted">h₊ (teal) & h× (magenta)</div>
+    <div class="muted">Dual polarization animation (phase-shifted)</div>
   </section>
 </main>
 
-<footer>BBH-Sim demo — mock waveform visualizer</footer>
+<footer>BBH-Sim demo — mock waveform visualizer © 2025</footer>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -90,13 +104,21 @@ function fftMag(sig){
   for(let k=0;k<n;k++){for(let j=0;j<n;j++){const a=2*Math.PI*k*j/n;re[k]+=sig[j]*Math.cos(a);im[k]-=sig[j]*Math.sin(a);}}
   return re.map((r,i)=>Math.sqrt(r*r+im[i]*im[i])/n).slice(0,n/2);
 }
+function drawAxes(ctx,w,h,label){
+  ctx.strokeStyle='rgba(255,255,255,0.2)';
+  ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.font='12px system-ui';ctx.fillText(label,8,14);
+}
 function drawTimeFreq(){
   const timeC=document.getElementById('timeCanvas');
   const freqC=document.getElementById('freqCanvas');
   const ctxT=timeC.getContext('2d'), ctxF=freqC.getContext('2d');
   const w=timeC.width=timeC.clientWidth, h=timeC.height=360;
   ctxT.fillStyle='#000';ctxT.fillRect(0,0,w,h);
-  ctxT.strokeStyle='#00b4ff';ctxT.beginPath();
+  drawAxes(ctxT,w,h,"Time-domain Strain");
+  ctxT.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--accent');
+  ctxT.beginPath();
   for(let i=0;i<N;i++){const x=i/N*w, y=h/2-hPlus[i]*160; i?ctxT.lineTo(x,y):ctxT.moveTo(x,y);}ctxT.stroke();
   ctxT.strokeStyle='#fff';ctxT.beginPath();
   for(let i=0;i<N;i++){const x=i/N*w, y=h/2-hCross[i]*160; i?ctxT.lineTo(x,y):ctxT.moveTo(x,y);}ctxT.stroke();
@@ -105,6 +127,7 @@ function drawTimeFreq(){
   const wf=freqC.width=freqC.clientWidth, hf=freqC.height=240;
   const ctx2=freqC.getContext('2d');
   ctx2.fillStyle='#000';ctx2.fillRect(0,0,wf,hf);
+  drawAxes(ctx2,wf,hf,"Frequency-domain (FFT)");
   ctx2.strokeStyle='#00ff88';ctx2.beginPath();
   for(let i=0;i<mag.length;i++){const x=i/mag.length*wf, y=hf-(mag[i]/Math.max(...mag))*200; i?ctx2.lineTo(x,y):ctx2.moveTo(x,y);}
   ctx2.stroke();
@@ -115,7 +138,9 @@ function drawTimeFreq(){
   const c=document.getElementById('chirpCanvas'), ctx=c.getContext('2d');
   let i=0, run=false;
   function draw(k){const w=c.width=c.clientWidth,h=c.height=360;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle='#00b4ff';ctx.beginPath();
+    drawAxes(ctx,w,h,"Time-domain Strain (h₊)");
+    ctx.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--accent');
+    ctx.beginPath();
     for(let j=0;j<k;j++){const x=j/N*w,y=h/2-hPlus[j]*160;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
   function step(){draw(i);i+=8;if(i<N&&run)requestAnimationFrame(step);else run=false;}
   document.getElementById('playChirp').onclick=()=>{if(!run){run=true;i=0;step();}};
@@ -128,9 +153,12 @@ function drawTimeFreq(){
   const c=document.getElementById('dualCanvas'), ctx=c.getContext('2d');
   let i=0, run=false;
   function draw(k){const w=c.width=c.clientWidth,h=c.height=360;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle='#00ffcc';ctx.beginPath();
+    drawAxes(ctx,w,h,"Dual Polarization (h₊, h×)");
+    ctx.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--hplus');
+    ctx.beginPath();
     for(let j=0;j<k;j++){const x=j/N*w,y=h/2-hPlus[j]*160;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
-    ctx.strokeStyle='#ff66ff';ctx.beginPath();
+    ctx.strokeStyle=window.getComputedStyle(document.documentElement).getPropertyValue('--hcross');
+    ctx.beginPath();
     for(let j=0;j<k;j++){const x=j/N*w,y=h/2-hCross[j]*160-40;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
   function step(){draw(i);i+=8;if(i<N&&run)requestAnimationFrame(step);else run=false;}
   document.getElementById('playDual').onclick=()=>{if(!run){run=true;i=0;step();}};
