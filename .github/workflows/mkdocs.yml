@@ -1,0 +1,11 @@
+site_name: BBH-SIM Documentation
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Concepts:
+    - Compressive Fields: docs/concepts/compressive_fields.md
+    - Black Hole Behavior: docs/concepts/bh_behavior.md
+  - Simulations:
+    - Intro Notebook: notebooks_html/intro_to_cf.html
