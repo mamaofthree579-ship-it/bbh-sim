@@ -74,128 +74,151 @@
     <input id="speedSlider" type="range" min="0.2" max="2.5" step="0.1" value="1">
   </div>
 
-  <script>
-    const canvas = document.getElementById("canvas3D");
-    const ctx = canvas.getContext("2d");
-    let w, h;
-    function resize() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
+  script>
+  const canvas = document.getElementById("canvas3D");
+  const ctx = canvas.getContext("2d");
+  let w, h;
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const gridSize = 25;
+  const spacing = 25;
+  const origin = { x: w / 2, y: h / 2 };
+
+  const N = 2000;
+  const dt = 0.0005;
+  const t = Array.from({ length: N }, (_, i) => i * dt);
+  const f_start = 30, f_end = 250;
+  const f_t = t.map(x => f_start + (f_end - f_start) * Math.pow(x / t[t.length - 1], 2));
+  const amp_scale = t.map(x => Math.pow(x / t[t.length - 1], 3));
+  const hPlus = t.map((x, i) => amp_scale[i] * Math.sin(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
+  const hCross = t.map((x, i) => amp_scale[i] * Math.cos(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
+
+  let frame = 0;
+  let playing = false;
+  let animId;
+  let angleX = Math.PI / 5;
+  let angleY = Math.PI / 6;
+  let speedFactor = 1;
+
+  const speedSlider = document.getElementById("speedSlider");
+  speedSlider.addEventListener("input", e => {
+    speedFactor = parseFloat(e.target.value);
+  });
+
+  // Handle drag to rotate
+  let dragging = false;
+  let lastX, lastY;
+  canvas.addEventListener("mousedown", e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+  canvas.addEventListener("mouseup", () => dragging = false);
+  canvas.addEventListener("mousemove", e => {
+    if (dragging) {
+      angleY += (e.clientX - lastX) * 0.01;
+      angleX += (e.clientY - lastY) * 0.01;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      drawGrid(hPlus[frame] * 4, hCross[frame] * 4);
     }
-    window.addEventListener("resize", resize);
-    resize();
+  });
 
-    const gridSize = 25;
-    const spacing = 25;
-    const origin = { x: w / 2, y: h / 2 };
-
-    const N = 2000;
-    const dt = 0.0005;
-    const t = Array.from({ length: N }, (_, i) => i * dt);
-    const f_start = 30, f_end = 250;
-    const f_t = t.map(x => f_start + (f_end - f_start) * Math.pow(x / t[t.length - 1], 2));
-    const amp_scale = t.map(x => Math.pow(x / t[t.length - 1], 3));
-    const hPlus = t.map((x, i) => amp_scale[i] * Math.sin(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
-    const hCross = t.map((x, i) => amp_scale[i] * Math.cos(2 * Math.PI * f_t[i] * x) * Math.exp(-x * 100));
-
-    let frame = 0;
-    let playing = false;
-    let animId;
-    let angleX = Math.PI / 5;
-    let angleY = Math.PI / 6;
-    let speedFactor = 1;
-
-    const speedSlider = document.getElementById("speedSlider");
-    speedSlider.addEventListener("input", e => {
-      speedFactor = parseFloat(e.target.value);
-    });
-
-    let dragging = false;
-    let lastX, lastY;
-    canvas.addEventListener("mousedown", e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
-    canvas.addEventListener("mouseup", () => dragging = false);
-    canvas.addEventListener("mousemove", e => {
-      if (dragging) {
-        angleY += (e.clientX - lastX) * 0.01;
-        angleX += (e.clientY - lastY) * 0.01;
-        lastX = e.clientX;
-        lastY = e.clientY;
-      }
-    });
-
-    function project3D(x, y, z) {
-      const cosY = Math.cos(angleY), sinY = Math.sin(angleY);
-      const cosX = Math.cos(angleX), sinX = Math.sin(angleX);
-      const dx = x * cosY - z * sinY;
-      const dz = x * sinY + z * cosY;
-      const dy = y * cosX - dz * sinX;
-      return { x: origin.x + dx * 1.5, y: origin.y + dy * 1.5 };
+  // Touch support (mobile)
+  canvas.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    dragging = true;
+    lastX = t.clientX;
+    lastY = t.clientY;
+  });
+  canvas.addEventListener("touchend", () => dragging = false);
+  canvas.addEventListener("touchmove", e => {
+    if (dragging) {
+      const t = e.touches[0];
+      angleY += (t.clientX - lastX) * 0.01;
+      angleX += (t.clientY - lastY) * 0.01;
+      lastX = t.clientX;
+      lastY = t.clientY;
+      drawGrid(hPlus[frame] * 4, hCross[frame] * 4);
     }
+  });
 
-    function drawGrid(hp, hx) {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = "#0af";
-      ctx.lineWidth = 1;
+  function project3D(x, y, z) {
+    const cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+    const cosX = Math.cos(angleX), sinX = Math.sin(angleX);
+    const dx = x * cosY - z * sinY;
+    const dz = x * sinY + z * cosY;
+    const dy = y * cosX - dz * sinX;
+    return { x: origin.x + dx * 1.5, y: origin.y + dy * 1.5 };
+  }
 
-      for (let i = -gridSize; i <= gridSize; i++) {
-        ctx.beginPath();
-        for (let j = -gridSize; j <= gridSize; j++) {
-          const x = i * spacing;
-          const y = j * spacing;
-          const z = (x * hp - y * hx) * 80;
-          const p = project3D(x, y, z);
-          if (j === -gridSize) ctx.moveTo(p.x, p.y);
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
-      }
+  function drawGrid(hp, hx) {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = "#0af";
+    ctx.lineWidth = 1;
 
+    for (let i = -gridSize; i <= gridSize; i++) {
+      ctx.beginPath();
       for (let j = -gridSize; j <= gridSize; j++) {
-        ctx.beginPath();
-        for (let i = -gridSize; i <= gridSize; i++) {
-          const x = i * spacing;
-          const y = j * spacing;
-          const z = (x * hp - y * hx) * 80;
-          const p = project3D(x, y, z);
-          if (i === -gridSize) ctx.moveTo(p.x, p.y);
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
+        const x = i * spacing;
+        const y = j * spacing;
+        const z = (x * hp - y * hx) * 80;
+        const p = project3D(x, y, z);
+        if (j === -gridSize) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
       }
-
-      ctx.fillStyle = "#0ff";
-      ctx.font = "16px system-ui";
-      ctx.fillText(`Time: ${(frame * dt * 1000).toFixed(1)} ms`, 20, 25);
+      ctx.stroke();
     }
 
-    function animate() {
-      if (!playing) return;
-      const hp = hPlus[frame] * 4;
-      const hx = hCross[frame] * 4;
-      drawGrid(hp, hx);
-      frame += Math.ceil(10 * speedFactor);
-      if (frame < N) animId = requestAnimationFrame(animate);
-      else {
-        playing = false;
-        document.getElementById("playBtn").textContent = "🔁 Replay";
+    for (let j = -gridSize; j <= gridSize; j++) {
+      ctx.beginPath();
+      for (let i = -gridSize; i <= gridSize; i++) {
+        const x = i * spacing;
+        const y = j * spacing;
+        const z = (x * hp - y * hx) * 80;
+        const p = project3D(x, y, z);
+        if (i === -gridSize) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
       }
+      ctx.stroke();
     }
 
-    document.getElementById("playBtn").addEventListener("click", () => {
-      if (!playing) {
-        playing = true;
-        frame = 0;
-        document.getElementById("playBtn").textContent = "⏸️ Pause";
-        animate();
-      } else {
-        cancelAnimationFrame(animId);
-        playing = false;
-        document.getElementById("playBtn").textContent = "▶️ Play";
-      }
-    });
+    ctx.fillStyle = "#0ff";
+    ctx.font = "16px system-ui";
+    ctx.fillText(`Time: ${(frame * dt * 1000).toFixed(1)} ms`, 20, 25);
+  }
 
-    drawGrid(0, 0);
-  </script>
-</body>
+  function animate() {
+    if (!playing) return;
+    const hp = hPlus[frame] * 4;
+    const hx = hCross[frame] * 4;
+    drawGrid(hp, hx);
+    frame += Math.ceil(8 * speedFactor);
+    if (frame >= N) {
+      playing = false;
+      document.getElementById("playBtn").textContent = "🔁 Replay";
+      frame = 0;
+    } else {
+      animId = requestAnimationFrame(animate);
+    }
+  }
+
+  const playBtn = document.getElementById("playBtn");
+  playBtn.addEventListener("click", () => {
+    if (!playing) {
+      playing = true;
+      playBtn.textContent = "⏸️ Pause";
+      animate();
+    } else {
+      playing = false;
+      playBtn.textContent = "▶️ Play";
+      cancelAnimationFrame(animId);
+    }
+  });
+
+  drawGrid(0, 0);
+      </script>
+        </body>
 </html>
