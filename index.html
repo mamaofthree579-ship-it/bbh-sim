@@ -1,93 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBH-SIM | Black Hole Simulation Framework</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #0b0f19;
-            color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-        }
-
-        header {
-            padding: 80px 20px;
-        }
-
-        h1 {
-            font-size: 3rem;
-            font-weight: bold;
-            animation: fadeIn 2.5s ease-in-out;
-        }
-
-        p.subtitle {
-            font-size: 1.2rem;
-            color: #8fa6d9;
-            max-width: 700px;
-            margin: 10px auto 20px;
-        }
-
-        .badges img {
-            margin: 5px;
-            height: 24px;
-        }
-
-        nav a {
-            display: inline-block;
-            margin: 15px;
-            padding: 12px 22px;
-            border-radius: 6px;
-            background: #14213d;
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 1.1rem;
-            transition: background 0.3s;
-        }
-
-        nav a:hover {
-            background: #1f2d52;
-        }
-
-        footer {
-            margin-top: 50px;
-            padding: 20px;
-            font-size: 0.9rem;
-            color: #6b82a7;
-        }
-
-        /* Subtle fade-in anim */
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(20px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BBH Gravitational-Wave Visualizer</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
+  <div class="background-clock"></div>
 
-<header>
-    <h1>BBH-SIM</h1>
-    <p class="subtitle">A framework for exploring gravitational behavior, binary black hole dynamics, and particle interactions.</p>
+  <div class="container">
+    <h1>🌌 Binary Black Hole Waveform Explorer</h1>
 
-    <div class="badge-row">
-    <img src="https://img.shields.io/github/actions/workflow/status/mamaofthree579/bbh-sim/ci.yml?label=CI" alt="CI Status">
-    <img src="https://img.shields.io/github/actions/workflow/status/mamaofthree579/bbh-sim/docs.yml?label=Docs" alt="Docs Deploy Status">
-    <img src="https://img.shields.io/github/license/mamaofthree579/bbh-sim" alt="License">
-</div>
+    <label for="eventSelect">Select Event:</label>
+    <select id="eventSelect"></select>
 
-    <nav>
-        <a href="docs/index.html">Documentation</a>
-        <a href="notebooks/intro_to_cf.html">Interactive Notebook</a>
-        <a href="https://github.com/mamaofthree579/bbh-sim">GitHub Repo</a>
-    </nav>
-</header>
+    <div id="waveformPlot" class="plot"></div>
+    <div id="frequencyPlot" class="plot"></div>
+  </div>
 
-<footer>
-    © 2025 BBH-SIM — Open Physics for Everyone 🌌
-</footer>
-
+  <script src="js/main.js"></script>
 </body>
 </html>
+
+
+---
+
+🎨 css/style.css
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: white;
+  margin: 0;
+  background: radial-gradient(circle at center, #0a0a1a 20%, #000 100%);
+  overflow-x: hidden;
+}
+
+.background-clock {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: conic-gradient(from 0deg, #1e90ff, #8a2be2, #ff00ff, #1e90ff);
+  animation: rotateClock 20s linear infinite;
+  opacity: 0.2;
+  z-index: -1;
+}
+
+@keyframes rotateClock {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1rem;
+  text-align: center;
+}
+
+select {
+  margin: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 1rem;
+}
+
+.plot {
+  width: 100%;
+  height: 400px;
+  margin-bottom: 2rem;
+  border-radius: 12px;
+}
+
+
+---
+
+⚙️ js/main.js
+
+async function loadEvents() {
+  const response = await fetch('data/events.json');
+  const events = await response.json();
+
+  const select = document.getElementById('eventSelect');
+  events.forEach(ev => {
+    const opt = document.createElement('option');
+    opt.value = ev.id;
+    opt.textContent = ev.name;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener('change', () => {
+    const event = events.find(e => e.id === select.value);
+    drawPlots(event);
+  });
+
+  drawPlots(events[0]);
+}
+
+function generateWaveform(event) {
+  const t = Array.from({ length: 2000 }, (_, i) => i * (event.duration / 2000));
+  const freqRange = event.freqEnd - event.freqStart;
+  const h = t.map(time => {
+    const freq = event.freqStart + (freqRange * time / event.duration);
+    return event.amplitude * Math.sin(2 * Math.PI * freq * time) * Math.exp(-0.3 * time);
+  });
+  return { t, h };
+}
+
+function drawPlots(event) {
+  const { t, h } = generateWaveform(event);
+
+  const waveformTrace = { x: t, y: h, type: 'scatter', mode: 'lines', line: { color: event.color }, name: 'Strain h(t)' };
+  const waveLayout = {
+    title: `${event.name} — Time-Domain Waveform`,
+    xaxis: { title: 'Time [s]' },
+    yaxis: { title: 'Strain' },
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: 'white' }
+  };
+  Plotly.newPlot('waveformPlot', [waveformTrace], waveLayout, { responsive: true });
+
+  const freq = t.map((_, i) => event.freqStart + i * (event.freqEnd - event.freqStart) / t.length);
+  const freqTrace = { x: t, y: freq, type: 'scatter', mode: 'lines', line: { color: '#ffa500' }, name: 'Instantaneous Frequency' };
+  const freqLayout = {
+    title: `${event.name} — Frequency Chirp`,
+    xaxis: { title: 'Time [s]' },
+    yaxis: { title: 'Frequency [Hz]' },
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: 'white' }
+  };
+  Plotly.newPlot('frequencyPlot', [freqTrace], freqLayout, { responsive: true });
+}
+
+loadEvents();
+
+
+---
+
+📊 data/events.json
+
+[
+  {
+    "id": "GW150914",
+    "name": "GW150914 — Binary Black Hole",
+    "amplitude": 1.0,
+    "freqStart": 30,
+    "freqEnd": 250,
+    "duration": 4,
+    "color": "#00ffff"
+  },
+  {
+    "id": "GW170817",
+    "name": "GW170817 — Binary Neutron Star",
+    "amplitude": 0.6,
+    "freqStart": 20,
+    "freqEnd": 400,
+    "duration": 10,
+    "color": "#ff69b4"
+  },
+  {
+    "id": "GW190521",
+    "name": "GW190521 — Massive BBH",
+    "amplitude": 1.2,
+    "freqStart": 20,
+    "freqEnd": 100,
+    "duration": 2,
+    "color": "#9b59b6"
+  }
+]
