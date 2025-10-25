@@ -16,25 +16,31 @@ fetch("data/events.json")
   });
 
 // Info modal (robust mobile-safe version)
-const infoBtn = document.getElementById("infoBtn");
-const infoModal = document.getElementById("infoModal");
-const closeInfo = document.getElementById("closeInfo");
+// ℹ️ Info modal (mobile safe, double protected)
+document.addEventListener("DOMContentLoaded", () => {
+  const infoBtn = document.getElementById("infoBtn");
+  const infoModal = document.getElementById("infoModal");
+  const closeInfo = document.getElementById("closeInfo");
 
-// Ensure starts hidden
-infoModal.style.display = "none";
-
-infoBtn.addEventListener("click", () => {
-  infoModal.style.display = "flex";
-});
-
-closeInfo.addEventListener("click", () => {
+  // Force hidden on load
   infoModal.style.display = "none";
-});
 
-window.addEventListener("click", (e) => {
-  if (e.target === infoModal) {
+  // Open modal
+  infoBtn.addEventListener("click", () => {
+    infoModal.style.display = "flex";
+  });
+
+  // Close on ×
+  closeInfo.addEventListener("click", () => {
     infoModal.style.display = "none";
-  }
+  });
+
+  // Close on background tap
+  infoModal.addEventListener("click", (e) => {
+    if (e.target === infoModal) {
+      infoModal.style.display = "none";
+    }
+  });
 });
 
 // Load selected event
