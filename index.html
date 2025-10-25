@@ -199,17 +199,14 @@ document.getElementById('generateBtn').onclick=()=>{
   const data=generateWave(m1,m2);
   plotWaveform(data);
   plotSpectrogram(data);
-  plotOrbit(0);
 };
 
 runSimulation(); // initial
 </script>
 </body>
 </html>
-<!DOCTYPE html>
-<html lang="en">
-
 <header>
+  <meta charset="UTF-8">
   <h1>Open BBH Visualizer — 3D Orbit + Chirp</h1>
   <div class="top-controls">
     <select id="presetSelect" title="Choose event">
@@ -255,7 +252,7 @@ runSimulation(); // initial
   </div>
 </div>
 
-<!-- player floating (auto-hide) -->
+<!-- player (hide) -->
 <div id="player" class="hidden" aria-label="player">
   <button id="playPause" title="Play / Pause">▶️</button>
   <button id="restart" title="Restart">🔁</button>
