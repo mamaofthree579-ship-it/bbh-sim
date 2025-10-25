@@ -17,7 +17,10 @@ fetch("data/events.json")
     document.getElementById("loadEvent").onclick = () => {
       const id = select.value;
       currentEvent = data.events.find(e => e.id === id);
-      if (currentEvent) plotWaveform(currentEvent);
+      if (currentEvent) {
+        showFacts(currentEvent);
+        plotWaveform(currentEvent);
+      }
     };
   });
 
@@ -44,9 +47,8 @@ document.getElementById("runSim").onclick = () => {
   const t = Array.from({length: 1000}, (_, i) => (i / 1000) * dur * 10);
   const freq = 0.05 * chirpMass ** 0.3;
   const hPlus = t.map(tt => Math.sin(freq * tt) * Math.exp(-tt / (dur * 5)));
-  const hCross = t.map(tt => Math.cos(freq * tt) * Math.exp(-tt / (dur * 5)));
 
-  plotCustomWaveform(t, hPlus, hCross, {m1, m2, dur});
+  plotCustomWaveform(t, hPlus, {m1, m2, dur});
 
   if (currentEvent) {
     overlayComparison(t, hPlus, currentEvent);
@@ -64,6 +66,15 @@ document.getElementById("saveSim").onclick = () => {
   link.download = "custom_simulation.json";
   link.click();
 };
+
+// Show event facts
+function showFacts(event) {
+  const facts = document.getElementById("quickFacts");
+  document.getElementById("eventName").textContent = `🌀 ${event.name}`;
+  document.getElementById("eventDate").textContent = `📅 Date: ${event.date}`;
+  document.getElementById("eventDesc").textContent = `📖 ${event.desc}`;
+  facts.classList.remove("hidden");
+}
 
 // Plot real event
 function plotWaveform(event) {
@@ -97,10 +108,9 @@ function plotWaveform(event) {
 }
 
 // Plot simulated waveform
-function plotCustomWaveform(t, hPlus, hCross, params) {
+function plotCustomWaveform(t, hPlus, params) {
   Plotly.newPlot("waveformPlot", [
-    {x: t, y: hPlus, mode: "lines", name: "h₊", line: {color: "#00e5ff"}},
-    {x: t, y: hCross, mode: "lines", name: "h×", line: {color: "#ff4081"}}
+    {x: t, y: hPlus, mode: "lines", name: "h₊", line: {color: "#00e5ff"}}
   ], {
     title: `Simulated BBH: m₁=${params.m1} M☉, m₂=${params.m2} M☉`,
     xaxis: {title: "Time [M]"},
