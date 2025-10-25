@@ -22,21 +22,15 @@
       z-index: 10;
     }
     h1 { margin: 0.5rem; }
-    select, button, input {
+    select, button {
       margin: 0.5rem;
       padding: 0.5rem 1rem;
       font-size: 1rem;
       border-radius: 6px;
       border: none;
     }
-    button {
-      background: #0084ff;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #00a0ff;
-    }
+    button { background: #0084ff; color: white; cursor: pointer; }
+    button:hover { background: #00a0ff; }
     #plot, #spectrogram {
       width: 95%;
       max-width: 900px;
@@ -46,14 +40,14 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       background: #111;
     }
-    #controls {
+    #orbitCanvas {
+      width: 95%;
+      max-width: 600px;
+      height: 300px;
       margin: 1rem auto;
-      padding: 1rem;
-      background: rgba(255,255,255,0.05);
-      border-radius: 10px;
-      width: 90%;
-      max-width: 800px;
-      display: none;
+      background: #0a0a1a;
+      border: 1px solid #222;
+      border-radius: 8px;
     }
     footer {
       margin-top: 1rem;
@@ -62,43 +56,24 @@
       color: #aaa;
     }
 
-    /* Modal styling */
-    #infoModal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.75);
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      transition: opacity 0.3s ease;
+    /* Modal */
+    #infoModal { display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; background: rgba(0,0,0,0.75);
+      align-items: center; justify-content: center; z-index: 999;
     }
-    #infoModal.show {
-      display: flex;
-      opacity: 1;
-    }
+    #infoModal.show { display: flex; }
     .modal-content {
-      background: #1e1e2f;
-      color: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 500px;
-      text-align: left;
-      position: relative;
-      animation: fadeIn 0.4s ease;
+      background: #1e1e2f; color: #fff; padding: 20px;
+      border-radius: 10px; max-width: 500px; text-align: left;
+      position: relative; animation: fadeIn 0.4s ease;
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95);}
-      to { opacity: 1; transform: scale(1);}
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
     }
-    .close-btn {
-      position: absolute;
-      top: 10px; right: 15px;
-      color: #fff;
-      font-size: 20px;
-      cursor: pointer;
-    }
+    .close-btn { position: absolute; top: 10px; right: 15px; color: #fff; font-size: 20px; cursor: pointer; }
+    #controls { display: none; margin-top: 1rem; color: #ccc; }
+    #controls input { width: 70px; margin: 0.3rem; }
   </style>
 </head>
 <body>
@@ -114,29 +89,24 @@
     <button id="infoBtn">ℹ️ Info</button>
   </header>
 
-  <div id="controls">
-    <h3>⚙️ Custom Simulation Controls</h3>
-    <label>Mass 1 (M☉): <input id="mass1" type="number" value="30" min="5" max="100" /></label>
-    <label>Mass 2 (M☉): <input id="mass2" type="number" value="30" min="5" max="100" /></label>
-    <label>Spin: <input id="spin" type="number" value="0.3" min="0" max="1" step="0.1" /></label>
-    <label>Separation: <input id="sep" type="number" value="15" min="5" max="30" /></label>
-    <button id="runSim">Run Simulation</button>
-  </div>
-
   <div id="plot"></div>
   <div id="spectrogram" style="display:none;"></div>
+  <canvas id="orbitCanvas" width="600" height="300"></canvas>
 
-  <!-- Modal -->
+  <div id="controls">
+    <label>M1:</label><input id="mass1" type="number" value="30" step="1">
+    <label>M2:</label><input id="mass2" type="number" value="30" step="1">
+    <label>Spin:</label><input id="spin" type="number" value="0.3" step="0.1">
+    <label>Sep:</label><input id="sep" type="number" value="15" step="1">
+    <button id="runSim">Run</button>
+  </div>
+
+  <!-- Info Modal -->
   <div id="infoModal">
     <div class="modal-content">
       <span class="close-btn" id="closeInfo">&times;</span>
       <h2>About This Visualization</h2>
-      <p>This viewer shows real gravitational wave detections and lets you run simplified custom BBH simulations using mock data.</p>
-      <ul>
-        <li><strong>Waveform:</strong> Time-domain strain</li>
-        <li><strong>Spectrogram:</strong> Frequency-time chirp</li>
-        <li><strong>Custom mode:</strong> Adjust masses, spins, and separation</li>
-      </ul>
+      <p>This page visualizes gravitational wave events and custom BBH simulations with waveform, spectrogram, and orbital animation.</p>
     </div>
   </div>
 
@@ -144,131 +114,156 @@
     <p>Visualization powered by Plotly.js | Open-source BBH Simulation Project</p>
   </footer>
 
-script> and </script> with this:
-
-<script>
-  // --- Generate a physically inspired chirp waveform ---
-  function generateChirp(params = {}) {
-    const {
-      m1 = 30, m2 = 30, spin = 0.3, sep = 15
-    } = params;
-    const totalMass = m1 + m2;
-    const chirpMass = Math.pow((m1 * m2) ** (3/5) / totalMass ** (1/5), 1); // simplified chirp mass proxy
-
-    const duration = 8; // seconds
-    const sampleRate = 1000;
-    const t = Array.from({ length: duration * sampleRate }, (_, i) => i / sampleRate);
-
-    // Frequency increases faster for smaller chirp mass (lighter systems)
-    const f0 = 20 / Math.sqrt(chirpMass);
-    const f1 = 200 * Math.sqrt(30 / chirpMass);
-    const freq = t.map(tt => f0 + (f1 - f0) * Math.pow(tt / duration, 3));
-
-    // Amplitude grows toward merger
-    const amp = t.map(tt => Math.pow(tt / duration, 2) * Math.exp(-0.05 * tt));
-
-    const phase = [];
-    let phi = 0;
-    for (let i = 0; i < t.length; i++) {
-      phi += 2 * Math.PI * freq[i] / sampleRate;
-      phase.push(phi);
+  <script>
+    // --- Generate chirp waveform ---
+    function generateChirp(params = {}) {
+      const { m1 = 30, m2 = 30, spin = 0.3, sep = 15 } = params;
+      const totalMass = m1 + m2;
+      const chirpMass = Math.pow((m1 * m2) ** (3/5) / totalMass ** (1/5), 1);
+      const duration = 8;
+      const sampleRate = 1000;
+      const t = Array.from({ length: duration * sampleRate }, (_, i) => i / sampleRate);
+      const f0 = 20 / Math.sqrt(chirpMass);
+      const f1 = 200 * Math.sqrt(30 / chirpMass);
+      const freq = t.map(tt => f0 + (f1 - f0) * Math.pow(tt / duration, 3));
+      const amp = t.map(tt => Math.pow(tt / duration, 2) * Math.exp(-0.05 * tt));
+      let phi = 0; const h = [];
+      for (let i = 0; i < t.length; i++) {
+        phi += 2 * Math.PI * freq[i] / sampleRate;
+        h.push(amp[i] * Math.sin(phi));
+      }
+      return { t, h, freq };
     }
 
-    const h = phase.map((p, i) => amp[i] * Math.sin(p));
+    const plotDiv = document.getElementById("plot");
+    const specDiv = document.getElementById("spectrogram");
+    const toggleBtn = document.getElementById("toggleView");
+    const eventSelect = document.getElementById("eventSelect");
+    const controlsDiv = document.getElementById("controls");
+    const orbitCanvas = document.getElementById("orbitCanvas");
+    const ctx = orbitCanvas.getContext("2d");
 
-    return { t, h, freq };
-  }
+    function plotWaveform(eventName, params) {
+      const { t, h } = generateChirp(params);
+      Plotly.newPlot(plotDiv, [{
+        x: t, y: h, type: "scatter", mode: "lines",
+        line: { color: "#00e0ff" }, name: "Chirp h(t)"
+      }], {
+        title: `${eventName} — Gravitational Wave Chirp`,
+        xaxis: { title: "Time [s]" },
+        yaxis: { title: "Strain" },
+        paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
+      });
+      plotSpectrogram(t, h);
+      startOrbitAnimation(params);
+    }
 
-  const plotDiv = document.getElementById("plot");
-  const specDiv = document.getElementById("spectrogram");
-  const toggleBtn = document.getElementById("toggleView");
-  const eventSelect = document.getElementById("eventSelect");
-  const controlsDiv = document.getElementById("controls");
+    function plotSpectrogram(t, h) {
+      const windowSize = 256;
+      const overlap = 128;
+      const spec = [];
+      for (let i = 0; i < h.length - windowSize; i += (windowSize - overlap)) {
+        const segment = h.slice(i, i + windowSize);
+        const mag = segment.map(v => Math.abs(v));
+        spec.push(mag);
+      }
+      const z = spec;
+      const y = Array.from({ length: windowSize }, (_, i) => i);
+      const x = Array.from({ length: z.length }, (_, i) => i);
+      Plotly.newPlot(specDiv, [{
+        z, x, y, type: "heatmap", colorscale: "Viridis"
+      }], {
+        title: "Spectrogram (Frequency vs Time)",
+        xaxis: { title: "Time Window" },
+        yaxis: { title: "Frequency Bin" },
+        paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
+      });
+    }
 
-  function plotWaveform(eventName, params) {
-    const { t, h } = generateChirp(params);
-    Plotly.newPlot(plotDiv, [{
-      x: t, y: h, type: "scatter", mode: "lines",
-      line: { color: "#00e0ff" }, name: "Chirp h(t)"
-    }], {
-      title: `${eventName} — Gravitational Wave Chirp`,
-      xaxis: { title: "Time [s]" },
-      yaxis: { title: "Strain" },
-      paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
+    // Orbit animation
+    let orbitAnimation;
+    function startOrbitAnimation(params) {
+      if (orbitAnimation) cancelAnimationFrame(orbitAnimation);
+      const { m1, m2, sep } = params;
+      let angle = 0;
+      function draw() {
+        ctx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);
+        const cx = orbitCanvas.width / 2;
+        const cy = orbitCanvas.height / 2;
+        const radius = sep * 6;
+        const speed = 0.002 + 0.0001 * (m1 + m2);
+        const r1 = radius * (m2 / (m1 + m2));
+        const r2 = radius * (m1 / (m1 + m2));
+        const x1 = cx + r1 * Math.cos(angle);
+        const y1 = cy + r1 * Math.sin(angle);
+        const x2 = cx - r2 * Math.cos(angle);
+        const y2 = cy - r2 * Math.sin(angle);
+        ctx.beginPath();
+        ctx.fillStyle = "#00e0ff";
+        ctx.arc(x1, y1, 10, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "#ff0084";
+        ctx.arc(x2, y2, 10, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.strokeStyle = "#444";
+        ctx.arc(cx, cy, radius, 0, 2*Math.PI);
+        ctx.stroke();
+        angle += speed;
+        orbitAnimation = requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    // Toggle view
+    toggleBtn.addEventListener("click", () => {
+      if (specDiv.style.display === "none") {
+        plotDiv.style.display = "none";
+        specDiv.style.display = "block";
+        toggleBtn.textContent = "Show Waveform";
+      } else {
+        plotDiv.style.display = "block";
+        specDiv.style.display = "none";
+        toggleBtn.textContent = "Show Spectrogram";
+      }
     });
-    plotSpectrogram(t, h);
-  }
 
-  function plotSpectrogram(t, h) {
-    const windowSize = 256;
-    const overlap = 128;
-    const spec = [];
-    for (let i = 0; i < h.length - windowSize; i += (windowSize - overlap)) {
-      const segment = h.slice(i, i + windowSize);
-      const mag = segment.map(v => Math.abs(v));
-      spec.push(mag);
-    }
-    const z = spec;
-    const y = Array.from({ length: windowSize }, (_, i) => i);
-    const x = Array.from({ length: z.length }, (_, i) => i);
-    Plotly.newPlot(specDiv, [{
-      z, x, y, type: "heatmap", colorscale: "Viridis"
-    }], {
-      title: "Spectrogram (Frequency vs Time)",
-      xaxis: { title: "Time Window" },
-      yaxis: { title: "Frequency Bin" },
-      paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
+    // Modal behavior
+    const infoModal = document.getElementById("infoModal");
+    const infoBtn = document.getElementById("infoBtn");
+    const closeInfo = document.getElementById("closeInfo");
+    infoBtn.addEventListener("click", () => infoModal.classList.add("show"));
+    closeInfo.addEventListener("click", () => infoModal.classList.remove("show"));
+    window.addEventListener("click", e => { if (e.target === infoModal) infoModal.classList.remove("show"); });
+
+    // Event selection
+    eventSelect.addEventListener("change", e => {
+      const eventName = e.target.value;
+      if (eventName === "Custom") {
+        controlsDiv.style.display = "block";
+      } else {
+        controlsDiv.style.display = "none";
+        const presets = {
+          GW150914: { m1: 36, m2: 29, spin: 0.3, sep: 15 },
+          GW170104: { m1: 31, m2: 19, spin: 0.2, sep: 14 },
+          GW190521: { m1: 85, m2: 66, spin: 0.7, sep: 20 }
+        };
+        plotWaveform(eventName, presets[eventName]);
+      }
     });
-  }
 
-  // Toggle view
-  toggleBtn.addEventListener("click", () => {
-    if (specDiv.style.display === "none") {
-      plotDiv.style.display = "none";
-      specDiv.style.display = "block";
-      toggleBtn.textContent = "Show Waveform";
-    } else {
-      plotDiv.style.display = "block";
-      specDiv.style.display = "none";
-      toggleBtn.textContent = "Show Spectrogram";
-    }
-  });
+    // Custom Simulation
+    document.getElementById("runSim").addEventListener("click", () => {
+      const m1 = parseFloat(document.getElementById("mass1").value);
+      const m2 = parseFloat(document.getElementById("mass2").value);
+      const spin = parseFloat(document.getElementById("spin").value);
+      const sep = parseFloat(document.getElementById("sep").value);
+      plotWaveform("Custom Simulation", { m1, m2, spin, sep });
+    });
 
-  // Modal behavior
-  const infoModal = document.getElementById("infoModal");
-  const infoBtn = document.getElementById("infoBtn");
-  const closeInfo = document.getElementById("closeInfo");
-  infoBtn.addEventListener("click", () => infoModal.classList.add("show"));
-  closeInfo.addEventListener("click", () => infoModal.classList.remove("show"));
-  window.addEventListener("click", e => { if (e.target === infoModal) infoModal.classList.remove("show"); });
-
-  // Event selection
-  eventSelect.addEventListener("change", e => {
-    const eventName = e.target.value;
-    if (eventName === "Custom") {
-      controlsDiv.style.display = "block";
-    } else {
-      controlsDiv.style.display = "none";
-      const presets = {
-        GW150914: { m1: 36, m2: 29, spin: 0.3, sep: 15 },
-        GW170104: { m1: 31, m2: 19, spin: 0.2, sep: 14 },
-        GW190521: { m1: 85, m2: 66, spin: 0.7, sep: 20 }
-      };
-      plotWaveform(eventName, presets[eventName]);
-    }
-  });
-
-  // Custom Simulation
-  document.getElementById("runSim").addEventListener("click", () => {
-    const m1 = parseFloat(document.getElementById("mass1").value);
-    const m2 = parseFloat(document.getElementById("mass2").value);
-    const spin = parseFloat(document.getElementById("spin").value);
-    const sep = parseFloat(document.getElementById("sep").value);
-    plotWaveform("Custom Simulation", { m1, m2, spin, sep });
-  });
-
-  // Initial plot
-  plotWaveform("GW150914", { m1: 36, m2: 29, spin: 0.3, sep: 15 });
-</script>
+    // Initialize default
+    plotWaveform("GW150914", { m1: 36, m2: 29, spin: 0.3, sep: 15 });
+  </script>
 </body>
 </html>
