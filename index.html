@@ -208,48 +208,6 @@ runSimulation(); // initial
 </html>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Open BBH Visualizer — 3D Orbit + Chirp</title>
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<style>
-  :root{
-    --bg:#04040a; --panel:#0c0c14; --accent:#00d0ff; --accent2:#ff2e8a; --muted:#9aa;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#030316 0%, #000 100%);color:#eaeef6;font-family:system-ui, -apple-system, "Segoe UI";}
-  header{padding:14px 12px;text-align:center;background:rgba(255,255,255,0.02);position:sticky;top:0;z-index:30}
-  header h1{margin:0;font-size:1.2rem;color:var(--accent)}
-  .top-controls{display:flex;gap:8px;justify-content:center;align-items:center;padding:10px;flex-wrap:wrap}
-  select,input[type=number],button{background:var(--panel);color:#e9f6ff;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px}
-  button{cursor:pointer}
-  .grid{display:grid;grid-template-columns:1fr;gap:12px;padding:12px;max-width:1200px;margin:0 auto}
-  @media(min-width:1000px){ .grid{grid-template-columns:1fr 420px} }
-  .panel{background:transparent;padding:8px;border-radius:8px}
-  #wavePanel{position:relative}
-  #progressBar{position:absolute;left:6px;right:6px;top:8px;height:6px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden;z-index:15}
-  #progressFill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:0 0 8px rgba(0,208,255,0.18)}
-  #mainPlot,#specPlot,#orbitPlot{background:var(--panel);border-radius:8px}
-  .right-column{display:flex;flex-direction:column;gap:12px}
-  .controls-block{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px}
-  .small{font-size:0.9rem;color:var(--muted)}
-  /* auto-hide player at bottom center */
-  #player{
-    position:fixed;left:50%;transform:translateX(-50%);
-    bottom:18px;background:rgba(4,4,10,0.88);padding:8px 12px;border-radius:999px;
-    border:1px solid rgba(255,255,255,0.04);display:flex;gap:10px;align-items:center;z-index:60;transition:opacity .35s,transform .35s;
-  }
-  #player.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(30px)}
-  #player button{background:transparent;border:none;color:#eaf6ff;font-size:18px}
-  #player .prog{width:160px;height:6px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden}
-  #player .prog > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:0 0 8px rgba(0,208,255,0.18)}
-  #infoBtn{position:fixed;right:12px;top:12px;background:var(--panel);padding:8px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;z-index:70}
-  #details{position:fixed;right:12px;top:56px;background:rgba(4,4,10,0.96);padding:12px;border-radius:8px;color:#dfeaff;border:1px solid rgba(255,255,255,0.03);display:none;z-index:70;min-width:220px}
-  .btn-small{padding:6px 8px;border-radius:6px}
-</style>
-</head>
-<body>
 
 <header>
   <h1>Open BBH Visualizer — 3D Orbit + Chirp</h1>
