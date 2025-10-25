@@ -4,14 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Open Gravitational Wave Explorer</title>
-
-  <!-- External CSS -->
   <link rel="stylesheet" href="css/style.css">
-
-  <!-- Plotly for charts -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
-  <!-- Ensure modal hidden before JS + smooth animation -->
+  <!-- Modal + UI animation styling -->
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -38,7 +34,7 @@
       margin-top: 1rem;
     }
 
-    select, button {
+    select, button, input[type=range] {
       background: #0a0a20;
       color: white;
       border: 1px solid #444;
@@ -62,7 +58,18 @@
       padding: 1rem;
     }
 
-    /* Modal Styling */
+    #customControls {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    label {
+      margin: 0.3rem;
+      display: inline-block;
+    }
+
+    /* Modal */
     #infoModal {
       display: none;
       opacity: 0;
@@ -142,10 +149,31 @@
       <option value="gw150914">GW150914 – First LIGO Detection</option>
       <option value="gw170104">GW170104 – Intermediate Mass Merger</option>
       <option value="gw190521">GW190521 – Massive BH Merger</option>
-      <option value="custom">Simulate Custom Collision</option>
+      <option value="custom">🧪 Custom Simulation</option>
     </select>
     <button id="simulateBtn">Simulate</button>
     <button id="infoBtn">ℹ️ Info</button>
+  </div>
+
+  <!-- Custom controls appear only when "custom" selected -->
+  <div id="customControls">
+    <h3>Customize Your Black Holes</h3>
+    <div>
+      <label>M₁: <span id="m1Val">30</span> M☉</label>
+      <input type="range" id="m1Slider" min="5" max="80" value="30">
+    </div>
+    <div>
+      <label>M₂: <span id="m2Val">25</span> M☉</label>
+      <input type="range" id="m2Slider" min="5" max="80" value="25">
+    </div>
+    <div>
+      <label>Spin₁: <span id="s1Val">0.3</span></label>
+      <input type="range" id="s1Slider" min="0" max="1" step="0.01" value="0.3">
+    </div>
+    <div>
+      <label>Spin₂: <span id="s2Val">0.2</span></label>
+      <input type="range" id="s2Slider" min="0" max="1" step="0.01" value="0.2">
+    </div>
   </div>
 
   <div id="chart"></div>
@@ -155,10 +183,9 @@
     <div class="modal-content">
       <span id="closeInfo" class="close">&times;</span>
       <h2>🌀 Understanding Gravitational Waves</h2>
-      <p><strong>Gravitational Strain (h):</strong> A measure of how much space-time is stretched and squeezed as a gravitational wave passes.</p>
-      <p><strong>Chirp Mass:</strong> The key mass combination that sets how quickly the waveform “chirps.”</p>
-      <p><strong>Frequency Evolution:</strong> As black holes spiral together, their wave frequency and amplitude both rise before the merger.</p>
-      <p>This visualization uses simplified models to help you explore how different masses affect waveform shape and timing.</p>
+      <p><strong>Gravitational Strain (h):</strong> Measures how space-time is stretched and squeezed as a wave passes.</p>
+      <p><strong>Chirp Mass:</strong> Controls how quickly the wave frequency increases before merger.</p>
+      <p><strong>Spins:</strong> Can speed up or slow down the inspiral depending on alignment.</p>
       <button id="learnMoreBtn" class="learn-btn">📖 Learn More</button>
     </div>
   </div>
@@ -168,7 +195,7 @@
   </footer>
 
   <script>
-    // ℹ️ Modal control with fade + zoom animation
+    // Info modal with smooth animation
     document.addEventListener("DOMContentLoaded", () => {
       const infoBtn = document.getElementById("infoBtn");
       const infoModal = document.getElementById("infoModal");
@@ -192,64 +219,88 @@
         if (e.target === infoModal) closeModal();
       });
 
-      // 📖 Learn More button
       learnMoreBtn.addEventListener("click", () => {
-        alert("Coming soon: Interactive lesson on chirp mass and waveform evolution!");
+        alert("Soon: You’ll be able to see how chirp mass affects the waveform shape!");
       });
     });
 
-    // 🌌 Simple mock simulation visuals
+    // Simulation logic
     document.addEventListener("DOMContentLoaded", () => {
       const chartDiv = document.getElementById("chart");
       const simulateBtn = document.getElementById("simulateBtn");
       const eventSelect = document.getElementById("eventSelect");
+      const customControls = document.getElementById("customControls");
+
+      const m1Slider = document.getElementById("m1Slider");
+      const m2Slider = document.getElementById("m2Slider");
+      const s1Slider = document.getElementById("s1Slider");
+      const s2Slider = document.getElementById("s2Slider");
+
+      const m1Val = document.getElementById("m1Val");
+      const m2Val = document.getElementById("m2Val");
+      const s1Val = document.getElementById("s1Val");
+      const s2Val = document.getElementById("s2Val");
+
+      function updateLabels() {
+        m1Val.textContent = m1Slider.value;
+        m2Val.textContent = m2Slider.value;
+        s1Val.textContent = s1Slider.value;
+        s2Val.textContent = s2Slider.value;
+      }
+
+      [m1Slider, m2Slider, s1Slider, s2Slider].forEach(slider =>
+        slider.addEventListener("input", updateLabels)
+      );
 
       function generateWaveform(event) {
-        let freq = 0.2;
-        let decay = 0.002;
-        let label = "";
+        let freq, decay, label;
 
-        switch (event) {
-          case "gw150914":
-            freq = 0.25; decay = 0.002; label = "GW150914";
-            break;
-          case "gw170104":
-            freq = 0.18; decay = 0.0018; label = "GW170104";
-            break;
-          case "gw190521":
-            freq = 0.12; decay = 0.001; label = "GW190521";
-            break;
-          case "custom":
-            freq = Math.random() * 0.3 + 0.1;
-            decay = Math.random() * 0.002 + 0.001;
-            label = "Custom Simulation";
-            break;
+        if (event === "custom") {
+          const m1 = parseFloat(m1Slider.value);
+          const m2 = parseFloat(m2Slider.value);
+          const s1 = parseFloat(s1Slider.value);
+          const s2 = parseFloat(s2Slider.value);
+
+          const chirpMass = Math.pow((m1 * m2), 3/5) / Math.pow(m1 + m2, 1/5);
+          freq = 0.1 + (50 / chirpMass) * 0.002;
+          decay = 0.001 + (s1 + s2) * 0.001;
+          label = `Custom: M₁=${m1}, M₂=${m2}`;
+        } else {
+          customControls.style.display = "none";
+          if (event === "gw150914") { freq = 0.25; decay = 0.002; label = "GW150914"; }
+          else if (event === "gw170104") { freq = 0.18; decay = 0.0018; label = "GW170104"; }
+          else if (event === "gw190521") { freq = 0.12; decay = 0.001; label = "GW190521"; }
         }
 
         const t = Array.from({ length: 2000 }, (_, i) => i / 20);
         const hPlus = t.map(x => Math.sin(freq * x) * Math.exp(-decay * x));
         const hCross = t.map(x => Math.cos(freq * x) * Math.exp(-decay * x));
 
-        const trace1 = { x: t, y: hPlus, mode: 'lines', name: 'h₊', line: { width: 2 } };
-        const trace2 = { x: t, y: hCross, mode: 'lines', name: 'h×', line: { width: 2 } };
-
-        const layout = {
-          title: `${label} – Simulated Gravitational Waveform`,
+        Plotly.newPlot(chartDiv, [
+          { x: t, y: hPlus, mode: 'lines', name: 'h₊', line: { width: 2 } },
+          { x: t, y: hCross, mode: 'lines', name: 'h×', line: { width: 2 } }
+        ], {
+          title: `${label} – Simulated Waveform`,
           xaxis: { title: 'Time (M)' },
           yaxis: { title: 'Strain (h)' },
           plot_bgcolor: '#0d0d20',
           paper_bgcolor: '#0d0d20',
           font: { color: 'white' }
-        };
-
-        Plotly.newPlot(chartDiv, [trace1, trace2], layout, { responsive: true });
+        }, { responsive: true });
       }
+
+      eventSelect.addEventListener("change", () => {
+        if (eventSelect.value === "custom") {
+          customControls.style.display = "block";
+        } else {
+          customControls.style.display = "none";
+        }
+      });
 
       simulateBtn.addEventListener("click", () => {
         generateWaveform(eventSelect.value);
       });
 
-      // Run initial simulation on load
       generateWaveform("gw150914");
     });
   </script>
