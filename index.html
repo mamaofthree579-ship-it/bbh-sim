@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -10,7 +10,8 @@
 <body>
   <header>
     <h1>🌌 Open Gravitational Wave Explorer</h1>
-    <p>Explore real events and simulate your own binary black hole mergers</p>
+    <p>Explore, simulate, and understand gravitational wave events</p>
+    <button id="infoBtn" class="info-button" title="Learn about gravitational waves">ℹ️</button>
   </header>
 
   <section class="controls">
@@ -18,7 +19,6 @@
     <select id="eventSelect">
       <option value="">-- Choose an event --</option>
     </select>
-
     <button id="loadEvent">Load Event</button>
     <button id="simulateCustom">Custom Simulation</button>
   </section>
@@ -32,9 +32,18 @@
 
   <section id="customForm" class="hidden">
     <h3>🛠 Custom Simulation Parameters</h3>
-    <label>Mass 1 (M☉): <input type="range" id="mass1" min="5" max="80" value="30" step="1"><span id="m1Val">30</span></label><br>
-    <label>Mass 2 (M☉): <input type="range" id="mass2" min="5" max="80" value="30" step="1"><span id="m2Val">30</span></label><br>
-    <label>Duration (s): <input type="range" id="duration" min="1" max="10" value="5" step="1"><span id="durVal">5</span></label><br>
+    <label>Mass 1 (M☉): 
+      <input type="range" id="mass1" min="5" max="80" value="30" step="1">
+      <span id="m1Val">30</span>
+    </label><br>
+    <label>Mass 2 (M☉): 
+      <input type="range" id="mass2" min="5" max="80" value="30" step="1">
+      <span id="m2Val">30</span>
+    </label><br>
+    <label>Duration (s): 
+      <input type="range" id="duration" min="1" max="10" value="5" step="1">
+      <span id="durVal">5</span>
+    </label><br>
     <button id="runSim">Run Simulation</button>
     <button id="saveSim">Save Simulation</button>
   </section>
@@ -47,6 +56,18 @@
   <footer>
     <p>Built with 💫 using open gravitational data + custom simulation tools</p>
   </footer>
+
+  <!-- Info Modal -->
+  <div id="infoModal" class="modal hidden">
+    <div class="modal-content">
+      <span id="closeInfo" class="close">&times;</span>
+      <h2>🌀 Understanding Gravitational Waves</h2>
+      <p><strong>Gravitational Strain (h):</strong> A measure of how much space-time is stretched and squeezed as a gravitational wave passes. Detectors like LIGO measure this strain as changes in distance smaller than a proton’s width.</p>
+      <p><strong>Chirp Mass:</strong> A special combination of the two black hole masses that determines how quickly the wave “chirps” (increases in frequency) before the merger.</p>
+      <p><strong>Frequency Evolution:</strong> As the black holes spiral together, they lose energy via gravitational radiation — the frequency and amplitude both rise until they merge and “ring down.”</p>
+      <p>This visualization uses simplified models to help you explore how different black hole masses affect the waveform’s shape and timing.</p>
+    </div>
+  </div>
 
   <script src="js/main.js"></script>
 </body>
