@@ -21,17 +21,9 @@
       background: rgba(0, 0, 0, 0.6);
       border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     }
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 0.2rem;
-    }
-    .controls {
-      text-align: center;
-      margin-top: 1rem;
-    }
-    select,
-    button,
-    input[type="range"] {
+    h1 { font-size: 1.8rem; margin-bottom: 0.2rem; }
+    .controls { text-align: center; margin-top: 1rem; }
+    select, button, input[type="range"] {
       background: #0a0a20;
       color: white;
       border: 1px solid #444;
@@ -41,28 +33,30 @@
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    select:hover,
-    button:hover {
-      background: #1a1a3d;
-    }
+    select:hover, button:hover { background: #1a1a3d; }
     #chart {
       width: 90%;
       max-width: 800px;
-      margin: 2rem auto;
+      margin: 2rem auto 1rem auto;
       border-radius: 1rem;
       background: #0d0d20;
       padding: 1rem;
     }
+    #playChirpBtn {
+      display: block;
+      margin: 0 auto 2rem auto;
+      background: #003366;
+      border: 1px solid #00aaff;
+    }
+    #playChirpBtn:hover { background: #005599; }
+
     #customControls {
       display: none;
       text-align: center;
       margin-top: 1rem;
       animation: fadeIn 0.5s ease;
     }
-    label {
-      margin: 0.3rem;
-      display: inline-block;
-    }
+    label { margin: 0.3rem; display: inline-block; }
 
     /* Modal */
     #infoModal {
@@ -70,19 +64,14 @@
       opacity: 0;
       position: fixed;
       z-index: 50;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
       background-color: rgba(0, 0, 0, 0.75);
       justify-content: center;
       align-items: center;
       transition: opacity 0.4s ease;
     }
-    #infoModal.show {
-      display: flex;
-      opacity: 1;
-    }
+    #infoModal.show { display: flex; opacity: 1; }
     .modal-content {
       background: #111;
       padding: 2rem;
@@ -93,34 +82,22 @@
       transform: scale(0.95);
       transition: transform 0.4s ease;
     }
-    #infoModal.show .modal-content {
-      transform: scale(1);
-    }
+    #infoModal.show .modal-content { transform: scale(1); }
     .close {
       position: absolute;
-      top: 0.5rem;
-      right: 1rem;
+      top: 0.5rem; right: 1rem;
       font-size: 1.8rem;
       cursor: pointer;
       color: #aaa;
     }
-    .close:hover {
-      color: white;
-    }
-    footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.9rem;
-      opacity: 0.7;
-    }
+    .close:hover { color: white; }
+    footer { text-align: center; padding: 1rem; font-size: 0.9rem; opacity: 0.7; }
     .learn-btn {
       margin-top: 1rem;
       background: #003366;
       border: 1px solid #00aaff;
     }
-    .learn-btn:hover {
-      background: #005599;
-    }
+    .learn-btn:hover { background: #005599; }
 
     /* Learn More Panel */
     #learnPanel {
@@ -136,20 +113,14 @@
       transition: bottom 0.5s ease;
       z-index: 60;
     }
-    #learnPanel.show {
-      bottom: 0;
-    }
+    #learnPanel.show { bottom: 0; }
     #orbitCanvas {
       display: block;
       margin: 1rem auto;
       background: #000;
       border-radius: 8px;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
 
@@ -192,6 +163,7 @@
   </div>
 
   <div id="chart"></div>
+  <button id="playChirpBtn">🔊 Play Chirp</button>
 
   <!-- Info Modal -->
   <div id="infoModal">
@@ -217,6 +189,7 @@
   </footer>
 
   <script>
+    // --- Info Modal & Learn Panel ---
     document.addEventListener("DOMContentLoaded", () => {
       const infoBtn = document.getElementById("infoBtn");
       const infoModal = document.getElementById("infoModal");
@@ -242,48 +215,30 @@
         startOrbitAnimation();
         playChirpSound();
       });
-      closeLearn.addEventListener("click", () => {
-        learnPanel.classList.remove("show");
-      });
+      closeLearn.addEventListener("click", () => learnPanel.classList.remove("show"));
     });
 
-    // Simulation logic
+    // --- Simulation logic ---
     document.addEventListener("DOMContentLoaded", () => {
       const chartDiv = document.getElementById("chart");
       const simulateBtn = document.getElementById("simulateBtn");
       const eventSelect = document.getElementById("eventSelect");
       const customControls = document.getElementById("customControls");
 
-      const m1Slider = document.getElementById("m1Slider");
-      const m2Slider = document.getElementById("m2Slider");
-      const s1Slider = document.getElementById("s1Slider");
-      const s2Slider = document.getElementById("s2Slider");
-
-      const m1Val = document.getElementById("m1Val");
-      const m2Val = document.getElementById("m2Val");
-      const s1Val = document.getElementById("s1Val");
-      const s2Val = document.getElementById("s2Val");
-
-      function updateLabels() {
-        m1Val.textContent = m1Slider.value;
-        m2Val.textContent = m2Slider.value;
-        s1Val.textContent = s1Slider.value;
-        s2Val.textContent = s2Slider.value;
-      }
-
-      [m1Slider, m2Slider, s1Slider, s2Slider].forEach(slider =>
-        slider.addEventListener("input", updateLabels)
-      );
+      const sliders = ["m1", "m2", "s1", "s2"];
+      sliders.forEach(id => {
+        const slider = document.getElementById(id + "Slider");
+        const label = document.getElementById(id + "Val");
+        slider.addEventListener("input", () => label.textContent = slider.value);
+      });
 
       function generateWaveform(event) {
         let freq, decay, label;
 
         if (event === "custom") {
           customControls.style.display = "block";
-          const m1 = parseFloat(m1Slider.value);
-          const m2 = parseFloat(m2Slider.value);
-          const s1 = parseFloat(s1Slider.value);
-          const s2 = parseFloat(s2Slider.value);
+          const m1 = +m1Slider.value, m2 = +m2Slider.value;
+          const s1 = +s1Slider.value, s2 = +s2Slider.value;
           const chirpMass = Math.pow((m1 * m2), 3/5) / Math.pow(m1 + m2, 1/5);
           freq = 0.1 + (50 / chirpMass) * 0.002;
           decay = 0.001 + (s1 + s2) * 0.001;
@@ -312,15 +267,17 @@
         }, { responsive: true });
       }
 
-      eventSelect.addEventListener("change", () => {
-        customControls.style.display = (eventSelect.value === "custom") ? "block" : "none";
-      });
-
+      eventSelect.addEventListener("change", () =>
+        customControls.style.display = (eventSelect.value === "custom") ? "block" : "none"
+      );
       simulateBtn.addEventListener("click", () => generateWaveform(eventSelect.value));
       generateWaveform("gw150914");
+
+      // --- Chirp playback button ---
+      document.getElementById("playChirpBtn").addEventListener("click", playChirpSound);
     });
 
-    // Orbit animation + chirp sound
+    // --- Orbit animation ---
     function startOrbitAnimation() {
       const canvas = document.getElementById("orbitCanvas");
       const ctx = canvas.getContext("2d");
@@ -345,6 +302,7 @@
       draw();
     }
 
+    // --- Chirp sound generator ---
     function playChirpSound() {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -354,9 +312,9 @@
       osc.connect(gain);
       gain.connect(audioCtx.destination);
 
-      const duration = 3; // seconds
-      const startFreq = 100; // Hz
-      const endFreq = 800; // Hz
+      const duration = 3;  // seconds
+      const startFreq = 100;
+      const endFreq = 800;
 
       const now = audioCtx.currentTime;
       osc.frequency.setValueAtTime(startFreq, now);
