@@ -1,278 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BBH Simulation Viewer</title>
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: radial-gradient(circle at top, #0a0a1a, #000);
-      color: #eee;
-      margin: 0;
-      text-align: center;
-    }
-    header {
-      padding: 1rem;
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(6px);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    select, button {
-      margin: 0.5rem;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: none;
-    }
-    button { background: #0084ff; color: white; cursor: pointer; }
-    button:hover { background: #00a0ff; }
-    #plot, #spectrogram {
-      width: 95%;
-      max-width: 900px;
-      height: 400px;
-      margin: 1rem auto;
-      border-radius: 8px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
-      background: #111;
-      position: relative;
-    }
-    #progressBar {
-      position: absolute;
-      top: 50px;
-      left: 0;
-      width: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #00e0ff, #ff0084);
-      box-shadow: 0 0 10px #00e0ff;
-      transition: width 0.05s linear;
-      z-index: 5;
-    }
-    #orbitCanvas {
-      width: 95%;
-      max-width: 600px;
-      height: 300px;
-      margin: 1rem auto;
-      background: #0a0a1a;
-      border: 1px solid #222;
-      border-radius: 8px;
-    }
-    #controls {
-      display: none;
-      margin-top: 1rem;
-      color: #ccc;
-    }
-    #controls input { width: 70px; margin: 0.3rem; }
-    footer {
-      margin-top: 1rem;
-      padding: 1rem;
-      font-size: 0.9rem;
-      color: #aaa;
-    }
-    #infoModal { display:none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBH Simulation – Interactive Visualizer</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  body {
+    background:#060606; color:#eee;
+    font-family:system-ui, sans-serif;
+    margin:0; padding:0;
+    overflow-x:hidden;
+  }
+  header {
+    text-align:center;
+    padding:1rem;
+    font-size:1.4rem;
+    font-weight:bold;
+    color:#88e0ff;
+  }
+  #controls { text-align:center; margin:1rem 0; }
+  select, button, input {
+    background:#111; color:#eee;
+    border:1px solid #333;
+    border-radius:6px;
+    padding:6px 10px; margin:4px;
+  }
+  #mainChart, #spectrogram, #orbit { width:100%; height:300px; }
+  #customOptions { display:none; text-align:center; margin-top:1rem; }
+  #playerBar {
+    position:fixed;
+    bottom:10px; right:10px;
+    background:rgba(0,0,0,0.7);
+    border:1px solid #444;
+    border-radius:12px;
+    padding:8px 12px;
+    display:flex; align-items:center; gap:10px;
+    backdrop-filter: blur(6px);
+  }
+  #progress {
+    width:120px; height:6px;
+    background:#222; border-radius:3px;
+    overflow:hidden;
+  }
+  #progress span {
+    display:block; height:100%; width:0%;
+    background:#00e0ff; transition:width 0.05s linear;
+  }
+  #playerBar button {
+    background:none; border:none; color:#fff; font-size:1.2rem;
+  }
+  #playerBar button:hover { color:#00e0ff; cursor:pointer; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>🌀 Binary Black Hole Simulation Viewer</h1>
-    <select id="eventSelect">
-      <option value="GW150914">GW150914 (First detection)</option>
-      <option value="GW170104">GW170104</option>
-      <option value="GW190521">GW190521 (Massive merger)</option>
-      <option value="Custom">Custom Simulation</option>
-    </select>
-    <button id="toggleView">Show Spectrogram</button>
-    <button id="hearChirp">🔊 Hear Chirp</button>
-  </header>
+<header>🌀 Binary Black Hole Simulation Visualizer</header>
 
-  <div id="plot">
-    <div id="progressBar"></div>
-  </div>
-  <div id="spectrogram" style="display:none;"></div>
-  <canvas id="orbitCanvas" width="600" height="300"></canvas>
+<div id="controls">
+  <select id="eventSelect">
+    <option value="gw150914">GW150914</option>
+    <option value="gw170817">GW170817</option>
+    <option value="gw190521">GW190521</option>
+    <option value="custom">Custom Simulation</option>
+  </select>
+  <button id="runBtn">Run Simulation</button>
+</div>
 
-  <div id="controls">
-    <label>M1:</label><input id="mass1" type="number" value="30" step="1">
-    <label>M2:</label><input id="mass2" type="number" value="30" step="1">
-    <label>Spin:</label><input id="spin" type="number" value="0.3" step="0.1">
-    <label>Sep:</label><input id="sep" type="number" value="15" step="1">
-    <button id="runSim">Run</button>
-  </div>
+<div id="customOptions">
+  <label>Mass 1 (M☉): <input type="number" id="mass1" value="30"></label>
+  <label>Mass 2 (M☉): <input type="number" id="mass2" value="35"></label>
+  <label>Spin 1 (χ): <input type="number" step="0.1" id="spin1" value="0.2"></label>
+  <label>Spin 2 (χ): <input type="number" step="0.1" id="spin2" value="0.1"></label>
+  <button id="generateBtn">Generate</button>
+</div>
 
-  <footer>
-    <p>Visualization powered by Plotly.js | Open-source BBH Simulation Project</p>
-  </footer>
+<div id="mainChart"></div>
+<div id="spectrogram"></div>
+<div id="orbit"></div>
 
-  <script>
-    let currentWave = { t: [], h: [] };
-    let orbitAnimation;
-    let progressAnim;
+<div id="playerBar">
+  <button id="playPause">▶️</button>
+  <button id="restart">🔁</button>
+  <div id="progress"><span></span></div>
+  <button id="soundToggle">🔇 Enable Sound</button>
+</div>
 
-    function generateChirp(params = {}) {
-      const { m1 = 30, m2 = 30, spin = 0.3, sep = 15 } = params;
-      const totalMass = m1 + m2;
-      const chirpMass = Math.pow((m1 * m2) ** (3/5) / totalMass ** (1/5), 1);
-      const duration = 8;
-      const sampleRate = 1000;
-      const t = Array.from({ length: duration * sampleRate }, (_, i) => i / sampleRate);
-      const f0 = 20 / Math.sqrt(chirpMass);
-      const f1 = 200 * Math.sqrt(30 / chirpMass);
-      const freq = t.map(tt => f0 + (f1 - f0) * Math.pow(tt / duration, 3));
-      const amp = t.map(tt => Math.pow(tt / duration, 2) * Math.exp(-0.05 * tt));
-      let phi = 0; const h = [];
-      for (let i = 0; i < t.length; i++) {
-        phi += 2 * Math.PI * freq[i] / sampleRate;
-        h.push(amp[i] * Math.sin(phi));
-      }
-      return { t, h, freq, duration };
-    }
+<script>
+/* ---------- Utility & Mock Data ---------- */
+let playing=false, t=0, dt=0.05, duration=20, timer;
+let audioCtx, osc;
+let soundEnabled=false;
+const progressEl=document.querySelector('#progress span');
 
-    const plotDiv = document.getElementById("plot");
-    const specDiv = document.getElementById("spectrogram");
-    const progressBar = document.getElementById("progressBar");
-    const toggleBtn = document.getElementById("toggleView");
-    const eventSelect = document.getElementById("eventSelect");
-    const controlsDiv = document.getElementById("controls");
-    const orbitCanvas = document.getElementById("orbitCanvas");
-    const ctx = orbitCanvas.getContext("2d");
+function generateWave(m1,m2){
+  const n=800;
+  const t=Array.from({length:n},(_,i)=>i/n*duration);
+  const amp=(m1+m2)/70;
+  const h=t.map(v=>amp*Math.sin(0.4*v*v)*Math.exp(-0.01*v));
+  return {t,h};
+}
 
-    function plotWaveform(eventName, params) {
-      const { t, h, freq, duration } = generateChirp(params);
-      currentWave = { t, h, freq, duration, params };
-      Plotly.newPlot(plotDiv, [{
-        x: t, y: h, type: "scatter", mode: "lines",
-        line: { color: "#00e0ff" }, name: "Chirp h(t)"
-      }], {
-        title: `${eventName} — Gravitational Wave Chirp`,
-        xaxis: { title: "Time [s]" },
-        yaxis: { title: "Strain" },
-        paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
-      });
-      plotSpectrogram(t, h);
-      startOrbitAnimation(params, freq);
-      resetProgress();
-    }
+function plotWaveform(data){
+  Plotly.newPlot('mainChart',[{
+    x:data.t, y:data.h, mode:'lines', line:{color:'#00e0ff'},
+    name:'h₊(t)'
+  }],{
+    paper_bgcolor:'#060606', plot_bgcolor:'#060606',
+    xaxis:{title:'Time [M]'}, yaxis:{title:'Strain'},
+    margin:{t:40,l:50,r:20,b:40}, title:'Gravitational-Wave Strain'
+  });
+}
 
-    function plotSpectrogram(t, h) {
-      const windowSize = 256;
-      const overlap = 128;
-      const spec = [];
-      for (let i = 0; i < h.length - windowSize; i += (windowSize - overlap)) {
-        const segment = h.slice(i, i + windowSize);
-        const mag = segment.map(v => Math.abs(v));
-        spec.push(mag);
-      }
-      const z = spec;
-      const y = Array.from({ length: windowSize }, (_, i) => i);
-      const x = Array.from({ length: z.length }, (_, i) => i);
-      Plotly.newPlot(specDiv, [{
-        z, x, y, type: "heatmap", colorscale: "Viridis"
-      }], {
-        title: "Spectrogram (Frequency vs Time)",
-        xaxis: { title: "Time Window" },
-        yaxis: { title: "Frequency Bin" },
-        paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
-      });
-    }
+function plotSpectrogram(data){
+  const freq=data.t.map(v=>v);
+  const amp=data.h.map(v=>Math.abs(v));
+  Plotly.newPlot('spectrogram',[{
+    x:data.t, y:freq, z:amp.map(a=>[a]), type:'heatmap',
+    colorscale:'Viridis', showscale:false
+  }],{
+    paper_bgcolor:'#060606', plot_bgcolor:'#060606',
+    title:'Chirp Spectrogram', margin:{t:40,l:50,r:20,b:40}
+  });
+}
 
-    function startOrbitAnimation(params, freqArray) {
-      if (orbitAnimation) cancelAnimationFrame(orbitAnimation);
-      const { m1, m2, sep } = params;
-      let angle = 0, frame = 0;
-      function draw() {
-        const freq = freqArray[Math.min(frame, freqArray.length - 1)];
-        const cx = orbitCanvas.width / 2;
-        const cy = orbitCanvas.height / 2;
-        const radius = sep * 6 * (1 - frame / freqArray.length * 0.6);
-        const speed = 0.002 + 0.0005 * freq / 100;
-        const r1 = radius * (m2 / (m1 + m2));
-        const r2 = radius * (m1 / (m1 + m2));
-        const x1 = cx + r1 * Math.cos(angle);
-        const y1 = cy + r1 * Math.sin(angle);
-        const x2 = cx - r2 * Math.cos(angle);
-        const y2 = cy - r2 * Math.sin(angle);
-        ctx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);
-        ctx.beginPath(); ctx.fillStyle = "#00e0ff"; ctx.arc(x1, y1, 10, 0, 2*Math.PI); ctx.fill();
-        ctx.beginPath(); ctx.fillStyle = "#ff0084"; ctx.arc(x2, y2, 10, 0, 2*Math.PI); ctx.fill();
-        ctx.beginPath(); ctx.strokeStyle = "#333"; ctx.arc(cx, cy, radius, 0, 2*Math.PI); ctx.stroke();
-        angle += speed;
-        frame++;
-        if (frame < freqArray.length) orbitAnimation = requestAnimationFrame(draw);
-      }
-      draw();
-    }
+function plotOrbit(progress){
+  const theta=Array.from({length:60},(_,i)=>i/60*2*Math.PI);
+  const r=1.5-progress*1.5;
+  const x1=theta.map(th=>r*Math.cos(th));
+  const y1=theta.map(th=>r*Math.sin(th));
+  const x2=x1.map(v=>-v), y2=y1.map(v=>-y1[x1.indexOf(v)]);
+  Plotly.newPlot('orbit',[
+    {x:[x1[0]],y:[y1[0]],mode:'markers',marker:{size:12,color:'#00e0ff'},name:'BH1'},
+    {x:[x2[0]],y:[y2[0]],mode:'markers',marker:{size:12,color:'#ff0077'},name:'BH2'},
+  ],{
+    paper_bgcolor:'#060606', plot_bgcolor:'#060606',
+    title:'Binary Orbit', xaxis:{visible:false}, yaxis:{visible:false}
+  });
+}
 
-    // Time progress bar
-    function resetProgress() {
-      progressBar.style.width = "0";
-      if (progressAnim) cancelAnimationFrame(progressAnim);
-    }
+/* ---------- Playback Controls ---------- */
+function step(){
+  if(!playing)return;
+  t+=dt;
+  if(t>=duration){playing=false; t=duration;}
+  const progress=t/duration*100;
+  progressEl.style.width=progress+'%';
+  plotOrbit(t/duration);
+  if(soundEnabled && osc) osc.frequency.setValueAtTime(150+300*(t/duration), audioCtx.currentTime);
+  if(t<duration) requestAnimationFrame(step);
+}
 
-    function startProgress(duration) {
-      const start = performance.now();
-      function animate(time) {
-        const elapsed = (time - start) / 1000;
-        const progress = Math.min(elapsed / duration, 1);
-        progressBar.style.width = `${progress * 100}%`;
-        if (progress < 1) progressAnim = requestAnimationFrame(animate);
-      }
-      progressAnim = requestAnimationFrame(animate);
-    }
+document.getElementById('playPause').onclick=()=>{
+  playing=!playing;
+  document.getElementById('playPause').textContent=playing?'⏸':'▶️';
+  if(playing) step();
+};
+document.getElementById('restart').onclick=()=>{
+  t=0; progressEl.style.width='0%'; playing=false;
+  document.getElementById('playPause').textContent='▶️';
+  plotOrbit(0);
+};
+document.getElementById('soundToggle').onclick=()=>{
+  if(!soundEnabled){
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    osc=audioCtx.createOscillator();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(150,audioCtx.currentTime);
+    osc.connect(audioCtx.destination);
+    osc.start();
+    soundEnabled=true;
+    document.getElementById('soundToggle').textContent='🔊 Sound On';
+  }else{
+    osc.stop(); soundEnabled=false;
+    document.getElementById('soundToggle').textContent='🔇 Enable Sound';
+  }
+};
 
-    // Hear chirp button
-    document.getElementById("hearChirp").addEventListener("click", () => {
-      const { h, duration } = currentWave;
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const buffer = audioCtx.createBuffer(1, h.length, 44100);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < h.length; i++) data[i] = h[i] * 0.5;
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioCtx.destination);
-      source.start();
-      resetProgress();
-      startProgress(duration);
-    });
+/* ---------- Simulation Setup ---------- */
+function runSimulation(){
+  const ev=document.getElementById('eventSelect').value;
+  if(ev==='custom'){
+    document.getElementById('customOptions').style.display='block';
+  }else{
+    document.getElementById('customOptions').style.display='none';
+    const presets={gw150914:[36,29],gw170817:[1.4,1.4],gw190521:[85,66]};
+    const [m1,m2]=presets[ev]||[30,30];
+    const data=generateWave(m1,m2);
+    plotWaveform(data);
+    plotSpectrogram(data);
+    plotOrbit(0);
+  }
+}
 
-    toggleBtn.addEventListener("click", () => {
-      if (specDiv.style.display === "none") {
-        plotDiv.style.display = "none";
-        specDiv.style.display = "block";
-        toggleBtn.textContent = "Show Waveform";
-      } else {
-        plotDiv.style.display = "block";
-        specDiv.style.display = "none";
-        toggleBtn.textContent = "Show Spectrogram";
-      }
-    });
+document.getElementById('runBtn').onclick=runSimulation;
+document.getElementById('generateBtn').onclick=()=>{
+  const m1=+document.getElementById('mass1').value;
+  const m2=+document.getElementById('mass2').value;
+  const data=generateWave(m1,m2);
+  plotWaveform(data);
+  plotSpectrogram(data);
+  plotOrbit(0);
+};
 
-    eventSelect.addEventListener("change", e => {
-      const eventName = e.target.value;
-      if (eventName === "Custom") {
-        controlsDiv.style.display = "block";
-      } else {
-        controlsDiv.style.display = "none";
-        const presets = {
-          GW150914: { m1: 36, m2: 29, spin: 0.3, sep: 15 },
-          GW170104: { m1: 31, m2: 19, spin: 0.2, sep: 14 },
-          GW190521: { m1: 85, m2: 66, spin: 0.7, sep: 20 }
-        };
-        plotWaveform(eventName, presets[eventName]);
-      }
-    });
-
-    document.getElementById("runSim").addEventListener("click", () => {
-      const m1 = parseFloat(document.getElementById("mass1").value);
-      const m2 = parseFloat(document.getElementById("mass2").value);
-      const spin = parseFloat(document.getElementById("spin").value);
-      const sep = parseFloat(document.getElementById("sep").value);
-      plotWaveform("Custom Simulation", { m1, m2, spin, sep });
-    });
-
-    plotWaveform("GW150914", { m1: 36, m2: 29, spin: 0.3, sep: 15 });
-  </script>
+runSimulation(); // initial
+</script>
 </body>
 </html>
