@@ -127,18 +127,19 @@
 </main>
 
 <footer>
-  © Open BBH Visualizer • 3D Orbits, Chirp, and Spectrogram
+  © Open BBH Visualizer • Interactive Chirp, Orbit & Spectrogram
 </footer>
 
 <script>
 let state = { playing:false, audioEnabled:false, audioCtx:null, audioOsc:null, tIndex:0, sampleRate:1024 };
 let tsData = null;
 
+// --- Waveform generator ---
 function generateChirp(m1,m2){
   const duration = 6;
   const N = Math.round(duration*state.sampleRate);
   const t=[], h=[], freq=[];
-  const f0=30, f1=500;
+  const f0=30, f1=400;
   for(let i=0;i<N;i++){
     const tt=i/state.sampleRate;
     const tau=tt/duration;
@@ -151,6 +152,7 @@ function generateChirp(m1,m2){
   return {t,h,freq};
 }
 
+// --- Plot functions ---
 function plotWaveform(ts){
   Plotly.newPlot('mainPlot', [{x:ts.t,y:ts.h,type:'scatter',mode:'lines',line:{color:'#00d4ff'}}],
     {title:'Gravitational Waveform',paper_bgcolor:'transparent',plot_bgcolor:'transparent',
@@ -179,12 +181,17 @@ function plotOrbit(){
 }
 
 function updateOrbit(i,ts){
+  const f=ts.freq[i]||50;
+  const orbitScale=Math.max(0.1,1.0 - (f/500)); // shrink radius as freq increases
   const theta=i*0.05;
-  const r1=0.5*Math.cos(theta),r2=-0.5*Math.cos(theta);
-  const y1=0.5*Math.sin(theta),y2=-0.5*Math.sin(theta);
+  const r1=orbitScale*Math.cos(theta);
+  const r2=-orbitScale*Math.cos(theta);
+  const y1=orbitScale*Math.sin(theta);
+  const y2=-orbitScale*Math.sin(theta);
   Plotly.restyle('orbitPlot',{'x':[[r1],[r2]],'y':[[y1],[y2]]},[0,1]);
 }
 
+// --- UI Logic ---
 function generateAndPlot(){
   const preset=document.getElementById('presetSelect').value;
   let m1=36,m2=29;
@@ -201,6 +208,7 @@ function generateAndPlot(){
   plotOrbit();
 }
 
+// --- Playback logic ---
 function play(){
   if(!tsData)return;
   state.playing=true;
@@ -239,6 +247,12 @@ function pause(){
   }
 }
 
+// --- Event Listeners ---
+document.getElementById('presetSelect').onchange=()=>{
+  const preset=document.getElementById('presetSelect').value;
+  document.getElementById('customControls').style.display=
+    preset==='custom'?'block':'none';
+};
 document.getElementById('generateBtn').onclick=generateAndPlot;
 document.getElementById('runCustom').onclick=generateAndPlot;
 document.getElementById('playPause').onclick=()=>{
@@ -250,6 +264,8 @@ document.getElementById('soundToggle').onclick=()=>{
   state.audioEnabled=!state.audioEnabled;
   document.getElementById('soundToggle').textContent=state.audioEnabled?'🔊':'🔇';
 };
+
+// --- Initialize ---
 generateAndPlot();
 </script>
 </body>
