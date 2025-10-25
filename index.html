@@ -1,314 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Open Gravitational Wave Explorer — Fixed</title>
-
-  <!-- Plotly CDN (keeps file light) -->
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BBH Simulation Viewer</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <style>
-    :root{ --bg:#02030a; --panel:#0d0d20; --accent:#00aaff; --muted:#9aa; --text:#fff; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; background:radial-gradient(circle,#02030a 10%, #000 100%);color:var(--text)}
-    header{text-align:center;padding:1rem;border-bottom:1px solid rgba(255,255,255,0.04)}
-    h1{margin:0;font-size:1.4rem;color:var(--accent)}
-    .controls{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;padding:12px}
-    select, button, input[type="range"]{background:#0a0a20;color:#fff;border:1px solid #333;border-radius:8px;padding:.45rem .7rem}
-    button{cursor:pointer}
-    #chart{width:92%;max-width:900px;margin:12px auto;background:var(--panel);padding:10px;border-radius:10px}
-    #playChirpBtn{display:block;margin:12px auto 28px auto;padding:.5rem 1rem;background:var(--accent);border:none;border-radius:8px;color:#000;font-weight:700}
-    #customControls{width:92%;max-width:900px;margin:8px auto;padding:10px;background:rgba(255,255,255,0.02);border-radius:10px;display:none}
-    .control-row{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
-    .control-row label{min-width:110px;text-align:right}
-    .small{font-size:0.9rem;color:var(--muted)}
-    footer{text-align:center;padding:14px;color:var(--muted)}
+    body {
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at top, #0a0a1a, #000);
+      color: #eee;
+      margin: 0;
+      text-align: center;
+    }
+    header {
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(6px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0.5rem;
+    }
+    select, button {
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      background: #0084ff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #00a0ff;
+    }
+    #plot, #spectrogram {
+      width: 95%;
+      max-width: 900px;
+      height: 400px;
+      margin: 1rem auto;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      background: #111;
+    }
+    footer {
+      margin-top: 1rem;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
 
-    /* modal */
-    #infoModal{display:none;opacity:0;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;z-index:60;transition:opacity .3s}
-    #infoModal.show{display:flex;opacity:1}
-    .modal-content{background:#111;padding:20px;border-radius:12px;max-width:700px;position:relative;color:#eaeaea;transform:scale(.98);transition:transform .25s}
-    #infoModal.show .modal-content{transform:scale(1)}
-    .close{position:absolute;right:12px;top:8px;cursor:pointer;font-size:1.4rem;color:#bbb}
-    .learn-btn{margin-top:12px;padding:.5rem 1rem;background:#003366;border:1px solid #00aaff;color:#fff;border-radius:8px;cursor:pointer}
-
-    /* learn panel */
-    #learnPanel{position:fixed;left:0;right:0;bottom:-100%;background:#050510;border-top:3px solid var(--accent);padding:12px;z-index:70;transition:bottom .35s}
-    #learnPanel.show{bottom:0}
-    #orbitCanvas{background:#000;display:block;margin:8px auto;border-radius:6px}
-    @media(min-width:900px){ #chart{padding:18px} }
+    /* Modal styling (fixed and improved) */
+    #infoModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.75);
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.3s ease;
+    }
+    #infoModal.show {
+      display: flex;
+      opacity: 1;
+    }
+    .modal-content {
+      background: #1e1e2f;
+      color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 500px;
+      text-align: left;
+      position: relative;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95);}
+      to { opacity: 1; transform: scale(1);}
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px; right: 15px;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Open Gravitational Wave Explorer</h1>
-    <div class="small">Fixed UI — Play button visible, custom controls robust, no stray drawing</div>
+    <h1>🌀 Binary Black Hole Simulation Viewer</h1>
+    <select id="eventSelect">
+      <option value="GW150914">GW150914 (First detection)</option>
+      <option value="GW170104">GW170104</option>
+      <option value="GW190521">GW190521 (Massive merger)</option>
+      <option value="Custom">Custom Simulation</option>
+    </select>
+    <button id="toggleView">Show Spectrogram</button>
+    <button id="infoBtn">ℹ️ Info</button>
   </header>
 
-  <div class="controls" role="region" aria-label="controls">
-    <label for="eventSelect" class="small">Event:</label>
-    <select id="eventSelect" aria-label="Event select">
-      <option value="gw150914">GW150914 — First LIGO</option>
-      <option value="gw170104">GW170104</option>
-      <option value="gw190521">GW190521</option>
-      <option value="custom">Custom Simulation</option>
-    </select>
+  <div id="plot"></div>
+  <div id="spectrogram" style="display:none;"></div>
 
-    <button id="simulateBtn">Simulate</button>
-    <button id="infoBtn">ℹ️ Info</button>
-  </div>
-
-  <!-- custom controls -->
-  <div id="customControls" aria-hidden="true">
-    <div class="control-row">
-      <label for="m1Slider">M₁ (M☉)</label>
-      <input id="m1Slider" type="range" min="5" max="80" value="30">
-      <span id="m1Val" class="small">30</span>
-    </div>
-    <div class="control-row">
-      <label for="m2Slider">M₂ (M☉)</label>
-      <input id="m2Slider" type="range" min="5" max="80" value="25">
-      <span id="m2Val" class="small">25</span>
-    </div>
-    <div class="control-row">
-      <label for="s1Slider">Spin₁</label>
-      <input id="s1Slider" type="range" min="0" max="1" step="0.01" value="0.3">
-      <span id="s1Val" class="small">0.30</span>
-    </div>
-    <div class="control-row">
-      <label for="s2Slider">Spin₂</label>
-      <input id="s2Slider" type="range" min="0" max="1" step="0.01" value="0.20">
-      <span id="s2Val" class="small">0.20</span>
-    </div>
-  </div>
-
-  <!-- Plot container -->
-  <div id="chart" role="img" aria-label="waveform chart"></div>
-
-  <!-- Play button (guaranteed visible) -->
-  <button id="playChirpBtn" aria-label="Play chirp sound">🔊 Play Chirp</button>
-
-  <!-- Info Modal -->
-  <div id="infoModal" role="dialog" aria-modal="true" aria-hidden="true">
+  <!-- Modal -->
+  <div id="infoModal">
     <div class="modal-content">
-      <span id="closeInfo" class="close" title="Close">×</span>
-      <h2>Understanding gravitational waves</h2>
-      <p><strong>Strain (h):</strong> fractional change in distance measured by detectors.</p>
-      <p><strong>Chirp mass:</strong> sets how fast the frequency increases.</p>
-      <p><strong>Spins:</strong> change inspiral speed and waveform phase.</p>
-      <button id="learnMoreBtn" class="learn-btn">📖 Learn More</button>
+      <span class="close-btn" id="closeInfo">&times;</span>
+      <h2>About This Visualization</h2>
+      <p>This tool displays gravitational wave events detected by LIGO/Virgo and lets you simulate custom binary black hole mergers.</p>
+      <ul>
+        <li><strong>Waveform:</strong> Time-domain strain signal</li>
+        <li><strong>Spectrogram:</strong> Frequency vs time “chirp” pattern</li>
+        <li><strong>Custom Simulations:</strong> Generate your own synthetic mergers</li>
+      </ul>
     </div>
   </div>
 
-  <!-- Learn panel (orbit + small waveform) -->
-  <div id="learnPanel" aria-hidden="true">
-    <h3>Chirp mass & orbit demo</h3>
-    <canvas id="orbitCanvas" width="320" height="200"></canvas>
-    <div style="margin-top:.6rem">
-      <button id="closeLearn" class="learn-btn">Close</button>
-    </div>
-  </div>
+  <footer>
+    <p>Visualization powered by Plotly.js | Open-source BBH Simulation Project</p>
+  </footer>
 
-  <footer>Open BBH Simulation • demo</footer>
-
-<script>
-/* Single consolidated DOMContentLoaded handler - no global errors */
-document.addEventListener('DOMContentLoaded', () => {
-
-  // DOM references
-  const eventSelect = document.getElementById('eventSelect');
-  const simulateBtn = document.getElementById('simulateBtn');
-  const infoBtn = document.getElementById('infoBtn');
-  const infoModal = document.getElementById('infoModal');
-  const closeInfo = document.getElementById('closeInfo');
-  const learnMoreBtn = document.getElementById('learnMoreBtn');
-  const learnPanel = document.getElementById('learnPanel');
-  const closeLearn = document.getElementById('closeLearn');
-  const customControls = document.getElementById('customControls');
-
-  // sliders + labels (explicit variables so generateWaveform can reference)
-  const m1Slider = document.getElementById('m1Slider');
-  const m2Slider = document.getElementById('m2Slider');
-  const s1Slider = document.getElementById('s1Slider');
-  const s2Slider = document.getElementById('s2Slider');
-  const m1Val = document.getElementById('m1Val');
-  const m2Val = document.getElementById('m2Val');
-  const s1Val = document.getElementById('s1Val');
-  const s2Val = document.getElementById('s2Val');
-
-  const chartDiv = document.getElementById('chart');
-  const playChirpBtn = document.getElementById('playChirpBtn');
-
-  // update slider labels
-  function updateLabels(){
-    m1Val.textContent = m1Slider.value;
-    m2Val.textContent = m2Slider.value;
-    s1Val.textContent = parseFloat(s1Slider.value).toFixed(2);
-    s2Val.textContent = parseFloat(s2Slider.value).toFixed(2);
-  }
-  [m1Slider, m2Slider, s1Slider, s2Slider].forEach(s => s.addEventListener('input', updateLabels));
-  updateLabels();
-
-  // Modal controls (robust)
-  infoModal.style.display = 'none';
-  infoBtn.addEventListener('click', () => {
-    infoModal.style.display = 'flex';
-    infoModal.classList.add('show');
-    infoModal.setAttribute('aria-hidden','false');
-  });
-  function closeModal(){
-    infoModal.classList.remove('show');
-    setTimeout(()=>{ infoModal.style.display='none'; infoModal.setAttribute('aria-hidden','true'); }, 300);
-  }
-  closeInfo.addEventListener('click', closeModal);
-  infoModal.addEventListener('click', (e)=>{ if(e.target===infoModal) closeModal(); });
-
-  // Learn panel controls
-  learnMoreBtn.addEventListener('click', ()=> {
-    learnPanel.classList.add('show');
-    startOrbitAnimation();
-    playChirpSound(); // also play chirp for the demo
-  });
-  closeLearn.addEventListener('click', ()=> learnPanel.classList.remove('show'));
-
-  // show/hide custom controls when user picks custom
-  function checkCustomVisibility(){
-    if(eventSelect.value === 'custom'){
-      customControls.style.display = 'block';
-      customControls.setAttribute('aria-hidden','false');
-    } else {
-      customControls.style.display = 'none';
-      customControls.setAttribute('aria-hidden','true');
-    }
-  }
-  eventSelect.addEventListener('change', checkCustomVisibility);
-  // initial check (fixes issue where custom wasn't shown)
-  checkCustomVisibility();
-
-  // Core waveform generator (safe: no undefined variables)
-  function generateWaveform(choice){
-    let freq, decay, label;
-    if(choice === 'custom'){
-      const m1 = Number(m1Slider.value);
-      const m2 = Number(m2Slider.value);
-      const s1 = Number(s1Slider.value);
-      const s2 = Number(s2Slider.value);
-      // chirp-mass-like scaling (toy model)
-      const chirpMass = Math.pow((m1*m2), 3/5) / Math.pow(m1+m2, 1/5);
-      freq = 0.1 + (50 / Math.max(1, chirpMass)) * 0.002; // avoid div by zero
-      decay = 0.001 + (s1 + s2) * 0.001;
-      label = `Custom — M₁=${m1} M☉, M₂=${m2} M☉`;
-    } else {
-      // presets tuned for demo
-      customControls.style.display = 'none';
-      if(choice === 'gw150914'){ freq = 0.25; decay = 0.002; label = 'GW150914'; }
-      else if(choice === 'gw170104'){ freq = 0.18; decay = 0.0018; label = 'GW170104'; }
-      else if(choice === 'gw190521'){ freq = 0.12; decay = 0.001; label = 'GW190521'; }
-      else { freq = 0.2; decay = 0.0015; label = 'Demo'; }
+  <script>
+    // Example waveform data generator
+    function generateWaveform(frequencyFactor=1.0) {
+      const t = Array.from({length: 1000}, (_, i) => i / 100);
+      const h = t.map(x => Math.sin(frequencyFactor * 0.2 * x) * Math.exp(-0.002 * x));
+      return {t, h};
     }
 
-    // build data and plot with Plotly
-    const N = 2000;
-    const t = new Array(N);
-    const hPlus = new Array(N);
-    const hCross = new Array(N);
-    for(let i=0;i<N;i++){
-      const x = i/20; // time index scaled
-      t[i]=x;
-      hPlus[i]=Math.sin(freq*x)*Math.exp(-decay*x);
-      hCross[i]=Math.cos(freq*x)*Math.exp(-decay*x);
+    // Main plot
+    const plotDiv = document.getElementById("plot");
+    const specDiv = document.getElementById("spectrogram");
+    const toggleBtn = document.getElementById("toggleView");
+    const eventSelect = document.getElementById("eventSelect");
+
+    function plotWaveform(eventName) {
+      const freq = eventName === "GW190521" ? 2.0 : eventName === "GW170104" ? 1.5 : 1.0;
+      const {t, h} = generateWaveform(freq);
+      Plotly.newPlot(plotDiv, [{
+        x: t, y: h, type: 'scatter', mode: 'lines', line: {color: '#00e0ff'}, name: 'Strain h(t)'
+      }], {
+        title: `${eventName} - Gravitational Wave Strain`,
+        xaxis: {title: 'Time [M]'},
+        yaxis: {title: 'Strain'},
+        paper_bgcolor: '#111', plot_bgcolor: '#111',
+        font: {color: '#eee'}
+      });
+      plotSpectrogram(t, h);
     }
 
-    const traces = [
-      { x: t, y: hPlus, mode: 'lines', name: 'h₊', line:{width:2, color:'#00e5ff'} },
-      { x: t, y: hCross, mode: 'lines', name: 'h×', line:{width:2, color:'#ff66cc'} }
-    ];
-    const layout = {
-      title: `${label} — Simulated Strain (toy model)`,
-      xaxis:{title:'Time (M)'},
-      yaxis:{title:'Strain (arb units)'},
-      paper_bgcolor: 'transparent',
-      plot_bgcolor: 'transparent',
-      font:{color:'#ddd'}
-    };
-    Plotly.newPlot(chartDiv, traces, layout, {responsive:true, displayModeBar:false});
-  }
-
-  // Simulate button
-  simulateBtn.addEventListener('click', ()=> generateWaveform(eventSelect.value) );
-
-  // initial plot
-  generateWaveform(eventSelect.value);
-
-  // Play chirp (general-purpose) — uses small WebAudio sweep
-  function playChirpSound(opts){
-    try{
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.connect(gain); gain.connect(audioCtx.destination);
-
-      // allow override via opts
-      const duration = (opts && opts.duration) ? opts.duration : 2.8;
-      const startFreq = (opts && opts.startFreq) ? opts.startFreq : 120;
-      const endFreq = (opts && opts.endFreq) ? opts.endFreq : 900;
-
-      const now = audioCtx.currentTime;
-      osc.frequency.setValueAtTime(startFreq, now);
-      // use linear ramp to avoid errors on some browsers when start==end
-      osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq), now + duration);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-      osc.start(now); osc.stop(now + duration);
-    }catch(e){ console.warn('Audio failed:', e); }
-  }
-
-  // Play Chirp button wired
-  playChirpBtn.addEventListener('click', ()=> {
-    // small heuristic: if custom selected, make chirp lower/faster by masses
-    if(eventSelect.value === 'custom'){
-      const m1 = Number(m1Slider.value), m2 = Number(m2Slider.value);
-      // heavier => lower pitch
-      const chirpMass = Math.pow((m1*m2),3/5)/Math.pow(m1+m2,1/5);
-      const start = Math.max(40, 100 - chirpMass*0.6);
-      const end = Math.max(200, 1000 - chirpMass*3);
-      playChirpSound({duration:3, startFreq:start, endFreq:end});
-    } else {
-      playChirpSound({duration:3, startFreq:120, endFreq:800});
+    // Spectrogram generation
+    function plotSpectrogram(t, h) {
+      const sampleCount = h.length;
+      const freqBins = 100;
+      const data = [];
+      for (let i = 0; i < freqBins; i++) {
+        data.push(Array.from({length: sampleCount}, (_, j) => Math.abs(h[j]) * Math.exp(-Math.abs(i - j / 10) / 20)));
+      }
+      const z = data;
+      const fig = {
+        data: [{z, x: t, y: Array.from({length: freqBins}, (_, i)=>i), type: 'heatmap', colorscale: 'Viridis'}],
+        layout: {
+          title: 'Spectrogram (Frequency vs Time)',
+          xaxis: {title: 'Time [M]'},
+          yaxis: {title: 'Frequency Bin'},
+          paper_bgcolor: '#111',
+          plot_bgcolor: '#111',
+          font: {color: '#eee'}
+        }
+      };
+      Plotly.newPlot(specDiv, fig);
     }
-  });
 
-  // Orbit animation (Learn panel)
-  function startOrbitAnimation(){
-    const canvas = document.getElementById('orbitCanvas');
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let angle = 0;
-    let running = true;
-    // stop previous loops by using closure flag
-    (function loop(){
-      if(!document.body.contains(canvas)) return;
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const cx = canvas.width/2, cy = canvas.height/2, r = 60;
-      const x1 = cx + r*Math.cos(angle), y1 = cy + r*Math.sin(angle);
-      const x2 = cx - r*Math.cos(angle), y2 = cy - r*Math.sin(angle);
-      // orbit tracks
-      ctx.fillStyle = '#002233';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.beginPath();
-      ctx.fillStyle = '#00aaff';
-      ctx.arc(x1,y1,10,0,Math.PI*2);
-      ctx.arc(x2,y2,10,0,Math.PI*2);
-      ctx.fill();
-      angle += 0.06;
-      requestAnimationFrame(loop);
-    })();
-  }
+    // Toggle button
+    toggleBtn.addEventListener("click", () => {
+      if (specDiv.style.display === "none") {
+        plotDiv.style.display = "none";
+        specDiv.style.display = "block";
+        toggleBtn.textContent = "Show Waveform";
+      } else {
+        plotDiv.style.display = "block";
+        specDiv.style.display = "none";
+        toggleBtn.textContent = "Show Spectrogram";
+      }
+    });
 
-}); // end DOMContentLoaded
-</script>
+    // Modal behavior
+    const infoModal = document.getElementById("infoModal");
+    const infoBtn = document.getElementById("infoBtn");
+    const closeInfo = document.getElementById("closeInfo");
+
+    infoBtn.addEventListener("click", () => infoModal.classList.add("show"));
+    closeInfo.addEventListener("click", () => infoModal.classList.remove("show"));
+    window.addEventListener("click", (e) => {
+      if (e.target === infoModal) infoModal.classList.remove("show");
+    });
+
+    // Event change
+    eventSelect.addEventListener("change", (e) => {
+      const eventName = e.target.value;
+      plotWaveform(eventName);
+    });
+
+    // Initialize
+    plotWaveform("GW150914");
+  </script>
 </body>
 </html>
