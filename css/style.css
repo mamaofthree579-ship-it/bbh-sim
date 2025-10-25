@@ -1,0 +1,52 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #0a0a0a;
+  color: #f5f5f5;
+  text-align: center;
+}
+
+header {
+  padding: 1rem;
+  background: linear-gradient(45deg, #111, #222);
+  border-bottom: 1px solid #333;
+}
+
+.controls {
+  margin: 1rem auto;
+}
+
+select, button, input[type="range"] {
+  margin: 0.5rem;
+  padding: 0.3rem;
+  border-radius: 6px;
+  border: none;
+}
+
+button {
+  background: #3949ab;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #5c6bc0;
+}
+
+#customForm {
+  margin: 1rem;
+  padding: 1rem;
+  background: #111;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.hidden {
+  display: none;
+}
+
+#plots {
+  width: 95%;
+  margin: auto;
+}
