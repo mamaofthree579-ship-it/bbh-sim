@@ -1,330 +1,314 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌌 Open Gravitational Wave Explorer</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Open Gravitational Wave Explorer — Fixed</title>
+
+  <!-- Plotly CDN (keeps file light) -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: radial-gradient(ellipse at center, #02030a 0%, #000 100%);
-      color: #fff;
-      margin: 0;
-      overflow-x: hidden;
-    }
-    header {
-      text-align: center;
-      padding: 1rem;
-      background: rgba(0, 0, 0, 0.6);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    h1 { font-size: 1.8rem; margin-bottom: 0.2rem; }
-    .controls { text-align: center; margin-top: 1rem; }
-    select, button, input[type="range"] {
-      background: #0a0a20;
-      color: white;
-      border: 1px solid #444;
-      border-radius: 0.5rem;
-      padding: 0.5rem 1rem;
-      margin: 0.3rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    select:hover, button:hover { background: #1a1a3d; }
-    #chart {
-      width: 90%;
-      max-width: 800px;
-      margin: 2rem auto 1rem auto;
-      border-radius: 1rem;
-      background: #0d0d20;
-      padding: 1rem;
-    }
-    #playChirpBtn {
-      display: block;
-      margin: 0 auto 2rem auto;
-      background: #003366;
-      border: 1px solid #00aaff;
-    }
-    #playChirpBtn:hover { background: #005599; }
+    :root{ --bg:#02030a; --panel:#0d0d20; --accent:#00aaff; --muted:#9aa; --text:#fff; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; background:radial-gradient(circle,#02030a 10%, #000 100%);color:var(--text)}
+    header{text-align:center;padding:1rem;border-bottom:1px solid rgba(255,255,255,0.04)}
+    h1{margin:0;font-size:1.4rem;color:var(--accent)}
+    .controls{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;padding:12px}
+    select, button, input[type="range"]{background:#0a0a20;color:#fff;border:1px solid #333;border-radius:8px;padding:.45rem .7rem}
+    button{cursor:pointer}
+    #chart{width:92%;max-width:900px;margin:12px auto;background:var(--panel);padding:10px;border-radius:10px}
+    #playChirpBtn{display:block;margin:12px auto 28px auto;padding:.5rem 1rem;background:var(--accent);border:none;border-radius:8px;color:#000;font-weight:700}
+    #customControls{width:92%;max-width:900px;margin:8px auto;padding:10px;background:rgba(255,255,255,0.02);border-radius:10px;display:none}
+    .control-row{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+    .control-row label{min-width:110px;text-align:right}
+    .small{font-size:0.9rem;color:var(--muted)}
+    footer{text-align:center;padding:14px;color:var(--muted)}
 
-    #customControls {
-      display: none;
-      text-align: center;
-      margin-top: 1rem;
-      animation: fadeIn 0.5s ease;
-    }
-    label { margin: 0.3rem; display: inline-block; }
+    /* modal */
+    #infoModal{display:none;opacity:0;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;z-index:60;transition:opacity .3s}
+    #infoModal.show{display:flex;opacity:1}
+    .modal-content{background:#111;padding:20px;border-radius:12px;max-width:700px;position:relative;color:#eaeaea;transform:scale(.98);transition:transform .25s}
+    #infoModal.show .modal-content{transform:scale(1)}
+    .close{position:absolute;right:12px;top:8px;cursor:pointer;font-size:1.4rem;color:#bbb}
+    .learn-btn{margin-top:12px;padding:.5rem 1rem;background:#003366;border:1px solid #00aaff;color:#fff;border-radius:8px;cursor:pointer}
 
-    /* Modal */
-    #infoModal {
-      display: none;
-      opacity: 0;
-      position: fixed;
-      z-index: 50;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.75);
-      justify-content: center;
-      align-items: center;
-      transition: opacity 0.4s ease;
-    }
-    #infoModal.show { display: flex; opacity: 1; }
-    .modal-content {
-      background: #111;
-      padding: 2rem;
-      border-radius: 1rem;
-      max-width: 600px;
-      text-align: left;
-      position: relative;
-      transform: scale(0.95);
-      transition: transform 0.4s ease;
-    }
-    #infoModal.show .modal-content { transform: scale(1); }
-    .close {
-      position: absolute;
-      top: 0.5rem; right: 1rem;
-      font-size: 1.8rem;
-      cursor: pointer;
-      color: #aaa;
-    }
-    .close:hover { color: white; }
-    footer { text-align: center; padding: 1rem; font-size: 0.9rem; opacity: 0.7; }
-    .learn-btn {
-      margin-top: 1rem;
-      background: #003366;
-      border: 1px solid #00aaff;
-    }
-    .learn-btn:hover { background: #005599; }
-
-    /* Learn More Panel */
-    #learnPanel {
-      position: fixed;
-      bottom: -100%;
-      left: 0;
-      width: 100%;
-      background: #050510;
-      border-top: 2px solid #00aaff;
-      color: #fff;
-      padding: 1rem;
-      text-align: center;
-      transition: bottom 0.5s ease;
-      z-index: 60;
-    }
-    #learnPanel.show { bottom: 0; }
-    #orbitCanvas {
-      display: block;
-      margin: 1rem auto;
-      background: #000;
-      border-radius: 8px;
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    /* learn panel */
+    #learnPanel{position:fixed;left:0;right:0;bottom:-100%;background:#050510;border-top:3px solid var(--accent);padding:12px;z-index:70;transition:bottom .35s}
+    #learnPanel.show{bottom:0}
+    #orbitCanvas{background:#000;display:block;margin:8px auto;border-radius:6px}
+    @media(min-width:900px){ #chart{padding:18px} }
   </style>
 </head>
-
 <body>
   <header>
-    <h1>🌌 Open Gravitational Wave Explorer</h1>
-    <p>Explore real and simulated black hole mergers</p>
+    <h1>Open Gravitational Wave Explorer</h1>
+    <div class="small">Fixed UI — Play button visible, custom controls robust, no stray drawing</div>
   </header>
 
-  <div class="controls">
-    <label for="eventSelect">Choose an Event:</label>
-    <select id="eventSelect">
-      <option value="gw150914">GW150914 – First LIGO Detection</option>
-      <option value="gw170104">GW170104 – Intermediate Mass Merger</option>
-      <option value="gw190521">GW190521 – Massive BH Merger</option>
-      <option value="custom">🧪 Custom Simulation</option>
+  <div class="controls" role="region" aria-label="controls">
+    <label for="eventSelect" class="small">Event:</label>
+    <select id="eventSelect" aria-label="Event select">
+      <option value="gw150914">GW150914 — First LIGO</option>
+      <option value="gw170104">GW170104</option>
+      <option value="gw190521">GW190521</option>
+      <option value="custom">Custom Simulation</option>
     </select>
+
     <button id="simulateBtn">Simulate</button>
     <button id="infoBtn">ℹ️ Info</button>
   </div>
 
-  <div id="customControls">
-    <h3>Customize Your Black Holes</h3>
-    <div>
-      <label>M₁: <span id="m1Val">30</span> M☉</label>
-      <input type="range" id="m1Slider" min="5" max="80" value="30">
+  <!-- custom controls -->
+  <div id="customControls" aria-hidden="true">
+    <div class="control-row">
+      <label for="m1Slider">M₁ (M☉)</label>
+      <input id="m1Slider" type="range" min="5" max="80" value="30">
+      <span id="m1Val" class="small">30</span>
     </div>
-    <div>
-      <label>M₂: <span id="m2Val">25</span> M☉</label>
-      <input type="range" id="m2Slider" min="5" max="80" value="25">
+    <div class="control-row">
+      <label for="m2Slider">M₂ (M☉)</label>
+      <input id="m2Slider" type="range" min="5" max="80" value="25">
+      <span id="m2Val" class="small">25</span>
     </div>
-    <div>
-      <label>Spin₁: <span id="s1Val">0.3</span></label>
-      <input type="range" id="s1Slider" min="0" max="1" step="0.01" value="0.3">
+    <div class="control-row">
+      <label for="s1Slider">Spin₁</label>
+      <input id="s1Slider" type="range" min="0" max="1" step="0.01" value="0.3">
+      <span id="s1Val" class="small">0.30</span>
     </div>
-    <div>
-      <label>Spin₂: <span id="s2Val">0.2</span></label>
-      <input type="range" id="s2Slider" min="0" max="1" step="0.01" value="0.2">
+    <div class="control-row">
+      <label for="s2Slider">Spin₂</label>
+      <input id="s2Slider" type="range" min="0" max="1" step="0.01" value="0.20">
+      <span id="s2Val" class="small">0.20</span>
     </div>
   </div>
 
-  <div id="chart"></div>
-  <button id="playChirpBtn">🔊 Play Chirp</button>
+  <!-- Plot container -->
+  <div id="chart" role="img" aria-label="waveform chart"></div>
+
+  <!-- Play button (guaranteed visible) -->
+  <button id="playChirpBtn" aria-label="Play chirp sound">🔊 Play Chirp</button>
 
   <!-- Info Modal -->
-  <div id="infoModal">
+  <div id="infoModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="modal-content">
-      <span id="closeInfo" class="close">&times;</span>
-      <h2>🌀 Understanding Gravitational Waves</h2>
-      <p><strong>Gravitational Strain (h):</strong> Measures how space-time is stretched and squeezed as a wave passes.</p>
-      <p><strong>Chirp Mass:</strong> Controls how quickly the wave frequency increases before merger.</p>
-      <p><strong>Spins:</strong> Can speed up or slow down the inspiral depending on alignment.</p>
+      <span id="closeInfo" class="close" title="Close">×</span>
+      <h2>Understanding gravitational waves</h2>
+      <p><strong>Strain (h):</strong> fractional change in distance measured by detectors.</p>
+      <p><strong>Chirp mass:</strong> sets how fast the frequency increases.</p>
+      <p><strong>Spins:</strong> change inspiral speed and waveform phase.</p>
       <button id="learnMoreBtn" class="learn-btn">📖 Learn More</button>
     </div>
   </div>
 
-  <!-- Learn More Panel -->
-  <div id="learnPanel">
-    <h3>🔭 Chirp Mass & Wave Evolution</h3>
-    <canvas id="orbitCanvas" width="300" height="200"></canvas>
-    <button id="closeLearn">Close</button>
+  <!-- Learn panel (orbit + small waveform) -->
+  <div id="learnPanel" aria-hidden="true">
+    <h3>Chirp mass & orbit demo</h3>
+    <canvas id="orbitCanvas" width="320" height="200"></canvas>
+    <div style="margin-top:.6rem">
+      <button id="closeLearn" class="learn-btn">Close</button>
+    </div>
   </div>
 
-  <footer>
-    <p>Created for the Open BBH Simulation Project • Powered by Plotly</p>
-  </footer>
+  <footer>Open BBH Simulation • demo</footer>
 
-  <script>
-    // --- Info Modal & Learn Panel ---
-    document.addEventListener("DOMContentLoaded", () => {
-      const infoBtn = document.getElementById("infoBtn");
-      const infoModal = document.getElementById("infoModal");
-      const closeInfo = document.getElementById("closeInfo");
-      const learnMoreBtn = document.getElementById("learnMoreBtn");
-      const learnPanel = document.getElementById("learnPanel");
-      const closeLearn = document.getElementById("closeLearn");
+<script>
+/* Single consolidated DOMContentLoaded handler - no global errors */
+document.addEventListener('DOMContentLoaded', () => {
 
-      infoModal.style.display = "none";
-      infoBtn.addEventListener("click", () => {
-        infoModal.style.display = "flex";
-        requestAnimationFrame(() => infoModal.classList.add("show"));
-      });
-      const closeModal = () => {
-        infoModal.classList.remove("show");
-        setTimeout(() => (infoModal.style.display = "none"), 400);
-      };
-      closeInfo.addEventListener("click", closeModal);
-      infoModal.addEventListener("click", e => { if (e.target === infoModal) closeModal(); });
+  // DOM references
+  const eventSelect = document.getElementById('eventSelect');
+  const simulateBtn = document.getElementById('simulateBtn');
+  const infoBtn = document.getElementById('infoBtn');
+  const infoModal = document.getElementById('infoModal');
+  const closeInfo = document.getElementById('closeInfo');
+  const learnMoreBtn = document.getElementById('learnMoreBtn');
+  const learnPanel = document.getElementById('learnPanel');
+  const closeLearn = document.getElementById('closeLearn');
+  const customControls = document.getElementById('customControls');
 
-      learnMoreBtn.addEventListener("click", () => {
-        learnPanel.classList.add("show");
-        startOrbitAnimation();
-        playChirpSound();
-      });
-      closeLearn.addEventListener("click", () => learnPanel.classList.remove("show"));
-    });
+  // sliders + labels (explicit variables so generateWaveform can reference)
+  const m1Slider = document.getElementById('m1Slider');
+  const m2Slider = document.getElementById('m2Slider');
+  const s1Slider = document.getElementById('s1Slider');
+  const s2Slider = document.getElementById('s2Slider');
+  const m1Val = document.getElementById('m1Val');
+  const m2Val = document.getElementById('m2Val');
+  const s1Val = document.getElementById('s1Val');
+  const s2Val = document.getElementById('s2Val');
 
-    // --- Simulation logic ---
-    document.addEventListener("DOMContentLoaded", () => {
-      const chartDiv = document.getElementById("chart");
-      const simulateBtn = document.getElementById("simulateBtn");
-      const eventSelect = document.getElementById("eventSelect");
-      const customControls = document.getElementById("customControls");
+  const chartDiv = document.getElementById('chart');
+  const playChirpBtn = document.getElementById('playChirpBtn');
 
-      const sliders = ["m1", "m2", "s1", "s2"];
-      sliders.forEach(id => {
-        const slider = document.getElementById(id + "Slider");
-        const label = document.getElementById(id + "Val");
-        slider.addEventListener("input", () => label.textContent = slider.value);
-      });
+  // update slider labels
+  function updateLabels(){
+    m1Val.textContent = m1Slider.value;
+    m2Val.textContent = m2Slider.value;
+    s1Val.textContent = parseFloat(s1Slider.value).toFixed(2);
+    s2Val.textContent = parseFloat(s2Slider.value).toFixed(2);
+  }
+  [m1Slider, m2Slider, s1Slider, s2Slider].forEach(s => s.addEventListener('input', updateLabels));
+  updateLabels();
 
-      function generateWaveform(event) {
-        let freq, decay, label;
+  // Modal controls (robust)
+  infoModal.style.display = 'none';
+  infoBtn.addEventListener('click', () => {
+    infoModal.style.display = 'flex';
+    infoModal.classList.add('show');
+    infoModal.setAttribute('aria-hidden','false');
+  });
+  function closeModal(){
+    infoModal.classList.remove('show');
+    setTimeout(()=>{ infoModal.style.display='none'; infoModal.setAttribute('aria-hidden','true'); }, 300);
+  }
+  closeInfo.addEventListener('click', closeModal);
+  infoModal.addEventListener('click', (e)=>{ if(e.target===infoModal) closeModal(); });
 
-        if (event === "custom") {
-          customControls.style.display = "block";
-          const m1 = +m1Slider.value, m2 = +m2Slider.value;
-          const s1 = +s1Slider.value, s2 = +s2Slider.value;
-          const chirpMass = Math.pow((m1 * m2), 3/5) / Math.pow(m1 + m2, 1/5);
-          freq = 0.1 + (50 / chirpMass) * 0.002;
-          decay = 0.001 + (s1 + s2) * 0.001;
-          label = `Custom: M₁=${m1}, M₂=${m2}`;
-        } else {
-          customControls.style.display = "none";
-          if (event === "gw150914") { freq = 0.25; decay = 0.002; label = "GW150914"; }
-          else if (event === "gw170104") { freq = 0.18; decay = 0.0018; label = "GW170104"; }
-          else if (event === "gw190521") { freq = 0.12; decay = 0.001; label = "GW190521"; }
-        }
+  // Learn panel controls
+  learnMoreBtn.addEventListener('click', ()=> {
+    learnPanel.classList.add('show');
+    startOrbitAnimation();
+    playChirpSound(); // also play chirp for the demo
+  });
+  closeLearn.addEventListener('click', ()=> learnPanel.classList.remove('show'));
 
-        const t = Array.from({ length: 2000 }, (_, i) => i / 20);
-        const hPlus = t.map(x => Math.sin(freq * x) * Math.exp(-decay * x));
-        const hCross = t.map(x => Math.cos(freq * x) * Math.exp(-decay * x));
+  // show/hide custom controls when user picks custom
+  function checkCustomVisibility(){
+    if(eventSelect.value === 'custom'){
+      customControls.style.display = 'block';
+      customControls.setAttribute('aria-hidden','false');
+    } else {
+      customControls.style.display = 'none';
+      customControls.setAttribute('aria-hidden','true');
+    }
+  }
+  eventSelect.addEventListener('change', checkCustomVisibility);
+  // initial check (fixes issue where custom wasn't shown)
+  checkCustomVisibility();
 
-        Plotly.newPlot(chartDiv, [
-          { x: t, y: hPlus, mode: 'lines', name: 'h₊', line: { width: 2 } },
-          { x: t, y: hCross, mode: 'lines', name: 'h×', line: { width: 2 } }
-        ], {
-          title: `${label} – Simulated Waveform`,
-          xaxis: { title: 'Time (M)' },
-          yaxis: { title: 'Strain (h)' },
-          plot_bgcolor: '#0d0d20',
-          paper_bgcolor: '#0d0d20',
-          font: { color: 'white' }
-        }, { responsive: true });
-      }
-
-      eventSelect.addEventListener("change", () =>
-        customControls.style.display = (eventSelect.value === "custom") ? "block" : "none"
-      );
-      simulateBtn.addEventListener("click", () => generateWaveform(eventSelect.value));
-      generateWaveform("gw150914");
-
-      // --- Chirp playback button ---
-      document.getElementById("playChirpBtn").addEventListener("click", playChirpSound);
-    });
-
-    // --- Orbit animation ---
-    function startOrbitAnimation() {
-      const canvas = document.getElementById("orbitCanvas");
-      const ctx = canvas.getContext("2d");
-      let angle = 0;
-      function draw() {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const r = 70;
-        const cx = canvas.width / 2, cy = canvas.height / 2;
-        const x1 = cx + r * Math.cos(angle);
-        const y1 = cy + r * Math.sin(angle);
-        const x2 = cx - r * Math.cos(angle);
-        const y2 = cy - r * Math.sin(angle);
-        ctx.beginPath();
-        ctx.fillStyle = "#00aaff";
-        ctx.arc(x1, y1, 10, 0, 2 * Math.PI);
-        ctx.arc(x2, y2, 10, 0, 2 * Math.PI);
-        ctx.fill();
-        angle += 0.05;
-        requestAnimationFrame(draw);
-      }
-      draw();
+  // Core waveform generator (safe: no undefined variables)
+  function generateWaveform(choice){
+    let freq, decay, label;
+    if(choice === 'custom'){
+      const m1 = Number(m1Slider.value);
+      const m2 = Number(m2Slider.value);
+      const s1 = Number(s1Slider.value);
+      const s2 = Number(s2Slider.value);
+      // chirp-mass-like scaling (toy model)
+      const chirpMass = Math.pow((m1*m2), 3/5) / Math.pow(m1+m2, 1/5);
+      freq = 0.1 + (50 / Math.max(1, chirpMass)) * 0.002; // avoid div by zero
+      decay = 0.001 + (s1 + s2) * 0.001;
+      label = `Custom — M₁=${m1} M☉, M₂=${m2} M☉`;
+    } else {
+      // presets tuned for demo
+      customControls.style.display = 'none';
+      if(choice === 'gw150914'){ freq = 0.25; decay = 0.002; label = 'GW150914'; }
+      else if(choice === 'gw170104'){ freq = 0.18; decay = 0.0018; label = 'GW170104'; }
+      else if(choice === 'gw190521'){ freq = 0.12; decay = 0.001; label = 'GW190521'; }
+      else { freq = 0.2; decay = 0.0015; label = 'Demo'; }
     }
 
-    // --- Chirp sound generator ---
-    function playChirpSound() {
+    // build data and plot with Plotly
+    const N = 2000;
+    const t = new Array(N);
+    const hPlus = new Array(N);
+    const hCross = new Array(N);
+    for(let i=0;i<N;i++){
+      const x = i/20; // time index scaled
+      t[i]=x;
+      hPlus[i]=Math.sin(freq*x)*Math.exp(-decay*x);
+      hCross[i]=Math.cos(freq*x)*Math.exp(-decay*x);
+    }
+
+    const traces = [
+      { x: t, y: hPlus, mode: 'lines', name: 'h₊', line:{width:2, color:'#00e5ff'} },
+      { x: t, y: hCross, mode: 'lines', name: 'h×', line:{width:2, color:'#ff66cc'} }
+    ];
+    const layout = {
+      title: `${label} — Simulated Strain (toy model)`,
+      xaxis:{title:'Time (M)'},
+      yaxis:{title:'Strain (arb units)'},
+      paper_bgcolor: 'transparent',
+      plot_bgcolor: 'transparent',
+      font:{color:'#ddd'}
+    };
+    Plotly.newPlot(chartDiv, traces, layout, {responsive:true, displayModeBar:false});
+  }
+
+  // Simulate button
+  simulateBtn.addEventListener('click', ()=> generateWaveform(eventSelect.value) );
+
+  // initial plot
+  generateWaveform(eventSelect.value);
+
+  // Play chirp (general-purpose) — uses small WebAudio sweep
+  function playChirpSound(opts){
+    try{
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.connect(gain); gain.connect(audioCtx.destination);
 
-      osc.type = "sine";
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      const duration = 3;  // seconds
-      const startFreq = 100;
-      const endFreq = 800;
+      // allow override via opts
+      const duration = (opts && opts.duration) ? opts.duration : 2.8;
+      const startFreq = (opts && opts.startFreq) ? opts.startFreq : 120;
+      const endFreq = (opts && opts.endFreq) ? opts.endFreq : 900;
 
       const now = audioCtx.currentTime;
       osc.frequency.setValueAtTime(startFreq, now);
-      osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
-      gain.gain.setValueAtTime(0.1, now);
+      // use linear ramp to avoid errors on some browsers when start==end
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq), now + duration);
+      gain.gain.setValueAtTime(0.08, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-      osc.start(now);
-      osc.stop(now + duration);
+      osc.start(now); osc.stop(now + duration);
+    }catch(e){ console.warn('Audio failed:', e); }
+  }
+
+  // Play Chirp button wired
+  playChirpBtn.addEventListener('click', ()=> {
+    // small heuristic: if custom selected, make chirp lower/faster by masses
+    if(eventSelect.value === 'custom'){
+      const m1 = Number(m1Slider.value), m2 = Number(m2Slider.value);
+      // heavier => lower pitch
+      const chirpMass = Math.pow((m1*m2),3/5)/Math.pow(m1+m2,1/5);
+      const start = Math.max(40, 100 - chirpMass*0.6);
+      const end = Math.max(200, 1000 - chirpMass*3);
+      playChirpSound({duration:3, startFreq:start, endFreq:end});
+    } else {
+      playChirpSound({duration:3, startFreq:120, endFreq:800});
     }
-  </script>
+  });
+
+  // Orbit animation (Learn panel)
+  function startOrbitAnimation(){
+    const canvas = document.getElementById('orbitCanvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let angle = 0;
+    let running = true;
+    // stop previous loops by using closure flag
+    (function loop(){
+      if(!document.body.contains(canvas)) return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const cx = canvas.width/2, cy = canvas.height/2, r = 60;
+      const x1 = cx + r*Math.cos(angle), y1 = cy + r*Math.sin(angle);
+      const x2 = cx - r*Math.cos(angle), y2 = cy - r*Math.sin(angle);
+      // orbit tracks
+      ctx.fillStyle = '#002233';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.beginPath();
+      ctx.fillStyle = '#00aaff';
+      ctx.arc(x1,y1,10,0,Math.PI*2);
+      ctx.arc(x2,y2,10,0,Math.PI*2);
+      ctx.fill();
+      angle += 0.06;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+}); // end DOMContentLoaded
+</script>
 </body>
 </html>
