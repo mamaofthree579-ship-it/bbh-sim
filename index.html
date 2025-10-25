@@ -1,86 +1,257 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Open Gravitational Wave Explorer</title>
+
+  <!-- External CSS -->
   <link rel="stylesheet" href="css/style.css">
+
+  <!-- Plotly for charts -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
   <!-- Ensure modal hidden before JS + smooth animation -->
   <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(ellipse at center, #02030a 0%, #000 100%);
+      color: #fff;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .controls {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    select, button {
+      background: #0a0a20;
+      color: white;
+      border: 1px solid #444;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      margin: 0.3rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    select:hover, button:hover {
+      background: #1a1a3d;
+    }
+
+    #chart {
+      width: 90%;
+      max-width: 800px;
+      margin: 2rem auto;
+      border-radius: 1rem;
+      background: #0d0d20;
+      padding: 1rem;
+    }
+
+    /* Modal Styling */
     #infoModal {
       display: none;
       opacity: 0;
-      transition: opacity 0.4s ease, transform 0.4s ease;
+      position: fixed;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.75);
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.4s ease;
     }
+
     #infoModal.show {
       display: flex;
       opacity: 1;
+    }
+
+    .modal-content {
+      background: #111;
+      padding: 2rem;
+      border-radius: 1rem;
+      max-width: 600px;
+      text-align: left;
+      position: relative;
+      transform: scale(0.95);
+      transition: transform 0.4s ease;
+    }
+
+    #infoModal.show .modal-content {
       transform: scale(1);
     }
+
+    .close {
+      position: absolute;
+      top: 0.5rem;
+      right: 1rem;
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    .close:hover {
+      color: white;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    .learn-btn {
+      margin-top: 1rem;
+      background: #003366;
+      border: 1px solid #00aaff;
+    }
+
+    .learn-btn:hover {
+      background: #005599;
+    }
   </style>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
-  
+
 <body>
   <header>
     <h1>🌌 Open Gravitational Wave Explorer</h1>
-    <p>Explore, simulate, and understand gravitational wave events</p>
-    <button id="infoBtn" class="info-button" title="Learn about gravitational waves">ℹ️</button>
+    <p>Explore real and simulated black hole mergers</p>
   </header>
 
-  <section class="controls">
-    <label for="eventSelect">Select Event:</label>
+  <div class="controls">
+    <label for="eventSelect">Choose an Event:</label>
     <select id="eventSelect">
-      <option value="">-- Choose an event --</option>
+      <option value="gw150914">GW150914 – First LIGO Detection</option>
+      <option value="gw170104">GW170104 – Intermediate Mass Merger</option>
+      <option value="gw190521">GW190521 – Massive BH Merger</option>
+      <option value="custom">Simulate Custom Collision</option>
     </select>
-    <button id="loadEvent">Load Event</button>
-    <button id="simulateCustom">Custom Simulation</button>
-  </section>
+    <button id="simulateBtn">Simulate</button>
+    <button id="infoBtn">ℹ️ Info</button>
+  </div>
 
-  <section id="quickFacts" class="hidden">
-    <h3>📘 Event Facts</h3>
-    <p id="eventName"></p>
-    <p id="eventDate"></p>
-    <p id="eventDesc"></p>
-  </section>
+  <div id="chart"></div>
 
-  <section id="customForm" class="hidden">
-    <h3>🛠 Custom Simulation Parameters</h3>
-    <label>Mass 1 (M☉): 
-      <input type="range" id="mass1" min="5" max="80" value="30" step="1">
-      <span id="m1Val">30</span>
-    </label><br>
-    <label>Mass 2 (M☉): 
-      <input type="range" id="mass2" min="5" max="80" value="30" step="1">
-      <span id="m2Val">30</span>
-    </label><br>
-    <label>Duration (s): 
-      <input type="range" id="duration" min="1" max="10" value="5" step="1">
-      <span id="durVal">5</span>
-    </label><br>
-    <button id="runSim">Run Simulation</button>
-    <button id="saveSim">Save Simulation</button>
-  </section>
-
-  <section id="plots">
-    <div id="waveformPlot"></div>
-    <div id="freqPlot"></div>
-  </section>
+  <!-- Info Modal -->
+  <div id="infoModal">
+    <div class="modal-content">
+      <span id="closeInfo" class="close">&times;</span>
+      <h2>🌀 Understanding Gravitational Waves</h2>
+      <p><strong>Gravitational Strain (h):</strong> A measure of how much space-time is stretched and squeezed as a gravitational wave passes.</p>
+      <p><strong>Chirp Mass:</strong> The key mass combination that sets how quickly the waveform “chirps.”</p>
+      <p><strong>Frequency Evolution:</strong> As black holes spiral together, their wave frequency and amplitude both rise before the merger.</p>
+      <p>This visualization uses simplified models to help you explore how different masses affect waveform shape and timing.</p>
+      <button id="learnMoreBtn" class="learn-btn">📖 Learn More</button>
+    </div>
+  </div>
 
   <footer>
-    <p>Built with 💫 using open gravitational data + custom simulation tools</p>
+    <p>Created for the Open BBH Simulation Project • Powered by Plotly</p>
   </footer>
 
-<!-- Info Modal -->
-<div id="infoModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <span id="closeInfo" class="close">&times;</span>
-    <h2>🌀 Understanding Gravitational Waves</h2>
-    <p><strong>Gravitational Strain (h):</strong> A measure of how much space-time is stretched and squeezed as a gravitational wave passes. Detectors like LIGO measure this strain as changes in distance smaller than a proton’s width.</p>
-    <p><strong>Chirp Mass:</strong> A special combination of the two black hole masses that determines how quickly the wave “chirps” (increases in frequency) before the merger.</p>
-    <p><strong>Frequency Evolution:</strong> As the black holes spiral together, they lose energy via gravitational radiation — the frequency and amplitude both rise until they merge and “ring down.”</p>
-    <p>This visualization uses simplified models to help you explore how different black hole masses affect the waveform’s shape and timing.</p>
-  </div>
-</div>
-  
+  <script>
+    // ℹ️ Modal control with fade + zoom animation
+    document.addEventListener("DOMContentLoaded", () => {
+      const infoBtn = document.getElementById("infoBtn");
+      const infoModal = document.getElementById("infoModal");
+      const closeInfo = document.getElementById("closeInfo");
+      const learnMoreBtn = document.getElementById("learnMoreBtn");
+
+      infoModal.style.display = "none";
+
+      infoBtn.addEventListener("click", () => {
+        infoModal.style.display = "flex";
+        requestAnimationFrame(() => infoModal.classList.add("show"));
+      });
+
+      const closeModal = () => {
+        infoModal.classList.remove("show");
+        setTimeout(() => (infoModal.style.display = "none"), 400);
+      };
+
+      closeInfo.addEventListener("click", closeModal);
+      infoModal.addEventListener("click", e => {
+        if (e.target === infoModal) closeModal();
+      });
+
+      // 📖 Learn More button
+      learnMoreBtn.addEventListener("click", () => {
+        alert("Coming soon: Interactive lesson on chirp mass and waveform evolution!");
+      });
+    });
+
+    // 🌌 Simple mock simulation visuals
+    document.addEventListener("DOMContentLoaded", () => {
+      const chartDiv = document.getElementById("chart");
+      const simulateBtn = document.getElementById("simulateBtn");
+      const eventSelect = document.getElementById("eventSelect");
+
+      function generateWaveform(event) {
+        let freq = 0.2;
+        let decay = 0.002;
+        let label = "";
+
+        switch (event) {
+          case "gw150914":
+            freq = 0.25; decay = 0.002; label = "GW150914";
+            break;
+          case "gw170104":
+            freq = 0.18; decay = 0.0018; label = "GW170104";
+            break;
+          case "gw190521":
+            freq = 0.12; decay = 0.001; label = "GW190521";
+            break;
+          case "custom":
+            freq = Math.random() * 0.3 + 0.1;
+            decay = Math.random() * 0.002 + 0.001;
+            label = "Custom Simulation";
+            break;
+        }
+
+        const t = Array.from({ length: 2000 }, (_, i) => i / 20);
+        const hPlus = t.map(x => Math.sin(freq * x) * Math.exp(-decay * x));
+        const hCross = t.map(x => Math.cos(freq * x) * Math.exp(-decay * x));
+
+        const trace1 = { x: t, y: hPlus, mode: 'lines', name: 'h₊', line: { width: 2 } };
+        const trace2 = { x: t, y: hCross, mode: 'lines', name: 'h×', line: { width: 2 } };
+
+        const layout = {
+          title: `${label} – Simulated Gravitational Waveform`,
+          xaxis: { title: 'Time (M)' },
+          yaxis: { title: 'Strain (h)' },
+          plot_bgcolor: '#0d0d20',
+          paper_bgcolor: '#0d0d20',
+          font: { color: 'white' }
+        };
+
+        Plotly.newPlot(chartDiv, [trace1, trace2], layout, { responsive: true });
+      }
+
+      simulateBtn.addEventListener("click", () => {
+        generateWaveform(eventSelect.value);
+      });
+
+      // Run initial simulation on load
+      generateWaveform("gw150914");
+    });
+  </script>
+</body>
+</html>
