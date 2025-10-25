@@ -1,7 +1,11 @@
+let loadedEvents = [];
+let currentEvent = null;
+
 // Load known gravitational events
 fetch("data/events.json")
   .then(res => res.json())
   .then(data => {
+    loadedEvents = data.events;
     const select = document.getElementById("eventSelect");
     data.events.forEach(ev => {
       const opt = document.createElement("option");
@@ -12,8 +16,8 @@ fetch("data/events.json")
 
     document.getElementById("loadEvent").onclick = () => {
       const id = select.value;
-      const event = data.events.find(e => e.id === id);
-      if (event) plotWaveform(event);
+      currentEvent = data.events.find(e => e.id === id);
+      if (currentEvent) plotWaveform(currentEvent);
     };
   });
 
@@ -23,7 +27,7 @@ document.getElementById("simulateCustom").onclick = () => {
   form.classList.toggle("hidden");
 };
 
-// Display current slider values
+// Slider updates
 ["mass1", "mass2", "duration"].forEach(id => {
   const slider = document.getElementById(id);
   const label = document.getElementById(id === "mass1" ? "m1Val" : id === "mass2" ? "m2Val" : "durVal");
@@ -43,6 +47,10 @@ document.getElementById("runSim").onclick = () => {
   const hCross = t.map(tt => Math.cos(freq * tt) * Math.exp(-tt / (dur * 5)));
 
   plotCustomWaveform(t, hPlus, hCross, {m1, m2, dur});
+
+  if (currentEvent) {
+    overlayComparison(t, hPlus, currentEvent);
+  }
 };
 
 // Save custom simulation parameters
@@ -57,10 +65,10 @@ document.getElementById("saveSim").onclick = () => {
   link.click();
 };
 
-// Plot known event
+// Plot real event
 function plotWaveform(event) {
   const t = Array.from({length: 1000}, (_, i) => i / 50);
-  const h = t.map(tt => Math.sin(tt * event.freq) * Math.exp(-tt / 40));
+  const h = t.map(tt => Math.sin(tt * event.freq * 0.02) * Math.exp(-tt / 40));
 
   Plotly.newPlot("waveformPlot", [{
     x: t,
@@ -110,5 +118,20 @@ function plotCustomWaveform(t, hPlus, hCross, params) {
     title: "Approximate Frequency Estimate",
     xaxis: {title: "Frequency [Hz]"},
     yaxis: {title: "Amplitude"}
+  });
+}
+
+// Overlay comparison between simulated and real event
+function overlayComparison(t, simH, event) {
+  const realT = Array.from({length: 1000}, (_, i) => i / 50);
+  const realH = realT.map(tt => Math.sin(tt * event.freq * 0.02) * Math.exp(-tt / 40));
+
+  Plotly.newPlot("waveformPlot", [
+    {x: t, y: simH, mode: "lines", name: "Simulated", line: {color: "#00e5ff"}},
+    {x: realT, y: realH, mode: "lines", name: event.name, line: {color: "#ff4081", dash: "dot"}}
+  ], {
+    title: `Comparison: Simulated vs ${event.name}`,
+    xaxis: {title: "Time [s]"},
+    yaxis: {title: "Strain h(t)"}
   });
 }
