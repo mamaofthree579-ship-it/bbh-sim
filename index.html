@@ -1,599 +1,258 @@
+index.html:
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BBH Simulation – Interactive Visualizer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BBH Simulation Visualizer — Orbit, Chirp & Spectrogram</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
   body {
-    background:#060606; color:#eee;
-    font-family:system-ui, sans-serif;
-    margin:0; padding:0;
-    overflow-x:hidden;
+    margin: 0;
+    background: radial-gradient(circle at top, #030316, #000);
+    color: #e9f6ff;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   header {
-    text-align:center;
-    padding:1rem;
-    font-size:1.4rem;
-    font-weight:bold;
-    color:#88e0ff;
+    background: rgba(255,255,255,0.04);
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
-  #controls { text-align:center; margin:1rem 0; }
+  header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #00d4ff;
+  }
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    flex-wrap: wrap;
+  }
   select, button, input {
-    background:#111; color:#eee;
-    border:1px solid #333;
-    border-radius:6px;
-    padding:6px 10px; margin:4px;
+    background: #0c0c14;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e9f6ff;
+    border-radius: 6px;
+    padding: 8px;
   }
-  #mainChart, #spectrogram, #orbit { width:100%; height:300px; }
-  #customOptions { display:none; text-align:center; margin-top:1rem; }
-  #playerBar {
-    position:fixed;
-    bottom:10px; right:10px;
-    background:rgba(0,0,0,0.7);
-    border:1px solid #444;
-    border-radius:12px;
-    padding:8px 12px;
-    display:flex; align-items:center; gap:10px;
-    backdrop-filter: blur(6px);
+  button { cursor: pointer; }
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    gap: 14px;
   }
-  #progress {
-    width:120px; height:6px;
-    background:#222; border-radius:3px;
-    overflow:hidden;
+  .plot {
+    width: 95%;
+    max-width: 1000px;
+    border-radius: 8px;
   }
-  #progress span {
-    display:block; height:100%; width:0%;
-    background:#00e0ff; transition:width 0.05s linear;
+  .custom-controls {
+    width: 95%;
+    max-width: 1000px;
+    background: rgba(255,255,255,0.03);
+    padding: 12px;
+    border-radius: 8px;
   }
-  #playerBar button {
-    background:none; border:none; color:#fff; font-size:1.2rem;
+  .custom-controls label {
+    display: inline-block;
+    margin: 6px;
+    font-size: 0.9rem;
   }
-  #playerBar button:hover { color:#00e0ff; cursor:pointer; }
+  .player {
+    width: 95%;
+    max-width: 1000px;
+    background: rgba(255,255,255,0.03);
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+  }
+  .player button {
+    background: transparent;
+    border: none;
+    color: #e9f6ff;
+    font-size: 18px;
+  }
+  footer {
+    text-align: center;
+    color: #aaa;
+    font-size: 0.85rem;
+    padding: 14px;
+  }
 </style>
 </head>
 <body>
-<header>🌀 Binary Black Hole Simulation Visualizer</header>
 
-<div id="controls">
-  <select id="eventSelect">
-    <option value="gw150914">GW150914</option>
-    <option value="gw170817">GW170817</option>
-    <option value="gw190521">GW190521</option>
-    <option value="custom">Custom Simulation</option>
-  </select>
-  <button id="runBtn">Run Simulation</button>
-</div>
-
-<div id="customOptions">
-  <label>Mass 1 (M☉): <input type="number" id="mass1" value="30"></label>
-  <label>Mass 2 (M☉): <input type="number" id="mass2" value="35"></label>
-  <label>Spin 1 (χ): <input type="number" step="0.1" id="spin1" value="0.2"></label>
-  <label>Spin 2 (χ): <input type="number" step="0.1" id="spin2" value="0.1"></label>
-  <button id="generateBtn">Generate</button>
-</div>
-
-<div id="mainChart"></div>
-<div id="spectrogram"></div>
-<div id="orbit"></div>
-
-<div id="playerBar">
-  <button id="playPause">▶️</button>
-  <button id="restart">🔁</button>
-  <div id="progress"><span></span></div>
-  <button id="soundToggle">🔇 Enable Sound</button>
-</div>
-
-<script>
-/* ---------- Utility & Mock Data ---------- */
-let playing=false, t=0, dt=0.05, duration=20, timer;
-let audioCtx, osc;
-let soundEnabled=false;
-const progressEl=document.querySelector('#progress span');
-
-function generateWave(m1,m2){
-  const n=800;
-  const t=Array.from({length:n},(_,i)=>i/n*duration);
-  const amp=(m1+m2)/70;
-  const h=t.map(v=>amp*Math.sin(0.4*v*v)*Math.exp(-0.01*v));
-  return {t,h};
-}
-
-function plotWaveform(data){
-  Plotly.newPlot('mainChart',[{
-    x:data.t, y:data.h, mode:'lines', line:{color:'#00e0ff'},
-    name:'h₊(t)'
-  }],{
-    paper_bgcolor:'#060606', plot_bgcolor:'#060606',
-    xaxis:{title:'Time [M]'}, yaxis:{title:'Strain'},
-    margin:{t:40,l:50,r:20,b:40}, title:'Gravitational-Wave Strain'
-  });
-}
-
-function plotSpectrogram(data){
-  const freq=data.t.map(v=>v);
-  const amp=data.h.map(v=>Math.abs(v));
-  Plotly.newPlot('spectrogram',[{
-    x:data.t, y:freq, z:amp.map(a=>[a]), type:'heatmap',
-    colorscale:'Viridis', showscale:false
-  }],{
-    paper_bgcolor:'#060606', plot_bgcolor:'#060606',
-    title:'Chirp Spectrogram', margin:{t:40,l:50,r:20,b:40}
-  });
-}
-
-function plotOrbit(progress){
-  const theta=Array.from({length:60},(_,i)=>i/60*2*Math.PI);
-  const r=1.5-progress*1.5;
-  const x1=theta.map(th=>r*Math.cos(th));
-  const y1=theta.map(th=>r*Math.sin(th));
-  const x2=x1.map(v=>-v), y2=y1.map(v=>-y1[x1.indexOf(v)]);
-  Plotly.newPlot('orbit',[
-    {x:[x1[0]],y:[y1[0]],mode:'markers',marker:{size:12,color:'#00e0ff'},name:'BH1'},
-    {x:[x2[0]],y:[y2[0]],mode:'markers',marker:{size:12,color:'#ff0077'},name:'BH2'},
-  ],{
-    paper_bgcolor:'#060606', plot_bgcolor:'#060606',
-    title:'Binary Orbit', xaxis:{visible:false}, yaxis:{visible:false}
-  });
-}
-
-/* ---------- Playback Controls ---------- */
-function step(){
-  if(!playing)return;
-  t+=dt;
-  if(t>=duration){playing=false; t=duration;}
-  const progress=t/duration*100;
-  progressEl.style.width=progress+'%';
-  plotOrbit(t/duration);
-  if(soundEnabled && osc) osc.frequency.setValueAtTime(150+300*(t/duration), audioCtx.currentTime);
-  if(t<duration) requestAnimationFrame(step);
-}
-
-document.getElementById('playPause').onclick=()=>{
-  playing=!playing;
-  document.getElementById('playPause').textContent=playing?'⏸':'▶️';
-  if(playing) step();
-};
-document.getElementById('restart').onclick=()=>{
-  t=0; progressEl.style.width='0%'; playing=false;
-  document.getElementById('playPause').textContent='▶️';
-  plotOrbit(0);
-};
-document.getElementById('soundToggle').onclick=()=>{
-  if(!soundEnabled){
-    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    osc=audioCtx.createOscillator();
-    osc.type='sine';
-    osc.frequency.setValueAtTime(150,audioCtx.currentTime);
-    osc.connect(audioCtx.destination);
-    osc.start();
-    soundEnabled=true;
-    document.getElementById('soundToggle').textContent='🔊 Sound On';
-  }else{
-    osc.stop(); soundEnabled=false;
-    document.getElementById('soundToggle').textContent='🔇 Enable Sound';
-  }
-};
-
-/* ---------- Simulation Setup ---------- */
-function runSimulation(){
-  const ev=document.getElementById('eventSelect').value;
-  if(ev==='custom'){
-    document.getElementById('customOptions').style.display='block';
-  }else{
-    document.getElementById('customOptions').style.display='none';
-    const presets={gw150914:[36,29],gw170817:[1.4,1.4],gw190521:[85,66]};
-    const [m1,m2]=presets[ev]||[30,30];
-    const data=generateWave(m1,m2);
-    plotWaveform(data);
-    plotSpectrogram(data);
-    plotOrbit(0);
-  }
-}
-
-document.getElementById('runBtn').onclick=runSimulation;
-document.getElementById('generateBtn').onclick=()=>{
-  const m1=+document.getElementById('mass1').value;
-  const m2=+document.getElementById('mass2').value;
-  const data=generateWave(m1,m2);
-  plotWaveform(data);
-  plotSpectrogram(data);
-};
-
-runSimulation(); // initial
-</script>
-</body>
-</html>
 <header>
-  <meta charset="UTF-8">
-  <h1>Open BBH Visualizer — 3D Orbit + Chirp</h1>
-  <div class="top-controls">
-    <select id="presetSelect" title="Choose event">
+  <h1>🌀 BBH Simulation Visualizer</h1>
+  <div class="controls">
+    <select id="presetSelect">
       <option value="GW150914">GW150914 (first BBH)</option>
       <option value="GW170104">GW170104</option>
       <option value="GW190521">GW190521</option>
-      <option value="custom">Custom simulation</option>
+      <option value="custom">Custom Simulation</option>
     </select>
-
-    <button id="openControls" class="btn-small">⚙️ Controls</button>
-    <button id="genBtn" class="btn-small">Generate</button>
+    <button id="generateBtn">Generate</button>
   </div>
 </header>
 
-<div class="grid">
-  <!-- left: waveform + spectrogram -->
-  <div class="panel" id="wavePanel">
-    <div id="progressBar"><div id="progressFill"></div></div>
-    <div id="mainPlot" style="width:100%;height:360px;"></div>
-    <div id="specPlot" style="width:100%;height:220px;margin-top:12px;"></div>
+<main>
+  <div id="mainPlot" class="plot" style="height:300px;"></div>
+  <div id="specPlot" class="plot" style="height:220px;"></div>
+
+  <div class="custom-controls" id="customControls" style="display:none;">
+    <strong>Custom Simulation Parameters</strong><br>
+    <label>m₁ <input id="m1" type="number" value="36" min="1" style="width:70px"></label>
+    <label>m₂ <input id="m2" type="number" value="29" min="1" style="width:70px"></label>
+    <label>spin₁ <input id="s1" type="number" value="0.3" min="0" max="1" step="0.01" style="width:60px"></label>
+    <label>spin₂ <input id="s2" type="number" value="0.2" min="0" max="1" step="0.01" style="width:60px"></label>
+    <label>sep <input id="sep" type="number" value="15" min="6" style="width:60px"></label>
+    <button id="runCustom">Run</button>
   </div>
 
-  <!-- right column: orbit (3D) + custom controls -->
-  <div class="right-column">
-    <div class="panel" id="orbitPanel">
-      <div id="orbitPlot" style="width:100%;height:420px;"></div>
-    </div>
+  <div id="orbitPlot" class="plot" style="height:420px;"></div>
 
-    <div class="controls-block" id="customBlock" aria-hidden="true">
-      <div class="small">Custom initial parameters</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <label class="small">m₁ (M☉) <input id="m1" type="number" value="36" min="1" style="width:90px"></label>
-        <label class="small">m₂ (M☉) <input id="m2" type="number" value="29" min="1" style="width:90px"></label>
-        <label class="small">spin₁ <input id="s1" type="number" value="0.3" min="0" max="0.99" step="0.01" style="width:80px"></label>
-        <label class="small">spin₂ <input id="s2" type="number" value="0.2" min="0" max="0.99" step="0.01" style="width:80px"></label>
-        <label class="small">sep (M) <input id="sep" type="number" value="15" min="6" style="width:84px"></label>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button id="runCustom" class="btn-small">Run Custom</button>
-        <button id="resetBtn" class="btn-small">Reset</button>
-      </div>
-    </div>
+  <div class="player">
+    <button id="playPause">▶️</button>
+    <button id="restart">🔁</button>
+    <button id="soundToggle">🔇</button>
   </div>
-</div>
+</main>
 
-<!-- player (hide) -->
-<div id="player" class="hidden" aria-label="player">
-  <button id="playPause" title="Play / Pause">▶️</button>
-  <button id="restart" title="Restart">🔁</button>
-  <div class="prog"><i id="progFill"></i></div>
-  <button id="soundToggle" title="Toggle sound">🔇</button>
-</div>
-
-<button id="infoBtn" title="View details">ℹ️</button>
-<div id="details" role="dialog" aria-hidden="true">
-  <div style="font-weight:700;margin-bottom:6px">Current simulation</div>
-  <div id="detailText" class="small"></div>
-</div>
+<footer>
+  © Open BBH Visualizer • 3D Orbits, Chirp, and Spectrogram
+</footer>
 
 <script>
-/* ============================
-   Core: chirp generator + plots
-   ============================ */
+let state = { playing:false, audioEnabled:false, audioCtx:null, audioOsc:null, tIndex:0, sampleRate:1024 };
+let tsData = null;
 
-let state = {
-  m1:36, m2:29, s1:0.3, s2:0.2, sep:15,
-  duration:6.0, sampleRate:1024, playing:false,
-  tIndex:0, audioEnabled:false, audioOsc:null, audioCtx:null,
-  autoHideTimer:null
-};
-
-const mainDiv = document.getElementById('mainPlot');
-const specDiv = document.getElementById('specPlot');
-const orbitDiv = document.getElementById('orbitPlot');
-const progressFill = document.getElementById('progressFill');
-const progFillSmall = document.getElementById('progFill');
-const player = document.getElementById('player');
-
-function chirpParamsFromState(){
-  return {m1:state.m1,m2:state.m2,s1:state.s1,s2:state.s2,sep:state.sep};
-}
-
-// produce time series with physically-inspired chirp (toy model)
-function generateChirp(params){
-  const {m1,m2,sep} = params;
-  const total = m1 + m2;
-  const chirpMass = Math.pow((m1*m2), 3/5) / Math.pow(total,1/5);
-  const duration = Math.max(3, Math.min(12, 8 * Math.max(1, (30/chirpMass)) * 0.8)); // adapt duration by mass
-  const sr = state.sampleRate;
-  const N = Math.round(duration*sr);
-  const t = new Array(N);
-  const h = new Array(N);
-  const freq = new Array(N);
-  const f0 = 20 * Math.sqrt(30/chirpMass);
-  const f1 = 800 * Math.sqrt(30/chirpMass);
+function generateChirp(m1,m2){
+  const duration = 6;
+  const N = Math.round(duration*state.sampleRate);
+  const t=[], h=[], freq=[];
+  const f0=30, f1=500;
   for(let i=0;i<N;i++){
-    const tt = i/sr;
-    t[i]=tt;
-    // frequency ramps steeply toward merger:
-    const tau = tt/duration;
-    const fr = f0 + (f1-f0)*Math.pow(tau, 3.2);
-    freq[i]=fr;
-    const amp = Math.pow(tau,1.8)*Math.exp(-2.2*(1-tau));
-    h[i] = amp * Math.sin(2*Math.PI*fr*tt);
+    const tt=i/state.sampleRate;
+    const tau=tt/duration;
+    const f=f0+(f1-f0)*Math.pow(tau,3);
+    freq.push(f);
+    t.push(tt);
+    const amp=Math.pow(tau,2)*Math.exp(-2*(1-tau));
+    h.push(amp*Math.sin(2*Math.PI*f*tt));
   }
-  return {t,h,freq,duration};
+  return {t,h,freq};
 }
-
-/* ----- Plot helpers ----- */
 
 function plotWaveform(ts){
-  const trace = { x: ts.t, y: ts.h, mode:'lines', line:{color:'#00d7ff'}, name:'h(t)' };
-  const layout = { margin:{t:30,l:50,r:10,b:40}, paper_bgcolor:'transparent', plot_bgcolor:'transparent',
-     xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
-  Plotly.newPlot(mainDiv, [trace], layout, {displayModeBar:false,responsive:true});
+  Plotly.newPlot('mainPlot', [{x:ts.t,y:ts.h,type:'scatter',mode:'lines',line:{color:'#00d4ff'}}],
+    {title:'Gravitational Waveform',paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+     margin:{t:40,l:50,r:20,b:40}}, {displayModeBar:false});
 }
 
 function plotSpectrogram(ts){
-  // short STFT-like heatmap: magnitude of local amplitude windows
-  const w = 256, hop = 128;
-  const mags = [];
-  for(let i=0;i+ w < ts.h.length;i+=hop){
-    const seg = ts.h.slice(i,i+w);
-    const mag = new Array(w).fill(0);
-    for(let k=0;k<w;k++) mag[k]=Math.abs(seg[k]);
-    mags.push(mag);
+  const w=128,hop=64,mags=[];
+  for(let i=0;i+w<ts.h.length;i+=hop){
+    const seg=ts.h.slice(i,i+w);
+    mags.push(seg.map(v=>Math.abs(v)));
   }
-  const layout = {margin:{t:30,l:50,r:10,b:40},paper_bgcolor:'transparent',plot_bgcolor:'transparent',
-    xaxis:{title:'Time window'}, yaxis:{title:'Frequency bin'}};
-  Plotly.newPlot(specDiv, [{z:mags, x: Array.from({length:mags.length},(_,i)=>i), y: Array.from({length:w},(_,i)=>i), type:'heatmap', colorscale:'Viridis'}], layout, {displayModeBar:false,responsive:true});
+  Plotly.newPlot('specPlot',[{z:mags,type:'heatmap',colorscale:'Viridis'}],
+   {title:'Spectrogram',paper_bgcolor:'transparent',plot_bgcolor:'transparent',margin:{t:40,l:50,r:20,b:40}},
+   {displayModeBar:false});
 }
 
-/* ----- 3D Orbit (Plotly scatter3d) ----- */
-function initOrbit3D(){
-  // initial stationary placeholders
-  const data = [
-    { x:[0], y:[0], z:[0], mode:'markers', marker:{size:8,color:'#00d7ff'}, name:'BH1', type:'scatter3d' },
-    { x:[0], y:[0], z:[0], mode:'markers', marker:{size:8,color:'#ff2e8a'}, name:'BH2', type:'scatter3d' },
-    { x:[0,0,0,0], y:[0,0,0,0], z:[0,0,0,0], mode:'lines', line:{color:'#444',width:1}, showlegend:false, type:'scatter3d' }
+function plotOrbit(){
+  const layout={scene:{xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false}},
+  margin:{t:0,l:0,r:0,b:0},paper_bgcolor:'transparent',plot_bgcolor:'transparent'};
+  const data=[
+    {x:[0.5],y:[0],z:[0],type:'scatter3d',mode:'markers',marker:{color:'#00d4ff',size:6},name:'BH1'},
+    {x:[-0.5],y:[0],z:[0],type:'scatter3d',mode:'markers',marker:{color:'#ff2e8a',size:6},name:'BH2'}
   ];
-  const layout = {
-    margin:{t:30,b:10,l:30,r:10},
-    scene:{aspectmode:'auto',camera:{eye:{x:1.4,y:1.2,z:0.8}},xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false}},
-    paper_bgcolor:'transparent',plot_bgcolor:'transparent'
-  };
-  Plotly.newPlot(orbitDiv,data,layout,{displayModeBar:false,responsive:true});
+  Plotly.newPlot('orbitPlot',data,layout,{displayModeBar:false});
 }
-initOrbit3D();
 
-function updateOrbit3D(frameIndex, ts, params){
-  // simple top-down circular orbits with slight tilt for z
-  const {m1,m2,sep} = params;
-  const total = m1 + m2;
-  const radius = sep * 0.6 * (1 - frameIndex/ts.t.length*0.65); // shrink towards merger
-  const speedFactor = 0.015 * (1 + (m1+m2)/100); // heavier -> faster base
-  const theta = frameIndex * speedFactor;
-  const r1 = radius * (m2/total);
-  const r2 = radius * (m1/total);
-  const tilt = 0.35;
-  const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.6);
-  const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta*0.6);
-  // orbit ring (coarse)
-  const ringPts = 48;
-  const ringX = [], ringY = [], ringZ = [];
-  for(let i=0;i<=ringPts;i++){
-    const th = i/ringPts*2*Math.PI;
-    ringX.push(radius*Math.cos(th)); ringY.push(radius*Math.sin(th)); ringZ.push(tilt*Math.cos(th)*0.1);
+function updateOrbit(i,ts){
+  const theta=i*0.05;
+  const r1=0.5*Math.cos(theta),r2=-0.5*Math.cos(theta);
+  const y1=0.5*Math.sin(theta),y2=-0.5*Math.sin(theta);
+  Plotly.restyle('orbitPlot',{'x':[[r1],[r2]],'y':[[y1],[y2]]},[0,1]);
+}
+
+function generateAndPlot(){
+  const preset=document.getElementById('presetSelect').value;
+  let m1=36,m2=29;
+  if(preset==='GW170104'){m1=31;m2=19;}
+  if(preset==='GW190521'){m1=85;m2=66;}
+  if(preset==='custom'){
+    document.getElementById('customControls').style.display='block';
+    m1=+document.getElementById('m1').value;
+    m2=+document.getElementById('m2').value;
+  } else document.getElementById('customControls').style.display='none';
+  tsData=generateChirp(m1,m2);
+  plotWaveform(tsData);
+  plotSpectrogram(tsData);
+  plotOrbit();
+}
+
+function play(){
+  if(!tsData)return;
+  state.playing=true;
+  if(state.audioEnabled&&!state.audioCtx){
+    state.audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   }
-  // update traces
-  Plotly.restyle(orbitDiv, {'x':[[x1]],[x2],[ringX]},{0,1,2});
-  Plotly.restyle(orbitDiv, {'y':[[y1]],[y2],[ringY]},{0,1,2});
-  Plotly.restyle(orbitDiv, {'z':[[z1]],[z2],[ringZ]},{0,1,2});
+  if(state.audioEnabled&&state.audioCtx){
+    const osc=state.audioCtx.createOscillator();
+    const gain=state.audioCtx.createGain();
+    gain.gain.value=0.05;
+    osc.type='sine';
+    osc.connect(gain);gain.connect(state.audioCtx.destination);
+    osc.start();
+    state.audioOsc={osc,gain};
+  }
+  function step(){
+    if(!state.playing)return;
+    const i=state.tIndex;
+    if(i>=tsData.t.length){pause();return;}
+    if(state.audioEnabled&&state.audioOsc){
+      const f=Math.min(1500,tsData.freq[i]*2);
+      try{state.audioOsc.osc.frequency.setValueAtTime(f,state.audioCtx.currentTime);}catch(e){}
+    }
+    updateOrbit(i,tsData);
+    state.tIndex++;
+    requestAnimationFrame(step);
+  }
+  step();
 }
 
-/* ===============
-   Playback engine
-   =============== */
-
-let tsData = null;
-let rafId = null;
-
-function resetPlayback(){
-  state.tIndex = 0;
-  progressFill.style.width = '0%';
-  progFillSmall.style.width = '0%';
+function pause(){
+  state.playing=false;
   if(state.audioOsc){
-    try{ state.audioOsc.stop(); }catch(e){}
+    try{state.audioOsc.osc.stop();}catch(e){}
     state.audioOsc=null;
   }
 }
 
-function play(){
-  if(!tsData) return;
-  if(state.tIndex >= tsData.t.length) state.tIndex = 0;
-  state.playing = true;
-  showPlayer();
-  const sr = state.sampleRate;
-  // create audio oscillator if enabled and permitted
-  if(state.audioEnabled && !state.audioCtx){
-    state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  }
-  if(state.audioEnabled && state.audioCtx && !state.audioOsc){
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
-    osc.type='sine';
-    gain.gain.value = 0.05;
-    osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start();
-    state.audioOsc = {osc,gain};
-  }
-
-  // step loop
-  function step(){
-    if(!state.playing){ rafId=null; return; }
-    const i = state.tIndex;
-    // update progress UI
-    const frac = i / Math.max(1, tsData.t.length-1);
-    const pct = Math.round(frac*10000)/100;
-    progressFill.style.width = `${pct}%`;
-    progFillSmall.style.width = `${pct}%`;
-    // update waveform highlight via vertical line (Plotly shapes) — simpler: skip heavy shapes
-    // update orbit positions
-    updateOrbitFrame(i);
-    // update audio freq if active
-    if(state.audioEnabled && state.audioOsc){
-      // map physical freq to audible freq range (scale factor)
-      const physFreq = tsData.freq[i] || 50;
-      const audible = Math.min(1500, 80 + physFreq*1.2);
-      try{ state.audioOsc.osc.frequency.setValueAtTime(audible, state.audioCtx.currentTime); }catch(e){}
-    }
-    state.tIndex++;
-    if(state.tIndex < tsData.t.length){
-      rafId = requestAnimationFrame(step);
-    } else {
-      state.playing = false;
-      rafId = null;
-    }
-  }
-  if(!rafId) rafId = requestAnimationFrame(step);
-}
-
-function pause(){
-  state.playing = false;
-  if(state.audioOsc){ try{ state.audioOsc.osc.frequency.cancelScheduledValues(state.audioCtx.currentTime); }catch(e){} }
-  if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
-}
-
-function restart(){
-  resetPlayback();
-  play();
-}
-
-/* sync helper: update 3d orbit frame using tsData */
-function updateOrbitFrame(frameIndex){
-  if(!tsData) return;
-  const params = chirpParamsFromState();
-  // clamp index
-  const idx = Math.min(frameIndex, tsData.t.length-1);
-  // Use Plotly restyle with arrays for each trace update
-  const {m1,m2,sep} = params;
-  const total = m1 + m2;
-  const radius = sep * 0.6 * (1 - idx/tsData.t.length*0.65);
-  const speedFactor = 0.015 * (1 + (m1+m2)/100);
-  const theta = idx * speedFactor;
-  const r1 = radius * (m2/total);
-  const r2 = radius * (m1/total);
-  const tilt = 0.35;
-  const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.6);
-  const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta*0.6);
-  // ring
-  const ringPts = 48, ringX=[], ringY=[], ringZ=[];
-  for(let i=0;i<=ringPts;i++){
-    const th = i/ringPts*2*Math.PI;
-    ringX.push(radius*Math.cos(th)); ringY.push(radius*Math.sin(th)); ringZ.push(tilt*Math.cos(th)*0.1);
-  }
-  // stash arrays - Plotly.restyle accepts array-of-arrays
-  Plotly.restyle(orbitDiv, {'x':[[x1],[x2],ringX], 'y':[[y1],[y2],ringY], 'z':[[z1],[z2],ringZ]}, [0,1,2]);
-}
-
-/* ====================
-   UI wiring & actions
-   ==================== */
-
-function showPlayer(){
-  player.classList.remove('hidden');
-  // reset auto-hide
-  if(state.autoHideTimer) clearTimeout(state.autoHideTimer);
-  state.autoHideTimer = setTimeout(()=>{ player.classList.add('hidden'); }, 3000);
-}
-
-// show controls panel
-document.getElementById('openControls').addEventListener('click', ()=>{
-  const cb = document.getElementById('customBlock');
-  const vis = cb.getAttribute('aria-hidden') === 'false';
-  cb.style.display = vis ? 'none' : 'block';
-  cb.setAttribute('aria-hidden', String(vis));
-});
-
-// preset selection handling
-document.getElementById('presetSelect').addEventListener('change', (e)=>{
-  const v = e.target.value;
-  if(v==='custom'){
-    document.getElementById('customBlock').style.display='block';
-    document.getElementById('customBlock').setAttribute('aria-hidden','false');
-    return;
-  }
-  document.getElementById('customBlock').style.display='none';
-  const presets = {
-    'GW150914':{m1:36,m2:29,s1:0.3,s2:0.2,sep:15},
-    'GW170104':{m1:31,m2:19,s1:0.1,s2:0.05,sep:14},
-    'GW190521':{m1:85,m2:66,s1:0.7,s2:0.6,sep:20}
-  };
-  const p = presets[v] || presets['GW150914'];
-  state.m1=p.m1; state.m2=p.m2; state.s1=p.s1; state.s2=p.s2; state.sep=p.sep;
-  generateAndPlot();
-});
-
-// generate button
-document.getElementById('genBtn').addEventListener('click', generateAndPlot);
-document.getElementById('runCustom').addEventListener('click', ()=>{
-  state.m1 = Number(document.getElementById('m1').value);
-  state.m2 = Number(document.getElementById('m2').value);
-  state.s1 = Number(document.getElementById('s1').value);
-  state.s2 = Number(document.getElementById('s2').value);
-  state.sep = Number(document.getElementById('sep').value);
-  generateAndPlot();
-});
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  document.getElementById('m1').value=36; document.getElementById('m2').value=29; document.getElementById('s1').value=0.3; document.getElementById('s2').value=0.2; document.getElementById('sep').value=15;
-  state.m1=36; state.m2=29; state.s1=0.3; state.s2=0.2; state.sep=15;
-  generateAndPlot();
-});
-
-// player controls
-document.getElementById('playPause').addEventListener('click', ()=>{
-  if(state.playing){ pause(); document.getElementById('playPause').textContent='▶️'; }
-  else { play(); document.getElementById('playPause').textContent='⏸'; showPlayer(); }
-});
-document.getElementById('restart').addEventListener('click', ()=>{ resetPlayback(); play(); document.getElementById('playPause').textContent='⏸'; showPlayer(); });
-document.getElementById('soundToggle').addEventListener('click', ()=>{
-  state.audioEnabled = !state.audioEnabled;
-  if(!state.audioEnabled && state.audioOsc){ try{ state.audioOsc.osc.stop(); }catch(e){} state.audioOsc=null; }
-  document.getElementById('soundToggle').textContent = state.audioEnabled ? '🔊' : '🔇';
-  // user gesture: create AudioContext when enabling
-  if(state.audioEnabled && !state.audioCtx){ state.audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
-  showPlayer();
-});
-
-// info/details
-const infoBtn = document.getElementById('infoBtn');
-const details = document.getElementById('details');
-const detailText = document.getElementById('detailText');
-infoBtn.addEventListener('click', ()=> {
-  if(details.style.display === 'block'){ details.style.display='none'; details.setAttribute('aria-hidden','true'); return; }
-  // populate details
-  detailText.innerHTML = `m₁=${state.m1} M☉<br>m₂=${state.m2} M☉<br>spin₁=${state.s1}<br>spin₂=${state.s2}<br>sep=${state.sep} M`;
-  details.style.display='block'; details.setAttribute('aria-hidden','false');
-});
-
-/* show player on any user interaction for discoverability */
-['mousemove','touchstart','touchend','click'].forEach(evt=>{
-  window.addEventListener(evt, ()=>{ player.classList.remove('hidden'); if(state.autoHideTimer) clearTimeout(state.autoHideTimer); state.autoHideTimer=setTimeout(()=>player.classList.add('hidden'),3000); }, {passive:true});
-});
-
-/* generate and plot */
-function generateAndPlot(){
-  // reset playback/audio
-  pause(); resetPlayback();
-  const p = chirpParamsFromState();
-  tsData = generateChirp(p);
-  // store tsData globally for playback
-  plotWaveform(tsData);
-  plotSpectrogram(tsData);
-  // initial orbit states
-  updateOrbitFrame(0);
-  // update details
-  detailText && (detailText.innerHTML = `m₁=${state.m1} M☉<br>m₂=${state.m2} M☉<br>spin₁=${state.s1}<br>spin₂=${state.s2}<br>sep=${state.sep} M`);
-  // also reset small progress
-  progressFill.style.width='0%'; progFillSmall.style.width='0%';
-}
-
-/* initial load */
+document.getElementById('generateBtn').onclick=generateAndPlot;
+document.getElementById('runCustom').onclick=generateAndPlot;
+document.getElementById('playPause').onclick=()=>{
+  if(state.playing){pause();document.getElementById('playPause').textContent='▶️';}
+  else{state.tIndex=0;play();document.getElementById('playPause').textContent='⏸';}
+};
+document.getElementById('restart').onclick=()=>{state.tIndex=0;pause();play();};
+document.getElementById('soundToggle').onclick=()=>{
+  state.audioEnabled=!state.audioEnabled;
+  document.getElementById('soundToggle').textContent=state.audioEnabled?'🔊':'🔇';
+};
 generateAndPlot();
-
-/* fallback: pause on page hide */
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pause(); });
-
 </script>
 </body>
 </html>
