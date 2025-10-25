@@ -1,0 +1,44 @@
+{
+  "events": [
+    {
+      "id": "GW150914",
+      "name": "GW150914",
+      "date": "2015-09-14",
+      "freq": 150,
+      "amplitude": 1.0e-21,
+      "desc": "First direct detection of gravitational waves; merger of two ~30 M☉ black holes."
+    },
+    {
+      "id": "GW151226",
+      "name": "GW151226",
+      "date": "2015-12-26",
+      "freq": 250,
+      "amplitude": 8.0e-22,
+      "desc": "Merger of 14 M☉ and 7 M☉ black holes."
+    },
+    {
+      "id": "GW170104",
+      "name": "GW170104",
+      "date": "2017-01-04",
+      "freq": 200,
+      "amplitude": 9.0e-22,
+      "desc": "Detected by LIGO Hanford and Livingston, 20–30 M☉ binary."
+    },
+    {
+      "id": "GW170814",
+      "name": "GW170814",
+      "date": "2017-08-14",
+      "freq": 220,
+      "amplitude": 1.1e-21,
+      "desc": "First triple-detector observation (LIGO + Virgo)."
+    },
+    {
+      "id": "GW170817",
+      "name": "GW170817",
+      "date": "2017-08-17",
+      "freq": 400,
+      "amplitude": 3.0e-22,
+      "desc": "Binary neutron star merger associated with GRB 170817A."
+    }
+  ]
+}
