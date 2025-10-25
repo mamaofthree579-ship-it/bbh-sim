@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Open Gravitational Wave Explorer</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌌 Open Gravitational Wave Explorer</title>
+  <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
-  <!-- Modal + UI animation styling -->
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -16,25 +15,23 @@
       margin: 0;
       overflow-x: hidden;
     }
-
     header {
       text-align: center;
       padding: 1rem;
       background: rgba(0, 0, 0, 0.6);
       border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     }
-
     h1 {
       font-size: 1.8rem;
       margin-bottom: 0.2rem;
     }
-
     .controls {
       text-align: center;
       margin-top: 1rem;
     }
-
-    select, button, input[type=range] {
+    select,
+    button,
+    input[type="range"] {
       background: #0a0a20;
       color: white;
       border: 1px solid #444;
@@ -44,11 +41,10 @@
       cursor: pointer;
       transition: all 0.2s ease;
     }
-
-    select:hover, button:hover {
+    select:hover,
+    button:hover {
       background: #1a1a3d;
     }
-
     #chart {
       width: 90%;
       max-width: 800px;
@@ -57,13 +53,12 @@
       background: #0d0d20;
       padding: 1rem;
     }
-
     #customControls {
       display: none;
       text-align: center;
       margin-top: 1rem;
+      animation: fadeIn 0.5s ease;
     }
-
     label {
       margin: 0.3rem;
       display: inline-block;
@@ -84,12 +79,10 @@
       align-items: center;
       transition: opacity 0.4s ease;
     }
-
     #infoModal.show {
       display: flex;
       opacity: 1;
     }
-
     .modal-content {
       background: #111;
       padding: 2rem;
@@ -100,11 +93,9 @@
       transform: scale(0.95);
       transition: transform 0.4s ease;
     }
-
     #infoModal.show .modal-content {
       transform: scale(1);
     }
-
     .close {
       position: absolute;
       top: 0.5rem;
@@ -113,26 +104,51 @@
       cursor: pointer;
       color: #aaa;
     }
-
     .close:hover {
       color: white;
     }
-
     footer {
       text-align: center;
       padding: 1rem;
       font-size: 0.9rem;
       opacity: 0.7;
     }
-
     .learn-btn {
       margin-top: 1rem;
       background: #003366;
       border: 1px solid #00aaff;
     }
-
     .learn-btn:hover {
       background: #005599;
+    }
+
+    /* Learn More Panel */
+    #learnPanel {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      width: 100%;
+      background: #050510;
+      border-top: 2px solid #00aaff;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      transition: bottom 0.5s ease;
+      z-index: 60;
+    }
+    #learnPanel.show {
+      bottom: 0;
+    }
+    #orbitCanvas {
+      display: block;
+      margin: 1rem auto;
+      background: #000;
+      border-radius: 8px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
   </style>
 </head>
@@ -155,7 +171,6 @@
     <button id="infoBtn">ℹ️ Info</button>
   </div>
 
-  <!-- Custom controls appear only when "custom" selected -->
   <div id="customControls">
     <h3>Customize Your Black Holes</h3>
     <div>
@@ -190,37 +205,46 @@
     </div>
   </div>
 
+  <!-- Learn More Panel -->
+  <div id="learnPanel">
+    <h3>🔭 Chirp Mass & Wave Evolution</h3>
+    <canvas id="orbitCanvas" width="300" height="200"></canvas>
+    <button id="closeLearn">Close</button>
+  </div>
+
   <footer>
     <p>Created for the Open BBH Simulation Project • Powered by Plotly</p>
   </footer>
 
   <script>
-    // Info modal with smooth animation
+    // Info modal + learn panel
     document.addEventListener("DOMContentLoaded", () => {
       const infoBtn = document.getElementById("infoBtn");
       const infoModal = document.getElementById("infoModal");
       const closeInfo = document.getElementById("closeInfo");
       const learnMoreBtn = document.getElementById("learnMoreBtn");
+      const learnPanel = document.getElementById("learnPanel");
+      const closeLearn = document.getElementById("closeLearn");
 
       infoModal.style.display = "none";
-
       infoBtn.addEventListener("click", () => {
         infoModal.style.display = "flex";
         requestAnimationFrame(() => infoModal.classList.add("show"));
       });
-
       const closeModal = () => {
         infoModal.classList.remove("show");
         setTimeout(() => (infoModal.style.display = "none"), 400);
       };
-
       closeInfo.addEventListener("click", closeModal);
-      infoModal.addEventListener("click", e => {
-        if (e.target === infoModal) closeModal();
-      });
+      infoModal.addEventListener("click", e => { if (e.target === infoModal) closeModal(); });
 
+      // Learn panel
       learnMoreBtn.addEventListener("click", () => {
-        alert("Soon: You’ll be able to see how chirp mass affects the waveform shape!");
+        learnPanel.classList.add("show");
+        startOrbitAnimation();
+      });
+      closeLearn.addEventListener("click", () => {
+        learnPanel.classList.remove("show");
       });
     });
 
@@ -256,11 +280,11 @@
         let freq, decay, label;
 
         if (event === "custom") {
+          customControls.style.display = "block";
           const m1 = parseFloat(m1Slider.value);
           const m2 = parseFloat(m2Slider.value);
           const s1 = parseFloat(s1Slider.value);
           const s2 = parseFloat(s2Slider.value);
-
           const chirpMass = Math.pow((m1 * m2), 3/5) / Math.pow(m1 + m2, 1/5);
           freq = 0.1 + (50 / chirpMass) * 0.002;
           decay = 0.001 + (s1 + s2) * 0.001;
@@ -290,19 +314,38 @@
       }
 
       eventSelect.addEventListener("change", () => {
-        if (eventSelect.value === "custom") {
-          customControls.style.display = "block";
-        } else {
-          customControls.style.display = "none";
-        }
+        if (eventSelect.value === "custom") customControls.style.display = "block";
+        else customControls.style.display = "none";
       });
 
-      simulateBtn.addEventListener("click", () => {
-        generateWaveform(eventSelect.value);
-      });
-
+      simulateBtn.addEventListener("click", () => generateWaveform(eventSelect.value));
       generateWaveform("gw150914");
     });
+
+    // Orbit animation for "Learn More"
+    function startOrbitAnimation() {
+      const canvas = document.getElementById("orbitCanvas");
+      const ctx = canvas.getContext("2d");
+      let angle = 0;
+      function draw() {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const r = 70;
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        const x1 = cx + r * Math.cos(angle);
+        const y1 = cy + r * Math.sin(angle);
+        const x2 = cx - r * Math.cos(angle);
+        const y2 = cy - r * Math.sin(angle);
+        ctx.beginPath();
+        ctx.fillStyle = "#00aaff";
+        ctx.arc(x1, y1, 10, 0, 2 * Math.PI);
+        ctx.arc(x2, y2, 10, 0, 2 * Math.PI);
+        ctx.fill();
+        angle += 0.05;
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
   </script>
 </body>
 </html>
