@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -21,10 +21,8 @@
       top: 0;
       z-index: 10;
     }
-    h1 {
-      margin: 0.5rem;
-    }
-    select, button {
+    h1 { margin: 0.5rem; }
+    select, button, input {
       margin: 0.5rem;
       padding: 0.5rem 1rem;
       font-size: 1rem;
@@ -48,6 +46,14 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       background: #111;
     }
+    #controls {
+      margin: 1rem auto;
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      width: 90%;
+      max-width: 800px;
+    }
     footer {
       margin-top: 1rem;
       padding: 1rem;
@@ -55,7 +61,7 @@
       color: #aaa;
     }
 
-    /* Modal styling (fixed and improved) */
+    /* Modal styling */
     #infoModal {
       display: none;
       position: fixed;
@@ -107,6 +113,15 @@
     <button id="infoBtn">ℹ️ Info</button>
   </header>
 
+  <div id="controls" style="display:none;">
+    <h3>⚙️ Custom Simulation Controls</h3>
+    <label>Mass 1 (M☉): <input id="mass1" type="number" value="30" min="5" max="100" /></label>
+    <label>Mass 2 (M☉): <input id="mass2" type="number" value="30" min="5" max="100" /></label>
+    <label>Spin: <input id="spin" type="number" value="0.3" min="0" max="1" step="0.1" /></label>
+    <label>Separation: <input id="sep" type="number" value="15" min="5" max="30" /></label>
+    <button id="runSim">Run Simulation</button>
+  </div>
+
   <div id="plot"></div>
   <div id="spectrogram" style="display:none;"></div>
 
@@ -115,11 +130,11 @@
     <div class="modal-content">
       <span class="close-btn" id="closeInfo">&times;</span>
       <h2>About This Visualization</h2>
-      <p>This tool displays gravitational wave events detected by LIGO/Virgo and lets you simulate custom binary black hole mergers.</p>
+      <p>This viewer shows real gravitational wave detections and lets you run simplified custom BBH simulations using mock data.</p>
       <ul>
-        <li><strong>Waveform:</strong> Time-domain strain signal</li>
-        <li><strong>Spectrogram:</strong> Frequency vs time “chirp” pattern</li>
-        <li><strong>Custom Simulations:</strong> Generate your own synthetic mergers</li>
+        <li><strong>Waveform:</strong> Time-domain strain</li>
+        <li><strong>Spectrogram:</strong> Frequency-time chirp</li>
+        <li><strong>Custom mode:</strong> Adjust masses, spins, separation</li>
       </ul>
     </div>
   </div>
@@ -129,22 +144,20 @@
   </footer>
 
   <script>
-    // Example waveform data generator
-    function generateWaveform(frequencyFactor=1.0) {
+    function generateWaveform(frequencyFactor=1.0, damping=0.002) {
       const t = Array.from({length: 1000}, (_, i) => i / 100);
-      const h = t.map(x => Math.sin(frequencyFactor * 0.2 * x) * Math.exp(-0.002 * x));
+      const h = t.map(x => Math.sin(frequencyFactor * 0.2 * x) * Math.exp(-damping * x));
       return {t, h};
     }
 
-    // Main plot
     const plotDiv = document.getElementById("plot");
     const specDiv = document.getElementById("spectrogram");
     const toggleBtn = document.getElementById("toggleView");
     const eventSelect = document.getElementById("eventSelect");
+    const controlsDiv = document.getElementById("controls");
 
-    function plotWaveform(eventName) {
-      const freq = eventName === "GW190521" ? 2.0 : eventName === "GW170104" ? 1.5 : 1.0;
-      const {t, h} = generateWaveform(freq);
+    function plotWaveform(eventName, freq=1.0, damping=0.002) {
+      const {t, h} = generateWaveform(freq, damping);
       Plotly.newPlot(plotDiv, [{
         x: t, y: h, type: 'scatter', mode: 'lines', line: {color: '#00e0ff'}, name: 'Strain h(t)'
       }], {
@@ -157,30 +170,26 @@
       plotSpectrogram(t, h);
     }
 
-    // Spectrogram generation
     function plotSpectrogram(t, h) {
-      const sampleCount = h.length;
       const freqBins = 100;
       const data = [];
       for (let i = 0; i < freqBins; i++) {
-        data.push(Array.from({length: sampleCount}, (_, j) => Math.abs(h[j]) * Math.exp(-Math.abs(i - j / 10) / 20)));
+        data.push(Array.from({length: h.length}, (_, j) => Math.abs(h[j]) * Math.exp(-Math.abs(i - j / 10) / 20)));
       }
       const z = data;
-      const fig = {
-        data: [{z, x: t, y: Array.from({length: freqBins}, (_, i)=>i), type: 'heatmap', colorscale: 'Viridis'}],
-        layout: {
-          title: 'Spectrogram (Frequency vs Time)',
-          xaxis: {title: 'Time [M]'},
-          yaxis: {title: 'Frequency Bin'},
-          paper_bgcolor: '#111',
-          plot_bgcolor: '#111',
-          font: {color: '#eee'}
-        }
-      };
-      Plotly.newPlot(specDiv, fig);
+      Plotly.newPlot(specDiv, [{
+        z, x: t, y: Array.from({length: freqBins}, (_, i)=>i),
+        type: 'heatmap', colorscale: 'Viridis'
+      }], {
+        title: 'Spectrogram (Frequency vs Time)',
+        xaxis: {title: 'Time [M]'},
+        yaxis: {title: 'Frequency Bin'},
+        paper_bgcolor: '#111', plot_bgcolor: '#111',
+        font: {color: '#eee'}
+      });
     }
 
-    // Toggle button
+    // Toggle view
     toggleBtn.addEventListener("click", () => {
       if (specDiv.style.display === "none") {
         plotDiv.style.display = "none";
@@ -197,17 +206,31 @@
     const infoModal = document.getElementById("infoModal");
     const infoBtn = document.getElementById("infoBtn");
     const closeInfo = document.getElementById("closeInfo");
-
     infoBtn.addEventListener("click", () => infoModal.classList.add("show"));
     closeInfo.addEventListener("click", () => infoModal.classList.remove("show"));
-    window.addEventListener("click", (e) => {
-      if (e.target === infoModal) infoModal.classList.remove("show");
+    window.addEventListener("click", e => { if (e.target === infoModal) infoModal.classList.remove("show"); });
+
+    // Event handling
+    eventSelect.addEventListener("change", e => {
+      const eventName = e.target.value;
+      if (eventName === "Custom") {
+        controlsDiv.style.display = "block";
+      } else {
+        controlsDiv.style.display = "none";
+        const freq = eventName === "GW190521" ? 2.0 : eventName === "GW170104" ? 1.5 : 1.0;
+        plotWaveform(eventName, freq);
+      }
     });
 
-    // Event change
-    eventSelect.addEventListener("change", (e) => {
-      const eventName = e.target.value;
-      plotWaveform(eventName);
+    // Custom run button
+    document.getElementById("runSim").addEventListener("click", () => {
+      const m1 = parseFloat(document.getElementById("mass1").value);
+      const m2 = parseFloat(document.getElementById("mass2").value);
+      const spin = parseFloat(document.getElementById("spin").value);
+      const sep = parseFloat(document.getElementById("sep").value);
+      const freqFactor = (m1 + m2) / 60.0 + spin;
+      const damping = 0.002 + (30 - sep) * 0.0001;
+      plotWaveform("Custom Simulation", freqFactor, damping);
     });
 
     // Initialize
