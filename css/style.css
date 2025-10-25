@@ -34,12 +34,17 @@ button:hover {
   background: #5c6bc0;
 }
 
-#customForm {
+#customForm, #quickFacts {
   margin: 1rem;
   padding: 1rem;
   background: #111;
   border-radius: 10px;
   display: inline-block;
+  max-width: 600px;
+}
+
+#quickFacts p {
+  margin: 0.3rem 0;
 }
 
 .hidden {
