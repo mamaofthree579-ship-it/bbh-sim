@@ -15,31 +15,27 @@ fetch("data/events.json")
     });
   });
 
-// Info modal (robust mobile-safe version)
-// ℹ️ Info modal (mobile safe, double protected)
+// ℹ️ Info modal with fade + zoom
 document.addEventListener("DOMContentLoaded", () => {
   const infoBtn = document.getElementById("infoBtn");
   const infoModal = document.getElementById("infoModal");
   const closeInfo = document.getElementById("closeInfo");
 
-  // Force hidden on load
   infoModal.style.display = "none";
 
-  // Open modal
   infoBtn.addEventListener("click", () => {
     infoModal.style.display = "flex";
+    requestAnimationFrame(() => infoModal.classList.add("show"));
   });
 
-  // Close on ×
-  closeInfo.addEventListener("click", () => {
-    infoModal.style.display = "none";
-  });
+  const closeModal = () => {
+    infoModal.classList.remove("show");
+    setTimeout(() => (infoModal.style.display = "none"), 400);
+  };
 
-  // Close on background tap
-  infoModal.addEventListener("click", (e) => {
-    if (e.target === infoModal) {
-      infoModal.style.display = "none";
-    }
+  closeInfo.addEventListener("click", closeModal);
+  infoModal.addEventListener("click", e => {
+    if (e.target === infoModal) closeModal();
   });
 });
 
