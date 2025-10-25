@@ -1,18 +1,27 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Open Gravitational Wave Explorer</title>
   <link rel="stylesheet" href="css/style.css">
-  style>
-  /* Ensure modal is hidden before JS runs */
-  #infoModal {
-    display: none;
-  }
-</style>
-   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!-- Ensure modal hidden before JS + smooth animation -->
+  <style>
+    #infoModal {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #infoModal.show {
+      display: flex;
+      opacity: 1;
+      transform: scale(1);
+    }
+  </style>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
+  
 <body>
   <header>
     <h1>🌌 Open Gravitational Wave Explorer</h1>
@@ -63,7 +72,7 @@
     <p>Built with 💫 using open gravitational data + custom simulation tools</p>
   </footer>
 
-!-- Info Modal -->
+<!-- Info Modal -->
 <div id="infoModal" class="modal" style="display:none;">
   <div class="modal-content">
     <span id="closeInfo" class="close">&times;</span>
