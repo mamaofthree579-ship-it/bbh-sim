@@ -217,7 +217,6 @@
   </footer>
 
   <script>
-    // Info modal + learn panel
     document.addEventListener("DOMContentLoaded", () => {
       const infoBtn = document.getElementById("infoBtn");
       const infoModal = document.getElementById("infoModal");
@@ -238,10 +237,10 @@
       closeInfo.addEventListener("click", closeModal);
       infoModal.addEventListener("click", e => { if (e.target === infoModal) closeModal(); });
 
-      // Learn panel
       learnMoreBtn.addEventListener("click", () => {
         learnPanel.classList.add("show");
         startOrbitAnimation();
+        playChirpSound();
       });
       closeLearn.addEventListener("click", () => {
         learnPanel.classList.remove("show");
@@ -314,15 +313,14 @@
       }
 
       eventSelect.addEventListener("change", () => {
-        if (eventSelect.value === "custom") customControls.style.display = "block";
-        else customControls.style.display = "none";
+        customControls.style.display = (eventSelect.value === "custom") ? "block" : "none";
       });
 
       simulateBtn.addEventListener("click", () => generateWaveform(eventSelect.value));
       generateWaveform("gw150914");
     });
 
-    // Orbit animation for "Learn More"
+    // Orbit animation + chirp sound
     function startOrbitAnimation() {
       const canvas = document.getElementById("orbitCanvas");
       const ctx = canvas.getContext("2d");
@@ -345,6 +343,29 @@
         requestAnimationFrame(draw);
       }
       draw();
+    }
+
+    function playChirpSound() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "sine";
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const duration = 3; // seconds
+      const startFreq = 100; // Hz
+      const endFreq = 800; // Hz
+
+      const now = audioCtx.currentTime;
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc.start(now);
+      osc.stop(now + duration);
     }
   </script>
 </body>
