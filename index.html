@@ -38,6 +38,18 @@
       border-radius: 8px;
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       background: #111;
+      position: relative;
+    }
+    #progressBar {
+      position: absolute;
+      top: 50px;
+      left: 0;
+      width: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #00e0ff, #ff0084);
+      box-shadow: 0 0 10px #00e0ff;
+      transition: width 0.05s linear;
+      z-index: 5;
     }
     #orbitCanvas {
       width: 95%;
@@ -76,7 +88,9 @@
     <button id="hearChirp">🔊 Hear Chirp</button>
   </header>
 
-  <div id="plot"></div>
+  <div id="plot">
+    <div id="progressBar"></div>
+  </div>
   <div id="spectrogram" style="display:none;"></div>
   <canvas id="orbitCanvas" width="600" height="300"></canvas>
 
@@ -95,8 +109,8 @@
   <script>
     let currentWave = { t: [], h: [] };
     let orbitAnimation;
+    let progressAnim;
 
-    // Generate chirp waveform
     function generateChirp(params = {}) {
       const { m1 = 30, m2 = 30, spin = 0.3, sep = 15 } = params;
       const totalMass = m1 + m2;
@@ -113,21 +127,21 @@
         phi += 2 * Math.PI * freq[i] / sampleRate;
         h.push(amp[i] * Math.sin(phi));
       }
-      return { t, h, freq };
+      return { t, h, freq, duration };
     }
 
     const plotDiv = document.getElementById("plot");
     const specDiv = document.getElementById("spectrogram");
+    const progressBar = document.getElementById("progressBar");
     const toggleBtn = document.getElementById("toggleView");
     const eventSelect = document.getElementById("eventSelect");
     const controlsDiv = document.getElementById("controls");
     const orbitCanvas = document.getElementById("orbitCanvas");
     const ctx = orbitCanvas.getContext("2d");
 
-    // Plot waveform + spectrogram
     function plotWaveform(eventName, params) {
-      const { t, h, freq } = generateChirp(params);
-      currentWave = { t, h, freq, params };
+      const { t, h, freq, duration } = generateChirp(params);
+      currentWave = { t, h, freq, duration, params };
       Plotly.newPlot(plotDiv, [{
         x: t, y: h, type: "scatter", mode: "lines",
         line: { color: "#00e0ff" }, name: "Chirp h(t)"
@@ -139,6 +153,7 @@
       });
       plotSpectrogram(t, h);
       startOrbitAnimation(params, freq);
+      resetProgress();
     }
 
     function plotSpectrogram(t, h) {
@@ -163,7 +178,6 @@
       });
     }
 
-    // Orbit animation synced to waveform frequency
     function startOrbitAnimation(params, freqArray) {
       if (orbitAnimation) cancelAnimationFrame(orbitAnimation);
       const { m1, m2, sep } = params;
@@ -181,18 +195,9 @@
         const x2 = cx - r2 * Math.cos(angle);
         const y2 = cy - r2 * Math.sin(angle);
         ctx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);
-        ctx.beginPath();
-        ctx.fillStyle = "#00e0ff";
-        ctx.arc(x1, y1, 10, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.fillStyle = "#ff0084";
-        ctx.arc(x2, y2, 10, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.strokeStyle = "#333";
-        ctx.arc(cx, cy, radius, 0, 2*Math.PI);
-        ctx.stroke();
+        ctx.beginPath(); ctx.fillStyle = "#00e0ff"; ctx.arc(x1, y1, 10, 0, 2*Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.fillStyle = "#ff0084"; ctx.arc(x2, y2, 10, 0, 2*Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.strokeStyle = "#333"; ctx.arc(cx, cy, radius, 0, 2*Math.PI); ctx.stroke();
         angle += speed;
         frame++;
         if (frame < freqArray.length) orbitAnimation = requestAnimationFrame(draw);
@@ -200,9 +205,26 @@
       draw();
     }
 
-    // Hear chirp
+    // Time progress bar
+    function resetProgress() {
+      progressBar.style.width = "0";
+      if (progressAnim) cancelAnimationFrame(progressAnim);
+    }
+
+    function startProgress(duration) {
+      const start = performance.now();
+      function animate(time) {
+        const elapsed = (time - start) / 1000;
+        const progress = Math.min(elapsed / duration, 1);
+        progressBar.style.width = `${progress * 100}%`;
+        if (progress < 1) progressAnim = requestAnimationFrame(animate);
+      }
+      progressAnim = requestAnimationFrame(animate);
+    }
+
+    // Hear chirp button
     document.getElementById("hearChirp").addEventListener("click", () => {
-      const { h } = currentWave;
+      const { h, duration } = currentWave;
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const buffer = audioCtx.createBuffer(1, h.length, 44100);
       const data = buffer.getChannelData(0);
@@ -211,9 +233,10 @@
       source.buffer = buffer;
       source.connect(audioCtx.destination);
       source.start();
+      resetProgress();
+      startProgress(duration);
     });
 
-    // Toggle view
     toggleBtn.addEventListener("click", () => {
       if (specDiv.style.display === "none") {
         plotDiv.style.display = "none";
@@ -226,7 +249,6 @@
       }
     });
 
-    // Event select
     eventSelect.addEventListener("change", e => {
       const eventName = e.target.value;
       if (eventName === "Custom") {
@@ -242,7 +264,6 @@
       }
     });
 
-    // Custom sim run
     document.getElementById("runSim").addEventListener("click", () => {
       const m1 = parseFloat(document.getElementById("mass1").value);
       const m2 = parseFloat(document.getElementById("mass2").value);
@@ -251,7 +272,6 @@
       plotWaveform("Custom Simulation", { m1, m2, spin, sep });
     });
 
-    // Default load
     plotWaveform("GW150914", { m1: 36, m2: 29, spin: 0.3, sep: 15 });
   </script>
 </body>
