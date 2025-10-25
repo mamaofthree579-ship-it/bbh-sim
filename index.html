@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -21,7 +21,6 @@
       top: 0;
       z-index: 10;
     }
-    h1 { margin: 0.5rem; }
     select, button {
       margin: 0.5rem;
       padding: 0.5rem 1rem;
@@ -49,31 +48,19 @@
       border: 1px solid #222;
       border-radius: 8px;
     }
+    #controls {
+      display: none;
+      margin-top: 1rem;
+      color: #ccc;
+    }
+    #controls input { width: 70px; margin: 0.3rem; }
     footer {
       margin-top: 1rem;
       padding: 1rem;
       font-size: 0.9rem;
       color: #aaa;
     }
-
-    /* Modal */
-    #infoModal { display: none; position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%; background: rgba(0,0,0,0.75);
-      align-items: center; justify-content: center; z-index: 999;
-    }
-    #infoModal.show { display: flex; }
-    .modal-content {
-      background: #1e1e2f; color: #fff; padding: 20px;
-      border-radius: 10px; max-width: 500px; text-align: left;
-      position: relative; animation: fadeIn 0.4s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    .close-btn { position: absolute; top: 10px; right: 15px; color: #fff; font-size: 20px; cursor: pointer; }
-    #controls { display: none; margin-top: 1rem; color: #ccc; }
-    #controls input { width: 70px; margin: 0.3rem; }
+    #infoModal { display:none; }
   </style>
 </head>
 <body>
@@ -86,7 +73,7 @@
       <option value="Custom">Custom Simulation</option>
     </select>
     <button id="toggleView">Show Spectrogram</button>
-    <button id="infoBtn">ℹ️ Info</button>
+    <button id="hearChirp">🔊 Hear Chirp</button>
   </header>
 
   <div id="plot"></div>
@@ -101,21 +88,15 @@
     <button id="runSim">Run</button>
   </div>
 
-  <!-- Info Modal -->
-  <div id="infoModal">
-    <div class="modal-content">
-      <span class="close-btn" id="closeInfo">&times;</span>
-      <h2>About This Visualization</h2>
-      <p>This page visualizes gravitational wave events and custom BBH simulations with waveform, spectrogram, and orbital animation.</p>
-    </div>
-  </div>
-
   <footer>
     <p>Visualization powered by Plotly.js | Open-source BBH Simulation Project</p>
   </footer>
 
   <script>
-    // --- Generate chirp waveform ---
+    let currentWave = { t: [], h: [] };
+    let orbitAnimation;
+
+    // Generate chirp waveform
     function generateChirp(params = {}) {
       const { m1 = 30, m2 = 30, spin = 0.3, sep = 15 } = params;
       const totalMass = m1 + m2;
@@ -143,8 +124,10 @@
     const orbitCanvas = document.getElementById("orbitCanvas");
     const ctx = orbitCanvas.getContext("2d");
 
+    // Plot waveform + spectrogram
     function plotWaveform(eventName, params) {
-      const { t, h } = generateChirp(params);
+      const { t, h, freq } = generateChirp(params);
+      currentWave = { t, h, freq, params };
       Plotly.newPlot(plotDiv, [{
         x: t, y: h, type: "scatter", mode: "lines",
         line: { color: "#00e0ff" }, name: "Chirp h(t)"
@@ -155,7 +138,7 @@
         paper_bgcolor: "#111", plot_bgcolor: "#111", font: { color: "#eee" }
       });
       plotSpectrogram(t, h);
-      startOrbitAnimation(params);
+      startOrbitAnimation(params, freq);
     }
 
     function plotSpectrogram(t, h) {
@@ -180,24 +163,24 @@
       });
     }
 
-    // Orbit animation
-    let orbitAnimation;
-    function startOrbitAnimation(params) {
+    // Orbit animation synced to waveform frequency
+    function startOrbitAnimation(params, freqArray) {
       if (orbitAnimation) cancelAnimationFrame(orbitAnimation);
       const { m1, m2, sep } = params;
-      let angle = 0;
+      let angle = 0, frame = 0;
       function draw() {
-        ctx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);
+        const freq = freqArray[Math.min(frame, freqArray.length - 1)];
         const cx = orbitCanvas.width / 2;
         const cy = orbitCanvas.height / 2;
-        const radius = sep * 6;
-        const speed = 0.002 + 0.0001 * (m1 + m2);
+        const radius = sep * 6 * (1 - frame / freqArray.length * 0.6);
+        const speed = 0.002 + 0.0005 * freq / 100;
         const r1 = radius * (m2 / (m1 + m2));
         const r2 = radius * (m1 / (m1 + m2));
         const x1 = cx + r1 * Math.cos(angle);
         const y1 = cy + r1 * Math.sin(angle);
         const x2 = cx - r2 * Math.cos(angle);
         const y2 = cy - r2 * Math.sin(angle);
+        ctx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);
         ctx.beginPath();
         ctx.fillStyle = "#00e0ff";
         ctx.arc(x1, y1, 10, 0, 2*Math.PI);
@@ -207,14 +190,28 @@
         ctx.arc(x2, y2, 10, 0, 2*Math.PI);
         ctx.fill();
         ctx.beginPath();
-        ctx.strokeStyle = "#444";
+        ctx.strokeStyle = "#333";
         ctx.arc(cx, cy, radius, 0, 2*Math.PI);
         ctx.stroke();
         angle += speed;
-        orbitAnimation = requestAnimationFrame(draw);
+        frame++;
+        if (frame < freqArray.length) orbitAnimation = requestAnimationFrame(draw);
       }
       draw();
     }
+
+    // Hear chirp
+    document.getElementById("hearChirp").addEventListener("click", () => {
+      const { h } = currentWave;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = audioCtx.createBuffer(1, h.length, 44100);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < h.length; i++) data[i] = h[i] * 0.5;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start();
+    });
 
     // Toggle view
     toggleBtn.addEventListener("click", () => {
@@ -229,15 +226,7 @@
       }
     });
 
-    // Modal behavior
-    const infoModal = document.getElementById("infoModal");
-    const infoBtn = document.getElementById("infoBtn");
-    const closeInfo = document.getElementById("closeInfo");
-    infoBtn.addEventListener("click", () => infoModal.classList.add("show"));
-    closeInfo.addEventListener("click", () => infoModal.classList.remove("show"));
-    window.addEventListener("click", e => { if (e.target === infoModal) infoModal.classList.remove("show"); });
-
-    // Event selection
+    // Event select
     eventSelect.addEventListener("change", e => {
       const eventName = e.target.value;
       if (eventName === "Custom") {
@@ -253,7 +242,7 @@
       }
     });
 
-    // Custom Simulation
+    // Custom sim run
     document.getElementById("runSim").addEventListener("click", () => {
       const m1 = parseFloat(document.getElementById("mass1").value);
       const m2 = parseFloat(document.getElementById("mass2").value);
@@ -262,7 +251,7 @@
       plotWaveform("Custom Simulation", { m1, m2, spin, sep });
     });
 
-    // Initialize default
+    // Default load
     plotWaveform("GW150914", { m1: 36, m2: 29, spin: 0.3, sep: 15 });
   </script>
 </body>
