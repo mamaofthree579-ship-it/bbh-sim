@@ -15,14 +15,27 @@ fetch("data/events.json")
     });
   });
 
-// Info modal
+// Info modal (robust mobile-safe version)
 const infoBtn = document.getElementById("infoBtn");
 const infoModal = document.getElementById("infoModal");
 const closeInfo = document.getElementById("closeInfo");
 
-infoBtn.onclick = () => infoModal.classList.remove("hidden");
-closeInfo.onclick = () => infoModal.classList.add("hidden");
-window.onclick = e => { if (e.target === infoModal) infoModal.classList.add("hidden"); };
+// Ensure starts hidden
+infoModal.style.display = "none";
+
+infoBtn.addEventListener("click", () => {
+  infoModal.style.display = "flex";
+});
+
+closeInfo.addEventListener("click", () => {
+  infoModal.style.display = "none";
+});
+
+window.addEventListener("click", (e) => {
+  if (e.target === infoModal) {
+    infoModal.style.display = "none";
+  }
+});
 
 // Load selected event
 document.getElementById("loadEvent").onclick = () => {
