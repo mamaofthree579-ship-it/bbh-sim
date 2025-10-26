@@ -158,9 +158,93 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;pa
           <div id="customEnergy" class="plot" style="height:140px;margin-top:10px;"></div>
         </div>
 
-        <!-- ADVANCED (placeholder: we show full derivation panel on RIGHT column but keep here for completeness if needed) -->
-        <div id="advancedCardPlaceholder" style="display:none;"></div>
-      </div>
+        <!-- 🧠 ADVANCED PHYSICS TAB -->
+<div id="advanced" class="tab-content">
+  <h2 class="text-2xl font-bold mb-4 text-blue-200">Advanced Physics Summary</h2>
+  <p class="mb-4 text-gray-200">
+    Below is a summarized view of the gravitational, neutrino, and coupling relations used in the simulator.
+    Click on each section to expand full derivations and technical notes.
+  </p>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      I. Geometry & General Relativity Basics
+    </summary>
+    <pre class="text-gray-100 text-sm whitespace-pre-wrap mt-2">
+**Schwarzschild radius**: rₛ = 2GM / c²  
+**Gravitational potential**: Φ(r) ≈ -GM / r  
+**Redshift factor**: E_obs = E_em √(1 - rₛ/r)
+    </pre>
+  </details>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      II. Binary Inspiral & Gravitational Waves
+    </summary>
+    <pre class="text-gray-100 text-sm whitespace-pre-wrap mt-2">
+**Chirp mass**: 𝓜 = (M₁M₂)^(3/5) / (M₁+M₂)^(1/5)  
+**GW frequency evolution**: 𝑓̇ = (96/5)π^(8/3)(G𝓜)^(5/3)/c⁵ · f^(11/3)  
+**Strain amplitude**: h(f) ≈ (4G^(5/3)/c⁴) π^(2/3) 𝓜^(5/3) f^(2/3) / D
+    </pre>
+  </details>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      III. Neutrino Physics & Detection
+    </summary>
+    <pre class="text-gray-100 text-sm whitespace-pre-wrap mt-2">
+**Total neutrino energy (supernova)**: E_ν,tot ≈ 10⁵³ erg  
+**Flux at distance D**: F_ν = E_ν,tot / (4πD²)  
+**Expected event count**: N ≈ (E_ν,tot / ⟨E_ν⟩) × (σN_T / 4πD²)
+    </pre>
+  </details>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      IV. Graviton–Neutrino Coupling
+    </summary>
+    <pre class="text-gray-100 text-sm whitespace-pre-wrap mt-2">
+**Phenomenological energy shift**:
+ΔE_ν = α ∫ ∇Φ(r(t)) dt  
+**GW-to-ν energy channel**:
+E_ν,extra = β E_GW,available
+    </pre>
+  </details>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      V. Timing & Multimessenger Relations
+    </summary>
+    <pre class="text-gray-100 text-sm whitespace-pre-wrap mt-2">
+Arrival-time relation:
+t_arr = t_em + D/v  
+Δt_ν-GW ≈ (t_em,ν - t_em,GW) + (D/c)(1/√(1 - m_ν²c⁴/E²) - 1)
+    </pre>
+  </details>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      VI. Energetics & Observable Balance
+    </summary>
+    <pre class="text-gray-100 text-sm whitespace-pre-wrap mt-2">
+E_avail = E_GW + E_ν + E_EM + E_other  
+Typical coupling fraction: β ≪ 1
+    </pre>
+  </details>
+
+  <details class="mb-4 bg-black/40 p-3 rounded-xl">
+    <summary class="cursor-pointer font-semibold text-lg text-cyan-300">
+      Full Derivations & Technical Notes
+    </summary>
+    <p class="text-gray-300 text-sm mt-2">
+      You can access the full derivations and extended notes (including neutrino timing, 
+      PN expansions, and coupling integrals) in the linked documentation below.
+    </p>
+    <a href="advanced_notes.html" class="text-cyan-400 underline mt-2 block">
+      📘 Open Full Advanced Derivations & Notes
+    </a>
+  </details>
+</div>
 
       <!-- RIGHT column: advanced & summary -->
       <div>
