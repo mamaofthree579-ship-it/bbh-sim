@@ -1,64 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Visualizer — Dual Orbits (Preset + Custom)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BBH Visualizer — Multimessenger (v4.0)</title>
 
 <!-- Plotly -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <!-- JSZip for ZIP export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- KaTeX for inline equation rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha256-z0zYzGd0h5g9vGJEf1r2p0Q0tJ9+LrK7a1Nw9aGgG9A=" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}]});"></script>
 
 <style>
-  :root{
-    --nebula1:#071335; --nebula2:#2b0b3a;
-    --accent1:#ffb85a; --accent2:#00d4ff; --muted:#98a8bf; --panel:rgba(255,255,255,0.02);
-  }
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:#eaf6ff;-webkit-font-smoothing:antialiased;}
-  body{
-    background:
-      radial-gradient(circle at 10% 10%, rgba(255,255,255,0.02), transparent 6%),
-      radial-gradient(circle at 70% 80%, rgba(255,255,255,0.02), transparent 12%),
-      radial-gradient(circle at 40% 30%, rgba(12,24,60,0.20), transparent 35%),
-      linear-gradient(180deg,var(--nebula1),var(--nebula2));
-  }
+:root{
+  --nebula1:#071335; --nebula2:#2b0b3a;
+  --accent1:#ffb85a; --accent2:#00d4ff; --muted:#9fb0c6; --panel:rgba(255,255,255,0.02);
+}
+html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:#eaf6ff;-webkit-font-smoothing:antialiased;}
+body{
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255,255,255,0.02), transparent 6%),
+    radial-gradient(circle at 70% 80%, rgba(255,255,255,0.02), transparent 12%),
+    radial-gradient(circle at 40% 30%, rgba(12,24,60,0.20), transparent 35%),
+    linear-gradient(180deg,var(--nebula1),var(--nebula2));
+  -webkit-font-smoothing:antialiased;
+}
 
-  /* stars */
-  #stars{position:fixed;inset:0;z-index:0;pointer-events:none;
-    background-image:
-      radial-gradient(circle, rgba(255,255,255,.98) 1px, transparent 2px),
-      radial-gradient(circle, rgba(255,255,255,.9) 1px, transparent 2px);
-    background-size:760px 760px,430px 430px;mix-blend-mode:screen;opacity:.06;}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:
+  radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 2px),
+  radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 2px);
+  background-size:760px 760px,430px 430px;mix-blend-mode:screen;opacity:.06;}
 
-  .container{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:12px;}
-  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;}
-  .brand{display:flex;align-items:center;gap:12px;}
-  .title{color:var(--accent2);font-weight:700;font-size:1.05rem;}
-  .tabs{display:flex;gap:8px;}
-  .tab-btn{background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:8px 12px;border-radius:8px;cursor:pointer;}
-  .tab-btn.active{background:linear-gradient(90deg, rgba(255,184,90,0.06), rgba(0,212,255,0.05));box-shadow:0 6px 18px rgba(0,0,0,0.38);border-color:rgba(0,212,255,0.12);}
+.container{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:12px;}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;}
+.brand{display:flex;align-items:center;gap:12px;}
+.title{color:var(--accent2);font-weight:700;font-size:1.05rem;}
+.tabs{display:flex;gap:8px;}
+.tab-btn{background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:8px 12px;border-radius:8px;cursor:pointer;}
+.tab-btn.active{background:linear-gradient(90deg, rgba(255,184,90,0.06), rgba(0,212,255,0.05));box-shadow:0 6px 18px rgba(0,0,0,0.4);border-color:rgba(0,212,255,0.12);}
 
-  .layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px;}
-  @media(min-width:1000px){.layout{grid-template-columns:1fr 420px;}}
+.layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px;}
+@media(min-width:1000px){ .layout{ grid-template-columns:1fr 420px; } }
 
-  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:10px;box-shadow:0 10px 40px rgba(0,0,0,0.45);}
-
-  .controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-  .muted{color:var(--muted);font-size:0.92rem;}
-  .plot{width:100%;border-radius:8px;background:transparent;}
-  .plot-main{height:300px;}
-  .plot-spec{height:180px;margin-top:10px;}
-  .orbit{height:320px;margin-top:10px;}
-  .player{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;margin-top:8px;border-radius:8px;background:rgba(0,0,0,0.18);}
-  .player button{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer;}
-  .infoButton{position:fixed;right:14px;top:12px;z-index:30;background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:8px 10px;border-radius:10px;cursor:pointer;}
-  .aboutModal{position:fixed;right:14px;top:56px;z-index:40;width:320px;max-width:88vw;background:rgba(0,0,0,0.66);border-radius:8px;padding:12px;border:1px solid rgba(255,255,255,0.04);display:none;color:#eaf6ff;}
-  .footer{text-align:center;color:var(--muted);padding:10px;font-size:0.9rem;margin-top:12px;}
-  input,select,button{font-size:0.95rem;}
-  .export-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer;}
-  .small{font-size:0.86rem;color:var(--muted);}
-  .explainer{margin-top:6px;margin-bottom:6px;color:var(--muted);font-size:0.95rem;}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:10px;box-shadow:0 10px 40px rgba(0,0,0,0.45);}
+.controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.muted{color:var(--muted);font-size:0.92rem;}
+.plot{width:100%;border-radius:8px;background:transparent;}
+.plot-main{height:300px;}
+.plot-spec{height:180px;margin-top:10px;}
+.orbit{height:320px;margin-top:10px;}
+.player{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;margin-top:8px;border-radius:8px;background:rgba(0,0,0,0.18);}
+.player button{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer;}
+.infoButton{position:fixed;right:14px;top:12px;z-index:30;background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:8px 10px;border-radius:10px;cursor:pointer;}
+.aboutModal{position:fixed;right:14px;top:56px;z-index:40;width:320px;max-width:88vw;background:rgba(0,0,0,0.66);border-radius:8px;padding:12px;border:1px solid rgba(255,255,255,0.04);display:none;color:#eaf6ff;}
+.footer{text-align:center;color:var(--muted);padding:10px;font-size:0.9rem;margin-top:12px;}
+.export-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer;}
+.small{font-size:0.86rem;color:var(--muted);}
+.explainer{margin-top:6px;margin-bottom:6px;color:var(--muted);font-size:0.95rem;}
+.switch-row{display:flex;gap:8px;align-items:center;}
+.katex-block{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-top:8px;color:#eaf6ff;}
 </style>
 </head>
 <body>
@@ -67,23 +71,23 @@
   <div class="container">
     <header>
       <div class="brand">
-        <div class="title">Open BBH Visualizer — Dual Orbits</div>
+        <div class="title">BBH Visualizer — Multimessenger (v4.0)</div>
         <div class="tabs" role="tablist">
           <button class="tab-btn active" id="tabPreset">Preset Events</button>
           <button class="tab-btn" id="tabCustom">Custom Simulation</button>
         </div>
       </div>
-      <div class="muted">v3.8 — Separate Orbit Views • Export .zip/.json</div>
+      <div class="muted">Physics & Education Mode • Export .json/.zip</div>
     </header>
 
     <div class="layout">
-      <!-- LEFT: Main content area -->
+      <!-- LEFT: main -->
       <div>
-        <!-- Preset card -->
+        <!-- PRESET -->
         <div id="presetCard" class="card" style="display:block;">
           <div class="controls-row">
             <label class="muted">Event:</label>
-            <select id="presetEventSelect">
+            <select id="presetSelect">
               <option value="GW150914">GW150914</option>
               <option value="GW170104">GW170104</option>
               <option value="GW170814">GW170814</option>
@@ -93,30 +97,27 @@
 
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
               <button id="presetSound">Enable Sound</button>
-              <button id="presetExportJSON" class="export-btn">Export Params (.json)</button>
-              <button id="presetExportZIP" class="export-btn">Export Package (.zip)</button>
+              <button id="presetExportJSON" class="export-btn">Params (.json)</button>
+              <button id="presetExportZIP" class="export-btn">Package (.zip)</button>
             </div>
           </div>
 
-          <!-- explainer above orbit -->
           <div class="explainer">orange = BH1 · blue = BH2</div>
 
-          <!-- Preset orbit + player (separate view) -->
           <div id="presetOrbit" class="plot orbit"></div>
-          <div class="player" id="presetPlayer">
+          <div class="player">
             <button id="presetPlay">Play</button>
             <button id="presetPause">Pause</button>
             <button id="presetRestart">Restart</button>
-            <div class="small muted">Preset simulation player</div>
+            <div class="small muted">Preset player</div>
           </div>
 
-          <!-- waveform, spec, energy -->
           <div id="presetWave" class="plot plot-main" style="margin-top:10px;"></div>
           <div id="presetSpec" class="plot plot-spec"></div>
           <div id="presetEnergy" class="plot" style="height:140px;margin-top:10px;"></div>
         </div>
 
-        <!-- Custom card -->
+        <!-- CUSTOM -->
         <div id="customCard" class="card" style="display:none;">
           <div class="controls-row">
             <label class="muted">Mode:</label>
@@ -124,36 +125,34 @@
             <button id="customRun">Run Custom Simulation</button>
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
               <button id="customSound">Enable Sound</button>
-              <button id="customExportJSON" class="export-btn">Export Params (.json)</button>
-              <button id="customExportZIP" class="export-btn">Export Package (.zip)</button>
+              <button id="customExportJSON" class="export-btn">Params (.json)</button>
+              <button id="customExportZIP" class="export-btn">Package (.zip)</button>
             </div>
           </div>
 
-          <div class="small muted" style="margin-top:8px;">Adjust masses (M☉), spins (visual), and separation; then Run Custom Simulation.</div>
+          <div class="small muted" style="margin-top:10px;">Set masses (M☉), distance (Mpc), and phenomenological couplings (α, β) below.</div>
 
-          <div style="margin-top:10px;" class="card">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <label>m₁ <input id="c_m1" type="number" value="36" min="5" max="200" style="width:90px"></label>
-              <label>m₂ <input id="c_m2" type="number" value="29" min="5" max="200" style="width:90px"></label>
-              <label>spin₁ <input id="c_s1" type="number" step="0.01" value="0.3" style="width:80px"></label>
-              <label>spin₂ <input id="c_s2" type="number" step="0.01" value="0.2" style="width:80px"></label>
+          <div class="card" style="margin-top:10px;">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+              <label>m₁ <input id="c_m1" type="number" value="36" min="1" style="width:80px"></label>
+              <label>m₂ <input id="c_m2" type="number" value="29" min="1" style="width:80px"></label>
+              <label>D (Mpc) <input id="c_D" type="number" value="410" min="0.1" step="1" style="width:110px"></label>
               <label>sep <input id="c_sep" type="number" value="15" min="6" style="width:80px"></label>
-              <label class="muted">Trail</label>
-              <input id="trailLen" type="range" min="5" max="120" value="40">
+              <label>α <input id="alpha" type="number" value="0.0" step="0.001" style="width:80px"></label>
+              <label>β <input id="beta" type="number" value="0.0" step="0.01" style="width:80px"></label>
+              <label class="muted">Trail</label><input id="trailLen" type="range" min="5" max="120" value="40">
               <span id="trailVal" class="muted">40</span>
             </div>
           </div>
 
-          <!-- explainer above orbit -->
           <div class="explainer">orange = BH1 · blue = BH2</div>
 
-          <!-- Custom orbit + player (separate) -->
           <div id="customOrbit" class="plot orbit"></div>
-          <div class="player" id="customPlayer">
+          <div class="player">
             <button id="customPlay">Play</button>
             <button id="customPause">Pause</button>
             <button id="customRestart">Restart</button>
-            <div class="small muted">Custom simulation player</div>
+            <div class="small muted">Custom player</div>
           </div>
 
           <div id="customWave" class="plot plot-main" style="margin-top:10px;"></div>
@@ -162,25 +161,56 @@
         </div>
       </div>
 
-      <!-- RIGHT column: info & notes -->
+      <!-- RIGHT column: physics panel & neutrino -->
       <div>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>Notes</strong></div>
-            <div class="muted small">Educational demo</div>
+            <div><strong>Physics & Education</strong></div>
+            <div class="small muted">Toggle explanations</div>
           </div>
-          <div style="margin-top:8px" class="small muted">
-            This demo uses a toy chirp generator for visualization. Export packages to include waveform CSV and params. For research-grade waveforms, upload NR/LIGO h(t) files.
+
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <div class="switch-row">
+              <label class="muted">Mode:</label>
+              <select id="modeSwitch"><option value="physics">Physics</option><option value="teach">Teaching</option></select>
+            </div>
+          </div>
+
+          <div id="physicsBlock" class="katex-block" style="display:block;">
+            <div><strong>Core formulas (leading-order)</strong></div>
+            <div style="margin-top:6px" id="eq-chirp">\\(\\mathcal{M}=\\dfrac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}}\\)</div>
+            <div id="eq-df" style="margin-top:6px">\\(\\dot f = \\dfrac{96}{5}\\pi^{8/3} \\dfrac{(G\\mathcal{M})^{5/3}}{c^5} f^{11/3}\\)</div>
+            <div id="eq-h" style="margin-top:6px">\\(h(f) \\approx \\dfrac{4 G^{5/3}}{c^4}\\pi^{2/3}\\dfrac{\\mathcal{M}^{5/3} f^{2/3}}{D}\\)</div>
+            <div style="margin-top:8px;" class="small muted">Use Physics mode to show numeric outputs below; Teaching mode highlights equations & explanations.</div>
+          </div>
+
+          <div id="teachBlock" class="katex-block" style="display:none;">
+            <div><strong>Teaching Panel</strong></div>
+            <div style="margin-top:6px" class="small muted">
+              This visualization uses leading-order PN scaling to generate chirps. The chirp mass \\(\\mathcal{M}\\) controls how quickly the frequency rises; amplitude scales as \\(\\mathcal{M}^{5/3}/D\\).
+            </div>
+            <div style="margin-top:8px" class="small muted">Equations rendered with KaTeX for clarity.</div>
           </div>
         </div>
 
         <div class="card" style="margin-top:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>About / Credits</strong></div>
-            <div class="muted small">Open BBH Sim Project</div>
+            <div><strong>Neutrino Phenomenology</strong></div>
+            <div class="small muted">α, β (phenomenological)</div>
           </div>
-          <div style="margin-top:8px" class="small muted">
-            Built with Plotly. Includes in-browser ZIP export (JSZip). Presets are simplified and for outreach only.
+          <div class="small muted" style="margin-top:6px;">
+            <div>α shifts neutrino energy by \\(\\Delta E_\\nu\\approx\\alpha\\int \\Phi dt\\).<br>β is fraction of GW energy transferred to neutrinos: \\(E_{\\nu,extra}=\\beta E_{GW}\\).</div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label class="muted">Detector effective area (m²):</label>
+              <input id="detArea" type="number" value="1000" step="10" style="width:110px">
+            </div>
+            <div style="margin-top:8px;" class="small muted">Avg neutrino energy (MeV): <input id="avgNuE" type="number" value="10" step="1" style="width:80px"></div>
+            <div style="margin-top:8px;" class="small muted">Distance (Mpc) used from active simulation.</div>
+            <div style="margin-top:10px;"><button id="computeNu">Compute Neutrino Estimates</button></div>
+            <div id="nuResults" style="margin-top:8px;" class="small muted"></div>
           </div>
         </div>
       </div>
@@ -188,84 +218,141 @@
 
     <button id="aboutBtn" class="infoButton" title="About">ℹ️</button>
     <div id="aboutModal" class="aboutModal" role="dialog" aria-hidden="true">
-      <div style="font-weight:700;margin-bottom:8px">About this Visualizer</div>
-      <div class="small muted">This interactive visualization simulates binary black hole inspirals (toy model). Two BHs orbit, radiate a chirp, and inspiral. For research-quality data, load NR or GWOSC waveforms.</div>
+      <div style="font-weight:700;margin-bottom:8px">About Multimessenger Visualizer</div>
+      <div class="small muted">This demo uses leading-order PN-inspired formulas to produce physically-informed visual chirps and inspiral motion. The neutrino coupling terms (α, β) are phenomenological — use them to explore possible multimessenger signatures. For research-grade waveforms, load NR or GWOSC data.</div>
       <hr style="margin:8px 0;border-color:rgba(255,255,255,0.04)">
       <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;"><button id="aboutClose">Close</button></div>
     </div>
 
-    <div class="footer">Open BBH Visualizer — Dual Orbits • v3.8</div>
+    <div class="footer">BBH Visualizer — Multimessenger (v4.0) • Use Export Package to save params + waveform + PNG</div>
   </div>
 
 <script>
 /* ============================
- Utilities
- ============================ */
+ Constants & helpers (SI)
+   - All masses are input in solar masses (Msun)
+   - Distances in Mpc for user input; internal SI conversion applied
+   - Equations use G, c
+   - We produce time-domain h(t) from PN-inspired frequency evolution
+============================ */
+const G = 6.67430e-11;
+const c = 299792458;
+const Msun = 1.98847e30;
+const Mpc = 3.085677581491367e22;
+
+/* small utilities */
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function linspace(a,b,n){const out=[];for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1));return out;}
-function downloadBlob(blob, filename){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},150); }
+function downloadBlob(blob, filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},200);}
 
 /* ============================
- Toy chirp generator
- ============================ */
-function generateChirp(params){
-  const m1 = params.m1 || 36, m2 = params.m2 || 29;
-  const total = Math.max(1, m1 + m2);
-  const chirpMass = Math.pow((m1*m2), 3/5) / Math.pow(total, 1/5);
-  const duration = clamp(5 * (30 / Math.max(1,chirpMass)), 2.2, 12); // seconds
-  const sr = 1024;
-  const N = Math.round(duration * sr);
-  const t = new Array(N), h = new Array(N), freq = new Array(N);
-  const f0 = 25 * Math.sqrt(30 / Math.max(1,chirpMass));
-  const f1 = 600 * Math.sqrt(30 / Math.max(1,chirpMass));
-  for(let i=0;i<N;i++){
-    const tt = i / sr;
-    const tau = tt / duration;
-    const fr = f0 + (f1 - f0) * Math.pow(tau, 3.0);
-    freq[i] = fr; t[i] = tt;
-    const amp = Math.pow(tau, 1.8) * Math.exp(-2.0 * (1 - tau));
-    h[i] = amp * Math.sin(2 * Math.PI * fr * tt);
-  }
-  return { t, h, freq, duration };
+ Physics module (functions)
+============================ */
+function chirpMassSI(m1_solar, m2_solar){
+  const m1 = m1_solar * Msun, m2 = m2_solar * Msun;
+  return Math.pow(Math.pow(m1*m2, 3/5) / Math.pow(m1+m2, 1/5), 1); // return SI mass (kg)
+}
+function chirpMassDimless(m1,m2){ // keep in Msun units for some scalings if needed
+  const m1si = m1 * Msun, m2si = m2 * Msun;
+  return Math.pow(Math.pow(m1si*m2si, 3/5) / Math.pow(m1si+m2si, 1/5), 1);
+}
+
+/* Inspiral timescale constant K such that tau(f) = K * f^{-8/3} */
+function inspiralK(Mc_SI){
+  // tau(f) = (5/256) * c^5 / (G^{5/3} * (pi^{8/3}) * Mc^{5/3}) * f^{-8/3}
+  const K = (5/256) * Math.pow(c,5) / (Math.pow(G*Mc_SI,5/3) * Math.pow(Math.PI,8/3));
+  return K;
+}
+
+/* invert to get f(t): f(t) = (K / (t_merger - t))^{3/8} */
+function frequencyFromTime(t, tmerger, K){
+  const dt = Math.max(1e-12, tmerger - t);
+  return Math.pow(K / dt, 3/8);
+}
+
+/* amplitude scale: leading order h(f) = (4 G^{5/3} pi^{2/3} Mc^{5/3} f^{2/3}) / (c^4 D) */
+function amplitudeH(Mc_SI, f, D_SI){
+  const num = 4 * Math.pow(G,5/3) * Math.pow(Math.PI,2/3) * Math.pow(Mc_SI,5/3) * Math.pow(f,2/3);
+  const den = Math.pow(c,4) * D_SI;
+  return num / den;
+}
+
+/* approximate total radiated GW energy: use order-of-magnitude E_GW ~ eps * M_tot c^2
+  choose eps ~ 0.05 as a plausible fraction near merger (toy) but we can compute a small estimate */
+function estimateEGW(m1_solar, m2_solar, eps=0.05){
+  const Mtot = (m1_solar + m2_solar) * Msun;
+  return eps * Mtot * c*c;
 }
 
 /* ============================
- Plot helpers (Plotly)
- ============================ */
-function plotWave(elid, ts, title){
+ Chirp generator (PN-inspired time-domain)
+  - produce arrays t (s), h(t) (dimensionless), freq(t) (Hz)
+  - approach: choose t_merger based on K and f_max, generate t from 0->t_merger*(1-eps)
+============================ */
+function generatePhysicsChirp(params){
+  // params: {m1 (Msun), m2 (Msun), D (Mpc)}
+  const m1 = params.m1, m2 = params.m2, Dmpc = params.D || 410;
+  const D_SI = Math.max(1e16, Dmpc * Mpc);
+  const Mc_SI = chirpMassDimless(m1,m2); // kg
+  const K = inspiralK(Mc_SI);
+  // choose f_final ~ innermost stable circular orbit ~ c^3 / (6^{3/2} * pi * GM)
+  // use total mass for approximate f_ISCO: f_isco ~ c^3 / (6^{3/2} * pi * G Mtot)
+  const Mtot = (m1 + m2) * Msun;
+  const f_isco = Math.max(20, Math.min(2000, c**3 / (Math.pow(6,1.5) * Math.PI * G * Mtot)));
+  const t_merge = K * Math.pow(f_isco, -8/3); // seconds
+  // produce time grid from t=0 to t_end = 0.999*t_merge (avoid singularity)
+  const t_end = Math.max(0.5, 0.999 * t_merge);
+  const sr = 2048; // sample rate sufficiently high
+  const N = Math.max(512, Math.round(Math.min(16, t_end) * sr)); // limit duration for performance
+  const t = linspace(0, t_end, N);
+  const freq = new Array(N), h = new Array(N), phase = new Array(N);
+  let phi = 0;
+  for(let i=0;i<N;i++){
+    const ti = t[i];
+    const fi = frequencyFromTime(ti, t_merge, K);
+    freq[i] = fi;
+    // amplitude
+    const Ai = amplitudeH(Mc_SI, fi, D_SI);
+    // phase increment approx 2*pi*f*dt
+    const dt = i===0 ? (t[1]-t[0]) : (t[i]-t[i-1]);
+    phi += 2*Math.PI*fi*dt;
+    phase[i] = phi;
+    h[i] = Ai * Math.sin(phi);
+  }
+  return { t, h, freq, duration: t_end, Mc_SI, D_SI, estimateEGW: estimateEGW(m1,m2) };
+}
+
+/* ============================
+ Plot helpers
+============================ */
+function plotWave(containerId, ts, title){
   const tr = { x: ts.t, y: ts.h, mode: 'lines', line: { color: '#ffffff' } };
   const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
-  Plotly.react(elid, [tr], layout, { displayModeBar:false, responsive:true });
+  Plotly.react(containerId, [tr], layout, { displayModeBar:false, responsive:true });
 }
-function plotSpec(elid, ts, title){
+function plotSpec(containerId, ts, title){
   const w=256, hop=128, mags=[];
   for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v)));
   const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react(elid, [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, { displayModeBar:false, responsive:true });
+  Plotly.react(containerId, [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, { displayModeBar:false, responsive:true });
 }
-function plotEnergy(elid, ts){
+function plotEnergy(containerId, ts){
   const step = Math.max(1, Math.round(ts.h.length / 200));
-  const p=[];
+  const p = [];
   for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f = ts.freq[i]||1; p.push(a*a*f*f); }
   const x = linspace(0, ts.duration, p.length);
-  Plotly.react(elid, [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated Radiated Power (toy)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
+  Plotly.react(containerId, [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated Radiated Power (toy)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
 }
 
-/* ============================
- Orbit initialization (two separate orbits)
- ============================ */
+/* Orbit 3D init and update (two orbits: preset & custom) */
 function initOrbit(elid){
   const data = [
     { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:14,color:'rgb(255,160,64)'}, name:'BH1' },
     { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color:'rgb(0,212,255)'}, name:'BH2' },
     { x:[], y:[], z:[], type:'scatter3d', mode:'markers', marker:{size:6,color:[],opacity:1}, name:'Trail', showlegend:false }
   ];
-  const layout = {
-    margin:{t:10,l:10,r:10,b:10},
-    scene:{ camera:{ eye:{x:1.2,y:1.0,z:0.7} }, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false} },
-    paper_bgcolor:'transparent', plot_bgcolor:'transparent'
-  };
-  Plotly.react(elid, data, layout, { displayModeBar:false, responsive:true });
+  const layout = { margin:{t:10,l:10,r:10,b:10}, scene:{ camera:{ eye:{x:1.2,y:1.0,z:0.7} }, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false}}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
+  Plotly.react(elid, data, layout, {displayModeBar:false, responsive:true});
 }
 initOrbit('presetOrbit'); initOrbit('customOrbit');
 
@@ -287,7 +374,7 @@ function computePositions(frameIdx, ts, params){
   const total = Math.max(1, params.m1 + params.m2);
   const r1 = radius * (params.m2 / total);
   const r2 = radius * (params.m1 / total);
-  const speed = 0.04 * (1 + fr / 200) * (1 + total / 120);
+  const speed = 0.04 * (1 + fr/200) * (1 + total/120);
   const theta = frameIdx * speed * 0.45;
   const tilt = 0.2;
   const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.7);
@@ -297,23 +384,23 @@ function computePositions(frameIdx, ts, params){
 
 /* trail helpers */
 function pushTrail(queue, pos, maxLen){ queue.push(pos.slice()); while(queue.length>maxLen) queue.shift(); }
-function trailToPoints(queue, colorRGB){ const out=[]; const L = queue.length; for(let i=0;i<L;i++){ const frac = i/Math.max(1,L-1); const alpha = 0.12 + 0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
+function trailToPoints(queue, colorRGB){ const out=[]; const L=queue.length; for(let i=0;i<L;i++){ const frac=i/Math.max(1,L-1); const alpha=0.12+0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
 
 /* ============================
- Presets and active states (separate for preset & custom)
- ============================ */
+ State objects (preset & custom)
+============================ */
 const PRESETS = {
-  GW150914:{m1:36,m2:29,spin1:0.3,spin2:0.2,sep:15},
-  GW170104:{m1:31,m2:19,spin1:0.1,spin2:0.05,sep:14},
-  GW170814:{m1:30,m2:25,spin1:0.2,spin2:0.1,sep:15},
-  GW190521:{m1:85,m2:66,spin1:0.7,spin2:0.6,sep:20}
+  GW150914:{m1:36,m2:29,spin1:0.3,spin2:0.2,sep:15,D:410},
+  GW170104:{m1:31,m2:19,spin1:0.1,spin2:0.05,sep:14,D:880},
+  GW170814:{m1:30,m2:25,spin1:0.2,spin2:0.1,sep:15,D:540},
+  GW190521:{m1:85,m2:66,spin1:0.7,spin2:0.6,sep:20,D:5300}
 };
 
-let presetState = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[], bh2:[]}, audio:{enabled:false, ctx:null, osc:null} };
-let customState = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[], bh2:[]}, audio:{enabled:false, ctx:null, osc:null} };
+let presetState = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[],bh2:[]}, audio:{enabled:false,ctx:null,osc:null} };
+let customState = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[],bh2:[]}, audio:{enabled:false,ctx:null,osc:null} };
 
-/* play loop for a given state (preset or custom) and orbit element id */
-function playState(state, orbitElId, waveElId, specElId, energyElId){
+/* play loop (generic for either state) */
+function playLoop(state, orbitEl){
   if(!state.ts) return;
   state.playing = true;
   state.startTime = performance.now();
@@ -333,20 +420,18 @@ function playState(state, orbitElId, waveElId, specElId, energyElId){
     if(idx >= state.ts.t.length - 1){
       state.playing = false;
       if(state.audio.osc){ try{ state.audio.osc.osc.stop(); }catch(e){} state.audio.osc=null; }
-      state.raf = null;
-      return;
+      state.raf = null; return;
     }
     const pos = computePositions(idx, state.ts, state.params);
     const maxTrail = Number(document.getElementById('trailLen').value) || 40;
     const perBH = Math.max(4, Math.round(maxTrail/6));
     pushTrail(state.trails.bh1, pos.bh1, perBH); pushTrail(state.trails.bh2, pos.bh2, perBH);
-    const pts1 = trailToPoints(state.trails.bh1, [255,160,64]).slice(-perBH);
-    const pts2 = trailToPoints(state.trails.bh2, [0,212,255]).slice(-perBH);
-    const trailPts = pts1.concat(pts2).slice(-maxTrail);
-    updateOrbit(orbitElId, pos.bh1, pos.bh2, trailPts);
+    const pts = trailToPoints(state.trails.bh1, [255,160,64]).slice(-perBH).concat(trailToPoints(state.trails.bh2, [0,212,255]).slice(-perBH));
+    updateOrbit(orbitEl, pos.bh1, pos.bh2, pts);
+    // audio update
     if(state.audio.enabled && state.audio.osc && state.ts.freq[idx]){
-      const aud = Math.min(2000, 80 + state.ts.freq[idx] * 1.1);
-      try{ state.audio.osc.osc.frequency.setValueAtTime(aud, state.audio.ctx.currentTime); }catch(e){}
+      const audible = Math.min(2000, 80 + state.ts.freq[idx]*1.1);
+      try{ state.audio.osc.osc.frequency.setValueAtTime(audible, state.audio.ctx.currentTime); }catch(e){}
     }
     state.raf = requestAnimationFrame(step);
   }
@@ -355,42 +440,49 @@ function playState(state, orbitElId, waveElId, specElId, energyElId){
 
 function pauseState(state){
   state.playing = false;
-  if(state.audio.osc){ try{ state.audio.osc.osc.stop(); }catch(e){} state.audio.osc = null; }
+  if(state.audio.osc){ try{ state.audio.osc.osc.stop(); }catch(e){} state.audio.osc=null; }
   if(state.raf){ cancelAnimationFrame(state.raf); state.raf = null; }
 }
 
-/* start/sync functions */
+/* ============================
+ Start / Plot functions for preset & custom
+============================ */
 function startPreset(key){
   const params = Object.assign({}, PRESETS[key]);
-  const ts = generateChirp(params);
-  presetState.name = key; presetState.params = params; presetState.ts = ts;
+  presetState.name = key; presetState.params = params;
+  presetState.ts = generatePhysicsChirp(params);
   presetState.trails.bh1 = []; presetState.trails.bh2 = [];
-  // plots
-  plotWave('presetWave', ts, `${key} — waveform`);
-  plotSpec('presetSpec', ts, `${key} — spectrogram`);
-  plotEnergy('presetEnergy', ts);
-  // init orbit
-  const p = computePositions(0, ts, params);
-  updateOrbit('presetOrbit', p.bh1, p.bh2, []);
+  plotWave('presetWave', presetState.ts, `${key} — waveform`);
+  plotSpec('presetSpec', presetState.ts, `${key} — spectrogram`);
+  plotEnergy('presetEnergy', presetState.ts);
+  const p0 = computePositions(0, presetState.ts, params);
+  updateOrbit('presetOrbit', p0.bh1, p0.bh2, []);
   pauseState(presetState);
 }
-
-function startCustom(params){
-  const ts = generateChirp(params);
-  customState.name = 'Custom'; customState.params = params; customState.ts = ts;
+function startCustomFromInputs(){
+  const params = {
+    m1: parseFloat(document.getElementById('c_m1').value) || 36,
+    m2: parseFloat(document.getElementById('c_m2').value) || 29,
+    sep: parseFloat(document.getElementById('c_sep').value) || 15,
+    D: parseFloat(document.getElementById('c_D').value) || 410,
+    alpha: parseFloat(document.getElementById('alpha').value) || 0,
+    beta: parseFloat(document.getElementById('beta').value) || 0
+  };
+  customState.params = params;
+  customState.ts = generatePhysicsChirp(params);
   customState.trails.bh1 = []; customState.trails.bh2 = [];
-  plotWave('customWave', ts, `Custom — waveform`);
-  plotSpec('customSpec', ts, `Custom — spectrogram`);
-  plotEnergy('customEnergy', ts);
-  const p = computePositions(0, ts, params);
-  updateOrbit('customOrbit', p.bh1, p.bh2, []);
+  plotWave('customWave', customState.ts, `Custom — waveform`);
+  plotSpec('customSpec', customState.ts, `Custom — spectrogram`);
+  plotEnergy('customEnergy', customState.ts);
+  const p0 = computePositions(0, customState.ts, params);
+  updateOrbit('customOrbit', p0.bh1, p0.bh2, []);
   pauseState(customState);
 }
 
 /* ============================
- Export helpers (JSON + ZIP)
- ============================ */
-async function exportPackageForState(state, filenamePrefix){
+ Export: params JSON & ZIP package (params.json, waveform.csv, metadata.json, waveform.png)
+============================ */
+async function exportPackage(state, filenamePrefix){
   if(!state.ts || !state.params){ alert('Run simulation first'); return; }
   const zip = new JSZip();
   zip.file('params.json', JSON.stringify(state.params, null, 2));
@@ -398,29 +490,54 @@ async function exportPackageForState(state, filenamePrefix){
   let csv = 'time,strain\n';
   for(let i=0;i<state.ts.t.length;i++) csv += `${state.ts.t[i]},${state.ts.h[i]}\n`;
   zip.file('waveform.csv', csv);
-  // metadata
-  const meta = { simulation: state.name || 'sim', duration: state.ts.duration, samples: state.ts.t.length, created: new Date().toISOString() };
-  zip.file('metadata.json', JSON.stringify(meta, null, 2));
-  // capture waveform png (try)
+  const metadata = { simulation: state.name||'sim', duration: state.ts.duration, samples: state.ts.t.length, created: new Date().toISOString() };
+  zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+  // capture waveform image
   try{
-    const dataUrl = await Plotly.toImage(document.getElementById(state===presetState? 'presetWave':'customWave'), {format:'png', width:1200, height:400});
+    const dataUrl = await Plotly.toImage(document.getElementById(state===presetState?'presetWave':'customWave'), {format:'png', width:1200, height:400});
     const blob = await (await fetch(dataUrl)).blob();
-    const arr = await blob.arrayBuffer();
-    zip.file('waveform.png', arr);
-  }catch(e){ console.warn('Could not capture waveform image:', e); }
+    const arrayBuf = await blob.arrayBuffer();
+    zip.file('waveform.png', arrayBuf);
+  }catch(e){ console.warn('Could not capture waveform PNG:', e); }
   const content = await zip.generateAsync({type:'blob'});
   downloadBlob(content, `${filenamePrefix}_package.zip`);
 }
-function exportParamsJSONForState(state, filename){
+function exportParamsJSON(state, filename){
   if(!state.params){ alert('Run simulation first'); return; }
   const blob = new Blob([JSON.stringify(state.params, null, 2)], {type:'application/json'});
   downloadBlob(blob, filename);
 }
 
 /* ============================
- UI Wiring
- ============================ */
-/* Tabs */
+ Neutrino estimate compute
+   - E_nu_extra = beta * E_GW_available (toy)
+   - flux F = E_nu / (4 pi D^2)
+   - events ~ F / <E_nu> * (sigma * N_targets) but we approximate using effective area
+============================ */
+function computeNeutrinoEstimates(){
+  // use active state: prefer custom if it has data otherwise preset
+  const state = (customState.ts && customState.params) ? customState : presetState;
+  if(!state.ts || !state.params){ alert('Run a simulation first'); return; }
+  const beta = parseFloat(document.getElementById('beta').value) || 0;
+  const avgE_MeV = parseFloat(document.getElementById('avgNuE').value) || 10;
+  const Aeff = parseFloat(document.getElementById('detArea').value) || 1000;
+  const E_GW = state.ts.estimateEGW || estimateEGW(state.params.m1, state.params.m2);
+  const E_nu_extra = beta * E_GW; // joules
+  const D_SI = state.params.D * Mpc || state.ts.D_SI;
+  const flux = E_nu_extra / (4 * Math.PI * D_SI*D_SI); // J/m2 (over the burst)
+  // convert avg energy to J
+  const avgE_J = avgE_MeV * 1.602176634e-13;
+  // number of neutrinos per m2 ~ flux / avgE_J
+  const n_per_m2 = flux / avgE_J;
+  const expected_events = n_per_m2 * Aeff;
+  const out = `E_GW ≈ ${(E_GW/ (1.98847e30*c*c)).toExponential(3)} M☉c² (toy fraction applied)<br>
+    β·E_GW = ${E_nu_extra.toExponential(3)} J → flux = ${flux.toExponential(3)} J/m² → neutrinos/m² ≈ ${n_per_m2.toExponential(3)} → expected events ≈ ${expected_events.toExponential(3)} (A_eff=${Aeff} m²)`;
+  document.getElementById('nuResults').innerHTML = out;
+}
+
+/* ============================
+ UI Wiring (tabs, buttons, etc)
+============================ */
 document.getElementById('tabPreset').addEventListener('click', ()=>{
   document.getElementById('presetCard').style.display='block';
   document.getElementById('customCard').style.display='none';
@@ -435,67 +552,56 @@ document.getElementById('tabCustom').addEventListener('click', ()=>{
 });
 
 /* About modal */
-document.getElementById('aboutBtn').addEventListener('click', ()=>{
-  const m=document.getElementById('aboutModal'); m.style.display = m.style.display==='block'?'none':'block';
-});
+document.getElementById('aboutBtn').addEventListener('click', ()=>{ const m=document.getElementById('aboutModal'); m.style.display = (m.style.display==='block'?'none':'block'); });
 document.getElementById('aboutClose').addEventListener('click', ()=>{ document.getElementById('aboutModal').style.display='none'; });
 
-/* Preset run + controls */
+/* Mode switch (physics / teach) */
+document.getElementById('modeSwitch').addEventListener('change', (e)=>{
+  const v=e.target.value;
+  document.getElementById('physicsBlock').style.display = v==='physics' ? 'block':'none';
+  document.getElementById('teachBlock').style.display = v==='teach' ? 'block':'none';
+});
+
+/* Trail length display */
+document.getElementById('trailLen').addEventListener('input', (e)=>{ document.getElementById('trailVal').textContent = e.target.value; });
+
+/* Preset controls */
 document.getElementById('presetRun').addEventListener('click', ()=>{
-  const key = document.getElementById('presetEventSelect').value || 'GW150914';
+  const key = document.getElementById('presetSelect').value || 'GW150914';
   startPreset(key);
 });
-document.getElementById('presetPlay').addEventListener('click', ()=>{ playState(presetState, 'presetOrbit', 'presetWave', 'presetSpec', 'presetEnergy'); });
+document.getElementById('presetPlay').addEventListener('click', ()=>{ playLoop(presetState, 'presetOrbit'); });
 document.getElementById('presetPause').addEventListener('click', ()=>{ pauseState(presetState); });
 document.getElementById('presetRestart').addEventListener('click', ()=>{
-  if(!presetState.params) return; startPreset(presetState.name); playState(presetState, 'presetOrbit', 'presetWave', 'presetSpec', 'presetEnergy');
+  if(!presetState.params) return; startPreset(presetState.name); playLoop(presetState, 'presetOrbit');
 });
 document.getElementById('presetSound').addEventListener('click', ()=>{
   presetState.audio.enabled = !presetState.audio.enabled;
   document.getElementById('presetSound').textContent = presetState.audio.enabled ? 'Disable Sound' : 'Enable Sound';
 });
+document.getElementById('presetExportJSON').addEventListener('click', ()=>{ exportParamsJSON(presetState, `${(presetState.name||'preset')}_params.json`); });
+document.getElementById('presetExportZIP').addEventListener('click', ()=>{ exportPackage(presetState, (presetState.name||'preset')); });
 
-/* Preset export */
-document.getElementById('presetExportJSON').addEventListener('click', ()=>{ exportParamsJSONForState(presetState, `${(presetState.name||'preset')}_params.json`); });
-document.getElementById('presetExportZIP').addEventListener('click', ()=>{ exportPackageForState(presetState, (presetState.name||'preset')); });
-
-/* Custom run + controls */
-document.getElementById('customRun').addEventListener('click', ()=>{
-  const params = {
-    m1: parseFloat(document.getElementById('c_m1').value) || 36,
-    m2: parseFloat(document.getElementById('c_m2').value) || 29,
-    spin1: parseFloat(document.getElementById('c_s1').value) || 0,
-    spin2: parseFloat(document.getElementById('c_s2').value) || 0,
-    sep: parseFloat(document.getElementById('c_sep').value) || 15
-  };
-  startCustom(params);
-});
-document.getElementById('customPlay').addEventListener('click', ()=>{ playState(customState, 'customOrbit', 'customWave', 'customSpec', 'customEnergy'); });
+/* Custom controls */
+document.getElementById('customRun').addEventListener('click', ()=>{ startCustomFromInputs(); });
+document.getElementById('customPlay').addEventListener('click', ()=>{ playLoop(customState, 'customOrbit'); });
 document.getElementById('customPause').addEventListener('click', ()=>{ pauseState(customState); });
-document.getElementById('customRestart').addEventListener('click', ()=>{ if(!customState.params) return; startCustom(customState.params); playState(customState, 'customOrbit', 'customWave', 'customSpec', 'customEnergy'); });
+document.getElementById('customRestart').addEventListener('click', ()=>{ if(!customState.params) return; startCustomFromInputs(); playLoop(customState,'customOrbit'); });
 document.getElementById('customSound').addEventListener('click', ()=>{ customState.audio.enabled = !customState.audio.enabled; document.getElementById('customSound').textContent = customState.audio.enabled ? 'Disable Sound' : 'Enable Sound'; });
+document.getElementById('customExportJSON').addEventListener('click', ()=>{ exportParamsJSON(customState, `custom_params.json`); });
+document.getElementById('customExportZIP').addEventListener('click', ()=>{ exportPackage(customState,'custom'); });
 
-/* Custom export */
-document.getElementById('customExportJSON').addEventListener('click', ()=>{ exportParamsJSONForState(customState, `custom_params.json`); });
-document.getElementById('customExportZIP').addEventListener('click', ()=>{ exportPackageForState(customState, 'custom'); });
+/* neutrino compute */
+document.getElementById('computeNu').addEventListener('click', ()=>{ computeNeutrinoEstimates(); });
 
-/* Trail length display */
-document.getElementById('trailLen').addEventListener('input',(e)=>{ document.getElementById('trailVal').textContent = e.target.value; });
-
-/* Initialize defaults */
+/* initialize defaults */
 (function init(){
-  document.getElementById('presetEventSelect').value = 'GW150914';
+  document.getElementById('presetSelect').value = 'GW150914';
   startPreset('GW150914');
-  // default custom
-  const defaultCustom = { m1:36,m2:29,spin1:0.3,spin2:0.2,sep:15 };
-  document.getElementById('c_m1').value = defaultCustom.m1;
-  document.getElementById('c_m2').value = defaultCustom.m2;
-  document.getElementById('c_s1').value = defaultCustom.spin1;
-  document.getElementById('c_s2').value = defaultCustom.spin2;
-  document.getElementById('c_sep').value = defaultCustom.sep;
-  startCustom(defaultCustom);
-  // resize
-  setTimeout(()=>{ ['presetOrbit','customOrbit','presetWave','presetSpec','customWave','customSpec'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); }); }, 300);
+  // custom defaults
+  document.getElementById('c_m1').value = 36; document.getElementById('c_m2').value = 29; document.getElementById('c_D').value = 410;
+  startCustomFromInputs();
+  setTimeout(()=>{ ['presetOrbit','customOrbit','presetWave','presetSpec','customWave','customSpec'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); });}, 300);
 })();
 
 /* responsive resize */
