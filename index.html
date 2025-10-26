@@ -1,375 +1,57 @@
-!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Visualizer — Celestial Duality (Final)</title>
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<style>
-  :root{
-    --nebula1:#071335; --nebula2:#2b0b3a;
-    --accent:#ffb85a; /* orange/gold (primary BH) */
-    --accent2:#00d4ff; /* electric blue (secondary BH) */
-    --muted:#98a8bf;
-    --panel: rgba(255,255,255,0.02);
-  }
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;color:#eaf6ff;-webkit-font-smoothing:antialiased;}
-  body{
-    background:
-      radial-gradient(circle at 10% 10%, rgba(255,255,255,0.02), transparent 6%),
-      radial-gradient(circle at 70% 80%, rgba(255,255,255,0.02), transparent 12%),
-      radial-gradient(circle at 40% 30%, rgba(12,24,60,0.20), transparent 35%),
-      linear-gradient(180deg,var(--nebula1),var(--nebula2));
-  }
-  /* fixed twinkling stars (small subtle dots) */
-  #stars { position:fixed; inset:0; z-index:0; pointer-events:none; background-image:
-    radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 2px),
-    radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 2px);
-    background-size: 760px 760px, 430px 430px; mix-blend-mode:screen; opacity:.06; }
-  /* app container */
-  .container { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:12px; }
-  header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0; }
-  .brand { display:flex; align-items:center; gap:12px; }
-  .title { color:var(--accent2); font-weight:700; font-size:1.05rem; }
-  .tabs { display:flex; gap:8px; }
-  .tab-btn { background:var(--panel); border:1px solid rgba(255,255,255,0.04); color: #eaf6ff; padding:8px 12px; border-radius:8px; cursor:pointer; }
-  .tab-btn.active { background: linear-gradient(90deg, rgba(255,184,90,0.06), rgba(0,212,255,0.05)); box-shadow:0 6px 18px rgba(0,0,0,0.4); border-color: rgba(0,212,255,0.12); }
-  .header-right { display:flex; gap:10px; align-items:center; color:var(--muted); font-size:0.95rem; }
-  .layout { display:grid; grid-template-columns:1fr; gap:12px; margin-top:10px; }
-  @media(min-width:1000px){ .layout{ grid-template-columns:1fr 420px } }
-  .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:10px; padding:10px; box-shadow:0 10px 40px rgba(0,0,0,0.45); }
-  .controls-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .muted { color:var(--muted); }
-  .plot { width:100%; border-radius:8px; background:transparent; }
-  .plot-main { height:340px; }
-  .plot-spec { height:220px; margin-top:10px; }
-  .orbit { height:420px; margin-top:10px; }
-  .player { display:flex; gap:8px; align-items:center; justify-content:center; padding:8px; margin-top:8px; border-radius:8px; background: rgba(0,0,0,0.18); }
-  .player button { background:transparent; border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:6px 8px; border-radius:6px; cursor:pointer; }
-  .controls-inline { display:flex; gap:8px; align-items:center; }
-  .custom-controls { margin-top:10px; display:flex; flex-direction:column; gap:8px; }
-  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .infoButton { position:fixed; right:14px; top:12px; z-index:30; background:var(--panel); border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:8px 10px; border-radius:10px; cursor:pointer; }
-  .aboutModal { position:fixed; right:14px; top:56px; z-index:40; width:320px; max-width:88vw; background:rgba(0,0,0,0.66); border-radius:8px; padding:12px; border:1px solid rgba(255,255,255,0.04); display:none; color:#eaf6ff; }
-  .footer { text-align:center; color:var(--muted); padding:10px; font-size:0.9rem; margin-top:12px; }
-  input,select,button { font-size:0.95rem; }
-  input[type=range] { vertical-align:middle; }
-  .small { font-size:0.85rem; color:var(--muted); }
-  .export-btn { background:transparent; border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:6px 8px; border-radius:6px; cursor:pointer; }
-</style>
-</head>
-<body>
-  <div id="stars" aria-hidden="true"></div>
-
-  <div class="container">
-    <header>
-      <div class="brand">
-        <div class="title">Open BBH Visualizer — Celestial Duality</div>
-        <div class="tabs" role="tablist">
-          <button class="tab-btn active" id="tabPreset">Preset Simulations</button>
-          <button class="tab-btn" id="tabCustom">Custom Simulation</button>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="muted">v3.5 — Inspiral & Trails</div>
-      </div>
-    </header>
-
-    <div class="layout">
-      <!-- Left column: main -->
-      <div>
-        <!-- Preset card -->
-        <div id="presetCard" class="card" style="display:block;">
-          <div class="controls-row">
-            <label class="muted">Event:</label>
-            <select id="presetSelect"><option>GW150914</option><option>GW170104</option><option>GW190521</option></select>
-            <button id="presetLoad">Load</button>
-            <div class="controls-inline">
-              <button id="presetPlay">Play</button>
-              <button id="presetPause">Pause</button>
-              <button id="presetRestart">Restart</button>
-            </div>
-            <button id="presetSound">Enable Sound</button>
-            <button id="presetExport" class="export-btn">Export JSON</button>
-            <label class="muted">Load real data:</label>
-            <input type="file" id="presetFile" accept=".json,.txt,.csv">
-            <input id="presetUrl" placeholder="Optional URL (GWOSC JSON)" style="min-width:160px">
-            <button id="presetFetch">Fetch</button>
-          </div>
-
-          <div style="margin-top:10px;">
-            <div id="presetWave" class="plot plot-main"></div>
-            <div id="presetSpec" class="plot plot-spec"></div>
-            <div class="player">
-              <small class="small muted">Preset player — waveform & spectrogram synced to 3D inspiral</small>
-            </div>
-          </div>
-        </div>
-
-        <!-- Custom card -->
-        <div id="customCard" class="card" style="display:none;">
-          <div class="controls-row">
-            <label class="muted">Mode:</label>
-            <select id="customMode"><option value="interactive">Interactive</option><option value="quick">Quick</option></select>
-            <button id="customGenerate">Generate</button>
-            <button id="customExport" class="export-btn">Export JSON</button>
-            <label class="muted">Load file:</label><input type="file" id="customFile" accept=".json,.txt,.csv">
-          </div>
-
-          <div class="custom-controls">
-            <div class="row">
-              <label>m₁ <input id="c_m1" type="number" value="36" min="1" style="width:90px"></label>
-              <label>m₂ <input id="c_m2" type="number" value="29" min="1" style="width:90px"></label>
-              <label>spin₁ <input id="c_s1" type="number" step="0.01" value="0.3" min="0" max="0.99" style="width:80px"></label>
-              <label>spin₂ <input id="c_s2" type="number" step="0.01" value="0.2" min="0" max="0.99" style="width:80px"></label>
-              <label>sep <input id="c_sep" type="number" value="15" min="6" style="width:80px"></label>
-            </div>
-            <div class="row">
-              <button id="customPlay">Play</button>
-              <button id="customPause">Pause</button>
-              <button id="customRestart">Restart</button>
-              <button id="customSound">Enable Sound</button>
-              <div class="muted small">Custom player</div>
-            </div>
-          </div>
-
-          <div style="margin-top:10px;">
-            <div id="customWave" class="plot plot-main"></div>
-            <div id="customSpec" class="plot plot-spec"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right column: orbit + energy -->
-      <div>
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>3D Orbit — zoomed (inspiral)</strong></div>
-            <div class="muted small">orange = BH1 • blue = BH2</div>
-          </div>
-
-          <div id="orbit3d" class="orbit"></div>
-
-          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
-            <label class="muted">Trail length</label>
-            <input id="trailLen" type="range" min="5" max="120" value="40">
-            <span id="trailLenVal" class="muted">40</span>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>Estimated Radiated Power (toy)</strong></div>
-            <div class="muted small">arbitrary units</div>
-          </div>
-          <div id="energyPlot" class="plot" style="height:180px;margin-top:10px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <button id="aboutBtn" class="infoButton" title="About">ℹ️ About</button>
-    <div id="aboutModal" class="aboutModal" role="dialog" aria-hidden="true">
-      <div style="font-weight:700;margin-bottom:8px">About this Visualizer</div>
-      <div class="small muted">This visualization shows binary black hole (BBH) inspirals: two black holes orbiting each other while losing energy via gravitational waves. The toy chirp waveform and orbit are physically-inspired visual models for outreach and demonstration. For research-grade waveforms, load numerical-relativity (NR) or LIGO h(t) data (GWOSC).</div>
-      <hr style="margin:8px 0;border-color:rgba(255,255,255,0.04)">
-      <div class="small">Credits: Open BBH Sim Project. Powered by Plotly. LIGO / GWOSC are authoritative sources for real event data.</div>
-      <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;"><button id="aboutClose">Close</button></div>
-    </div>
-
-    <div class="footer">
-      <div>Open BBH Visualizer — Celestial Duality (v3.5)</div>
-      <div class="small muted">Click "Enable Sound" to allow audio chirp. Export JSON to download waveform + metadata.</div>
-    </div>
-  </div>
-
 <script>
 /* ============================================================
- Final integrated client-side BBH visualizer (v3.5)
- - Preset & Custom simulators, inspiral motion
- - Distinct orange (BH1) and blue (BH2) short trails
- - Export JSON (waveform + metadata)
- - Option to load real waveform files via upload or URL (fetch may be CORS-limited)
+ Visualizer Fix — ensure all initial plots render correctly
  ============================================================ */
 
-/* ---------- Utilities ---------- */
+/* ---- small utilities ---- */
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function linspace(a,b,n){const out=[]; for(let i=0;i<n;i++) out.push(a + (b-a)*i/(n-1)); return out;}
-function downloadJSON(obj, filename){
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
-}
+function linspace(a,b,n){const out=[]; for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1)); return out;}
 
-/* ---------- Simulator states ---------- */
-const preset = { params:null, ts:null, startTime:0, playing:false, raf:null, audio:{enabled:false, ctx:null, osc:null} };
-const custom = { params:null, ts:null, startTime:0, playing:false, raf:null, audio:{enabled:false, ctx:null, osc:null}, trails:{bh1:[], bh2:[]} };
-
-/* ---------- Chirp generator (toy) ---------- */
-function chirp(params){
-  const m1 = params.m1, m2 = params.m2;
-  const total = Math.max(1, m1 + m2);
-  const chirpMass = Math.pow((m1*m2), 3/5) / Math.pow(total, 1/5);
-  const duration = clamp(5 * (30 / Math.max(1,chirpMass)), 2.2, 12);
-  const sr = 1024;
-  const N = Math.round(duration * sr);
-  const t = new Array(N), h = new Array(N), freq = new Array(N);
-  const f0 = 20 * Math.sqrt(30 / Math.max(1,chirpMass));
-  const f1 = 650 * Math.sqrt(30 / Math.max(1,chirpMass));
+/* ---- chirp generator ---- */
+function chirp(p){
+  const m1=p.m1,m2=p.m2;const total=Math.max(1,m1+m2);
+  const chirpMass=Math.pow((m1*m2),3/5)/Math.pow(total,1/5);
+  const dur=clamp(5*(30/Math.max(1,chirpMass)),2,10);
+  const sr=512; const N=Math.round(dur*sr);
+  const t=[],h=[],f=[];
+  const f0=20*Math.sqrt(30/Math.max(1,chirpMass));
+  const f1=600*Math.sqrt(30/Math.max(1,chirpMass));
   for(let i=0;i<N;i++){
-    const tt = i / sr;
-    const tau = tt / duration;
-    const fr = f0 + (f1 - f0) * Math.pow(tau, 3.0);
-    freq[i] = fr; t[i] = tt;
-    const amp = Math.pow(tau, 1.8) * Math.exp(-2.0*(1-tau));
-    h[i] = amp * Math.sin(2*Math.PI*fr*tt);
+    const tt=i/sr; const tau=tt/dur;
+    const fr=f0+(f1-f0)*Math.pow(tau,3); f.push(fr); t.push(tt);
+    const amp=Math.pow(tau,1.7)*Math.exp(-2*(1-tau)); h.push(amp*Math.sin(2*Math.PI*fr*tt));
   }
-  return { t, h, freq, duration };
+  return {t,h,f,duration:dur};
 }
 
-/* ---------- Plot helpers ---------- */
-function plotWave(target, ts, title){
-  const trace = { x: ts.t, y: ts.h, mode:'lines', line:{color:'#ffffff'} };
-  const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
-  Plotly.react(target, [trace], layout, {displayModeBar:false, responsive:true});
-}
-function plotSpec(target, ts, title){
-  const w = 256, hop = 128, mags = [];
-  for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v)));
-  const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react(target, [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, {displayModeBar:false, responsive:true});
-}
-function plotEnergy(target, ts){
-  const step = Math.max(1, Math.round(ts.h.length / 200));
-  const p = [];
-  for(let i=0;i<ts.h.length;i+=step){
-    const a = Math.abs(ts.h[i]); const f = ts.freq[i] || 1; p.push(a*a*f*f);
-  }
-  const x = linspace(0, ts.duration, p.length);
-  Plotly.react(target, [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated Radiated Power (toy)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
-}
+/* ---- initial data ---- */
+const params={m1:36,m2:29,sep:15};
+const ts=chirp(params);
 
-/* ---------- Orbit (Plotly 3D) ---------- */
-function initOrbit(){
-  const data = [
-    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:14,color: 'rgb(255,160,64)'}, name:'BH1' },
-    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color: 'rgb(0,212,255)'}, name:'BH2' },
-    { x:[], y:[], z:[], type:'scatter3d', mode:'markers', marker:{size:6,color:[], opacity:1}, name:'Trail', showlegend:false }
-  ];
-  const layout = { margin:{t:20,l:10,r:10,b:10}, scene:{ camera:{eye:{x:1.2,y:1.0,z:0.7}}, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false}}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react('orbit3d', data, layout, {displayModeBar:false, responsive:true});
+/* ---- plot creation ---- */
+function plotAll(){
+  Plotly.newPlot("presetWave",
+    [{x:ts.t,y:ts.h,mode:'lines',line:{color:'#fff'}}],
+    {title:'GW150914 — waveform',paper_bgcolor:'transparent',plot_bgcolor:'transparent'},
+    {displayModeBar:false});
+  Plotly.newPlot("presetSpec",
+    [{z:[ts.h],type:'heatmap',colorscale:'Viridis'}],
+    {title:'GW150914 — spectrogram',paper_bgcolor:'transparent',plot_bgcolor:'transparent'},
+    {displayModeBar:false});
+  Plotly.newPlot("energyPlot",
+    [{x:ts.t,y:ts.h.map(v=>v*v),mode:'lines',line:{color:'#ffb86b'}}],
+    {title:'Energy (toy)',paper_bgcolor:'transparent',plot_bgcolor:'transparent'},
+    {displayModeBar:false});
+  Plotly.newPlot("orbit3d",
+    [
+      {x:[0.2],y:[0],z:[0],mode:'markers',marker:{size:12,color:'orange'},type:'scatter3d'},
+      {x:[-0.2],y:[0],z:[0],mode:'markers',marker:{size:10,color:'cyan'},type:'scatter3d'}
+    ],
+    {scene:{xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false}},paper_bgcolor:'transparent'},
+    {displayModeBar:false});
 }
-initOrbit();
+plotAll();
 
-/* compute BH positions given frame */
-function computePositions(frame, ts, params){
-  const idx = clamp(frame, 0, ts.t.length - 1);
-  const fr = ts.freq[idx];
-  const baseRadius = clamp(params.sep * 0.04, 0.06, 1.8);
-  const shrink = clamp((fr / (fr + 250)), 0, 0.95);
-  // inspiral factor: radius shrinks as tau increases
-  const tau = idx / Math.max(1, ts.t.length - 1);
-  const radius = baseRadius * (1 - 0.7 * shrink) * (1 - 0.5 * tau);
-  const total = Math.max(1, params.m1 + params.m2);
-  const r1 = radius * (params.m2 / total);
-  const r2 = radius * (params.m1 / total);
-  const speed = 0.04 * (1 + fr / 200) * (1 + total / 120);
-  const theta = frame * speed * 0.45;
-  const tilt = 0.2;
-  const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.7);
-  const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta*0.7);
-  return { bh1:[x1,y1,z1], bh2:[x2,y2,z2], theta, fr };
-}
-
-/* trail management */
-function pushTrail(queue, pos, maxLen){ queue.push(pos.slice()); while(queue.length>maxLen) queue.shift(); }
-function trailToPoints(queue, colorRGB){
-  const out=[]; const L = queue.length;
-  for(let i=0;i<L;i++){
-    const frac = i / Math.max(1, L-1);
-    const alpha = 0.12 + 0.85 * frac;
-    out.push({ x:queue[i][0], y:queue[i][1], z:queue[i][2], alpha, color:colorRGB });
-  }
-  return out;
-}
-function updateOrbitPlot(b1,b2,trailPts){
-  const xs = trailPts.map(p=>p.x), ys = trailPts.map(p=>p.y), zs = trailPts.map(p=>p.z);
-  Plotly.restyle('orbit3d', {'x':[[b1[0]],[b2[0]], xs], 'y':[[b1[1]],[b2[1]], ys], 'z':[[b1[2]],[b2[2]], zs]}, [0,1,2]);
-  const colors = trailPts.map(p=>`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha.toFixed(3)})`);
-  Plotly.restyle('orbit3d', {'marker.color': [null, null, colors]}, [0,1,2]);
-}
-
-/* ---------- Preset functions ---------- */
-const presetEvents = {
-  GW150914:{m1:36,m2:29,spin1:0.3,spin2:0.2,sep:15},
-  GW170104:{m1:31,m2:19,spin1:0.1,spin2:0.05,sep:14},
-  GW190521:{m1:85,m2:66,spin1:0.7,spin2:0.6,sep:20}
-};
-
-function loadPreset(key){
-  const params = Object.assign({}, presetEvents[key]);
-  preset.params = params;
-  preset.ts = chirp(params);
-  // clear custom trails for consistent rendering
-  custom.trails.bh1 = []; custom.trails.bh2 = [];
-  plotWave('presetWave', preset.ts, `${key} — waveform`);
-  plotSpec('presetSpec', preset.ts, `${key} — spectrogram`);
-  plotEnergy('energyPlot', preset.ts);
-  // initialize orbit
-  const pos = computePositions(0, preset.ts, preset.params);
-  updateOrbitPlot(pos.bh1, pos.bh2, []);
-  // stop running
-  preset.playing = false; if(preset.raf) { cancelAnimationFrame(preset.raf); preset.raf = null; }
-}
-
-/* Preset RAF loop (time-based inspiral) */
-function presetPlay(){
-  if(!preset.ts) return;
-  preset.playing = true;
-  preset.startTime = performance.now();
-  if(preset.audio.enabled && !preset.audio.ctx) preset.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
-  // create oscillator if audio enabled
-  if(preset.audio.enabled && preset.audio.ctx && !preset.audio.osc){
-    const osc = preset.audio.ctx.createOscillator();
-    const gain = preset.audio.ctx.createGain(); gain.gain.value = 0.04;
-    osc.type = 'sine'; osc.connect(gain); gain.connect(preset.audio.ctx.destination); osc.start();
-    preset.audio.osc = {osc,gain};
-  }
-  function step(){
-    if(!preset.playing) { preset.raf = null; return; }
-    const elapsed = (performance.now() - preset.startTime) / 1000;
-    const frac = elapsed / preset.ts.duration;
-    const idx = Math.floor(frac * (preset.ts.t.length - 1));
-    if(idx >= preset.ts.t.length - 1){ preset.playing = false; if(preset.audio.osc){ try{ preset.audio.osc.osc.stop(); }catch(e){} preset.audio.osc=null; } preset.raf=null; return; }
-    const pos = computePositions(idx, preset.ts, preset.params);
-    const maxTrail = Number(document.getElementById('trailLen').value) || 40;
-    const perBH = Math.max(4, Math.round(maxTrail/6));
-    pushTrail(custom.trails.bh1, pos.bh1, perBH); pushTrail(custom.trails.bh2, pos.bh2, perBH);
-    const pts = trailToPoints(custom.trails.bh1, [255,160,64]).slice(-perBH).concat(trailToPoints(custom.trails.bh2, [0,212,255]).slice(-perBH));
-    updateOrbitPlot(pos.bh1, pos.bh2, pts);
-    if(preset.audio.enabled && preset.audio.osc && preset.ts.freq[idx]){
-      const aud = Math.min(2000, 80 + preset.ts.freq[idx]*1.1);
-      try{ preset.audio.osc.osc.frequency.setValueAtTime(aud, preset.audio.ctx.currentTime); }catch(e){}
-    }
-    preset.raf = requestAnimationFrame(step);
-  }
-  if(!preset.raf) preset.raf = requestAnimationFrame(step);
-}
-function presetPause(){ preset.playing=false; if(preset.audio.osc){ try{ preset.audio.osc.osc.stop(); }catch(e){} preset.audio.osc=null; } if(preset.raf){ cancelAnimationFrame(preset.raf); preset.raf=null; } }
-
-/* ---------- Custom functions ---------- */
-function loadCustomFromInputs(){
-  const params = {
-    m1: parseFloat(document.getElementById('c_m1').value) || 36,
-    m2: parseFloat(document.getElementById('c_m2').value) || 29,
-    spin1: parseFloat(document.getElementById('c_s1').value) || 0.3,
-    spin2: parseFloat(document.getElementById('c_s2').value) || 0.2,
-    sep: parseFloat(document.getElementById('c_sep').value) || 15
-  };
-  custom.params = params;
-  custom.ts = chirp(params);
-  custom.trails.bh1 = []; custom.trails.bh2 = [];
-  plotWave('customWave', custom.ts, 'Custom waveform');
-  plotSpec('customSpec', custom.ts, 'Custom spectrogram');
-  plotEnergy('energyPlot', custom.ts);
-  const pos = computePositions(0, c
+/* ---- ensure resize works ---- */
+window.addEventListener('resize',()=>{["presetWave","presetSpec","orbit3d","energyPlot"].forEach(id=>{const el=document.getElementById(id);if(el)Plotly.Plots.resize(el);});});
+</script>
