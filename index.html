@@ -3,20 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Visualizer — Event Horizon (v3.7)</title>
+<title>BBH Visualizer — Dual Orbits (Preset + Custom)</title>
 
 <!-- Plotly -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<!-- JSZip for in-browser ZIP export -->
+<!-- JSZip for ZIP export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
   :root{
     --nebula1:#071335; --nebula2:#2b0b3a;
-    --accent1: #ffb85a; /* orange/gold */
-    --accent2: #00d4ff; /* electric blue */
-    --muted: #98a8bf;
-    --panel: rgba(255,255,255,0.02);
+    --accent1:#ffb85a; --accent2:#00d4ff; --muted:#98a8bf; --panel:rgba(255,255,255,0.02);
   }
   html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:#eaf6ff;-webkit-font-smoothing:antialiased;}
   body{
@@ -27,12 +24,12 @@
       linear-gradient(180deg,var(--nebula1),var(--nebula2));
   }
 
-  /* fixed twinkling stars */
-  #stars { position:fixed; inset:0; z-index:0; pointer-events:none;
+  /* stars */
+  #stars{position:fixed;inset:0;z-index:0;pointer-events:none;
     background-image:
-      radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 2px),
-      radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 2px);
-    background-size: 760px 760px, 430px 430px; mix-blend-mode:screen; opacity:.06; }
+      radial-gradient(circle, rgba(255,255,255,.98) 1px, transparent 2px),
+      radial-gradient(circle, rgba(255,255,255,.9) 1px, transparent 2px);
+    background-size:760px 760px,430px 430px;mix-blend-mode:screen;opacity:.06;}
 
   .container{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:12px;}
   header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;}
@@ -40,30 +37,28 @@
   .title{color:var(--accent2);font-weight:700;font-size:1.05rem;}
   .tabs{display:flex;gap:8px;}
   .tab-btn{background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:8px 12px;border-radius:8px;cursor:pointer;}
-  .tab-btn.active{background:linear-gradient(90deg, rgba(255,184,90,0.06), rgba(0,212,255,0.05));box-shadow:0 6px 18px rgba(0,0,0,0.4);border-color:rgba(0,212,255,0.12);}
+  .tab-btn.active{background:linear-gradient(90deg, rgba(255,184,90,0.06), rgba(0,212,255,0.05));box-shadow:0 6px 18px rgba(0,0,0,0.38);border-color:rgba(0,212,255,0.12);}
 
   .layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px;}
-  @media(min-width:1000px){ .layout{grid-template-columns:1fr 420px;} }
+  @media(min-width:1000px){.layout{grid-template-columns:1fr 420px;}}
 
-  .card{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:10px;box-shadow:0 10px 40px rgba(0,0,0,0.45);}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:10px;box-shadow:0 10px 40px rgba(0,0,0,0.45);}
 
   .controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .muted{color:var(--muted);font-size:0.92rem;}
   .plot{width:100%;border-radius:8px;background:transparent;}
-  .plot-main{height:340px;}
-  .plot-spec{height:220px;margin-top:10px;}
-  .orbit{height:420px;margin-top:10px;}
-
+  .plot-main{height:300px;}
+  .plot-spec{height:180px;margin-top:10px;}
+  .orbit{height:320px;margin-top:10px;}
   .player{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;margin-top:8px;border-radius:8px;background:rgba(0,0,0,0.18);}
   .player button{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer;}
-
   .infoButton{position:fixed;right:14px;top:12px;z-index:30;background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:8px 10px;border-radius:10px;cursor:pointer;}
   .aboutModal{position:fixed;right:14px;top:56px;z-index:40;width:320px;max-width:88vw;background:rgba(0,0,0,0.66);border-radius:8px;padding:12px;border:1px solid rgba(255,255,255,0.04);display:none;color:#eaf6ff;}
-  .footer{ text-align:center;color:var(--muted);padding:10px;font-size:0.9rem;margin-top:12px; }
-
+  .footer{text-align:center;color:var(--muted);padding:10px;font-size:0.9rem;margin-top:12px;}
   input,select,button{font-size:0.95rem;}
   .export-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer;}
   .small{font-size:0.86rem;color:var(--muted);}
+  .explainer{margin-top:6px;margin-bottom:6px;color:var(--muted);font-size:0.95rem;}
 </style>
 </head>
 <body>
@@ -72,67 +67,71 @@
   <div class="container">
     <header>
       <div class="brand">
-        <div class="title">Open BBH Visualizer — Event Horizon</div>
+        <div class="title">Open BBH Visualizer — Dual Orbits</div>
         <div class="tabs" role="tablist">
           <button class="tab-btn active" id="tabPreset">Preset Events</button>
           <button class="tab-btn" id="tabCustom">Custom Simulation</button>
         </div>
       </div>
-      <div class="muted">v3.7 — Export (.json / .zip) • Inspiral</div>
+      <div class="muted">v3.8 — Separate Orbit Views • Export .zip/.json</div>
     </header>
 
     <div class="layout">
-      <!-- LEFT: main -->
+      <!-- LEFT: Main content area -->
       <div>
-        <!-- PRESET CARD -->
+        <!-- Preset card -->
         <div id="presetCard" class="card" style="display:block;">
           <div class="controls-row">
             <label class="muted">Event:</label>
-            <select id="eventSelect">
+            <select id="presetEventSelect">
               <option value="GW150914">GW150914</option>
               <option value="GW170104">GW170104</option>
               <option value="GW170814">GW170814</option>
               <option value="GW190521">GW190521</option>
             </select>
-            <button id="runEvent">Run Simulation</button>
+            <button id="presetRun">Run Simulation</button>
 
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
               <button id="presetSound">Enable Sound</button>
-              <button id="presetExportParams" class="export-btn">Export Params (.json)</button>
-              <button id="presetExportZip" class="export-btn">Export Package (.zip)</button>
+              <button id="presetExportJSON" class="export-btn">Export Params (.json)</button>
+              <button id="presetExportZIP" class="export-btn">Export Package (.zip)</button>
             </div>
           </div>
 
-          <div style="margin-top:10px;">
-            <div id="orbitView" class="plot orbit"></div>
-            <div id="wavePlot" class="plot plot-main"></div>
-            <div id="specPlot" class="plot plot-spec"></div>
-            <div id="energyPlot" class="plot" style="height:160px;margin-top:10px;"></div>
-            <div class="player">
-              <button id="presetPlay">Play</button>
-              <button id="presetPause">Pause</button>
-              <button id="presetRestart">Restart</button>
-              <div class="small muted">Preset simulation</div>
-            </div>
+          <!-- explainer above orbit -->
+          <div class="explainer">orange = BH1 · blue = BH2</div>
+
+          <!-- Preset orbit + player (separate view) -->
+          <div id="presetOrbit" class="plot orbit"></div>
+          <div class="player" id="presetPlayer">
+            <button id="presetPlay">Play</button>
+            <button id="presetPause">Pause</button>
+            <button id="presetRestart">Restart</button>
+            <div class="small muted">Preset simulation player</div>
           </div>
+
+          <!-- waveform, spec, energy -->
+          <div id="presetWave" class="plot plot-main" style="margin-top:10px;"></div>
+          <div id="presetSpec" class="plot plot-spec"></div>
+          <div id="presetEnergy" class="plot" style="height:140px;margin-top:10px;"></div>
         </div>
 
-        <!-- CUSTOM CARD -->
+        <!-- Custom card -->
         <div id="customCard" class="card" style="display:none;">
           <div class="controls-row">
-            <label class="muted">Custom Mode</label>
+            <label class="muted">Mode:</label>
             <select id="customMode"><option value="interactive">Interactive</option><option value="quick">Quick</option></select>
-            <button id="runCustom">Run Custom Simulation</button>
+            <button id="customRun">Run Custom Simulation</button>
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
               <button id="customSound">Enable Sound</button>
-              <button id="customExportParams" class="export-btn">Export Params (.json)</button>
-              <button id="customExportZip" class="export-btn">Export Package (.zip)</button>
+              <button id="customExportJSON" class="export-btn">Export Params (.json)</button>
+              <button id="customExportZIP" class="export-btn">Export Package (.zip)</button>
             </div>
           </div>
 
-          <div class="small muted" style="margin-top:10px;">Adjust masses (M☉) and separation (geometric units); spins are visual but not used in toy chirp model.</div>
+          <div class="small muted" style="margin-top:8px;">Adjust masses (M☉), spins (visual), and separation; then Run Custom Simulation.</div>
 
-          <div class="card" style="margin-top:10px;">
+          <div style="margin-top:10px;" class="card">
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <label>m₁ <input id="c_m1" type="number" value="36" min="5" max="200" style="width:90px"></label>
               <label>m₂ <input id="c_m2" type="number" value="29" min="5" max="200" style="width:90px"></label>
@@ -145,40 +144,43 @@
             </div>
           </div>
 
-          <div style="margin-top:10px;">
-            <div id="customWave" class="plot plot-main"></div>
-            <div id="customSpec" class="plot plot-spec"></div>
-            <div class="player" style="margin-top:8px;">
-              <button id="customPlay">Play</button>
-              <button id="customPause">Pause</button>
-              <button id="customRestart">Restart</button>
-              <div class="small muted">Custom simulation</div>
-            </div>
+          <!-- explainer above orbit -->
+          <div class="explainer">orange = BH1 · blue = BH2</div>
+
+          <!-- Custom orbit + player (separate) -->
+          <div id="customOrbit" class="plot orbit"></div>
+          <div class="player" id="customPlayer">
+            <button id="customPlay">Play</button>
+            <button id="customPause">Pause</button>
+            <button id="customRestart">Restart</button>
+            <div class="small muted">Custom simulation player</div>
           </div>
+
+          <div id="customWave" class="plot plot-main" style="margin-top:10px;"></div>
+          <div id="customSpec" class="plot plot-spec"></div>
+          <div id="customEnergy" class="plot" style="height:140px;margin-top:10px;"></div>
         </div>
       </div>
 
-      <!-- RIGHT: orbit + energy (shared) -->
+      <!-- RIGHT column: info & notes -->
       <div>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>Orbit View (zoomed)</strong></div>
-            <div class="muted small">orange = BH1 · blue = BH2</div>
+            <div><strong>Notes</strong></div>
+            <div class="muted small">Educational demo</div>
           </div>
-
-          <div style="margin-top:10px;">
-            <!-- orbitView is already in left column — show same orbit here as well -->
-            <div class="muted small">This panel shows the same 3D inspiral used by the active simulation.</div>
+          <div style="margin-top:8px" class="small muted">
+            This demo uses a toy chirp generator for visualization. Export packages to include waveform CSV and params. For research-grade waveforms, upload NR/LIGO h(t) files.
           </div>
         </div>
 
         <div class="card" style="margin-top:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>Notes & Links</strong></div>
-            <div class="muted small">Educational demo</div>
+            <div><strong>About / Credits</strong></div>
+            <div class="muted small">Open BBH Sim Project</div>
           </div>
           <div style="margin-top:8px" class="small muted">
-            This is a toy-model visualization for outreach and demos. For research-grade waveforms, export parameters and upload NR or LIGO waveforms (GWOSC).
+            Built with Plotly. Includes in-browser ZIP export (JSZip). Presets are simplified and for outreach only.
           </div>
         </div>
       </div>
@@ -187,32 +189,25 @@
     <button id="aboutBtn" class="infoButton" title="About">ℹ️</button>
     <div id="aboutModal" class="aboutModal" role="dialog" aria-hidden="true">
       <div style="font-weight:700;margin-bottom:8px">About this Visualizer</div>
-      <div class="small muted">This interactive visualization simulates binary black hole (BBH) inspirals. Two black holes orbit each other while radiating gravitational waves (the chirp). This demo uses a toy chirp generator for visualization and teaching. For NR-quality waveforms (LIGO/GWOSC), upload real h(t) files or provide fetchable URLs.</div>
+      <div class="small muted">This interactive visualization simulates binary black hole inspirals (toy model). Two BHs orbit, radiate a chirp, and inspiral. For research-quality data, load NR or GWOSC waveforms.</div>
       <hr style="margin:8px 0;border-color:rgba(255,255,255,0.04)">
-      <div class="small">Credits: Open BBH Sim Project. Powered by Plotly. LIGO/GWOSC for real waveforms.</div>
       <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;"><button id="aboutClose">Close</button></div>
     </div>
 
-    <div class="footer">Open BBH Visualizer — Event Horizon (v3.7) • Export .json & .zip included</div>
+    <div class="footer">Open BBH Visualizer — Dual Orbits • v3.8</div>
   </div>
 
 <script>
 /* ============================
-   Utilities
-   ============================ */
+ Utilities
+ ============================ */
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function linspace(a,b,n){const arr=[];for(let i=0;i<n;i++)arr.push(a+(b-a)*i/(n-1));return arr;}
-function downloadBlob(blob, filename){
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 200);
-}
+function linspace(a,b,n){const out=[];for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1));return out;}
+function downloadBlob(blob, filename){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},150); }
 
 /* ============================
-   Toy chirp generator (physically-inspired)
-   Input params: {m1,m2,spin1,spin2,sep}
-   Output ts: {t,h,freq,duration}
-   ============================ */
+ Toy chirp generator
+ ============================ */
 function generateChirp(params){
   const m1 = params.m1 || 36, m2 = params.m2 || 29;
   const total = Math.max(1, m1 + m2);
@@ -227,8 +222,7 @@ function generateChirp(params){
     const tt = i / sr;
     const tau = tt / duration;
     const fr = f0 + (f1 - f0) * Math.pow(tau, 3.0);
-    freq[i] = fr;
-    t[i] = tt;
+    freq[i] = fr; t[i] = tt;
     const amp = Math.pow(tau, 1.8) * Math.exp(-2.0 * (1 - tau));
     h[i] = amp * Math.sin(2 * Math.PI * fr * tt);
   }
@@ -236,31 +230,31 @@ function generateChirp(params){
 }
 
 /* ============================
-   Plot helpers (Plotly)
-   ============================ */
-function plotWave(containerId, ts, title){
-  const trace = { x: ts.t, y: ts.h, mode: 'lines', line: {color:'#ffffff'} };
+ Plot helpers (Plotly)
+ ============================ */
+function plotWave(elid, ts, title){
+  const tr = { x: ts.t, y: ts.h, mode: 'lines', line: { color: '#ffffff' } };
   const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
-  Plotly.react(containerId, [trace], layout, {displayModeBar:false, responsive:true});
+  Plotly.react(elid, [tr], layout, { displayModeBar:false, responsive:true });
 }
-function plotSpectrogram(containerId, ts, title){
-  const w = 256, hop = 128, mags = [];
+function plotSpec(elid, ts, title){
+  const w=256, hop=128, mags=[];
   for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v)));
   const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react(containerId, [{ z: mags, type: 'heatmap', colorscale:'Viridis' }], layout, {displayModeBar:false, responsive:true});
+  Plotly.react(elid, [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, { displayModeBar:false, responsive:true });
 }
-function plotEnergy(containerId, ts){
+function plotEnergy(elid, ts){
   const step = Math.max(1, Math.round(ts.h.length / 200));
-  const p = [];
-  for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f=ts.freq[i]||1; p.push(a*a*f*f); }
+  const p=[];
+  for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f = ts.freq[i]||1; p.push(a*a*f*f); }
   const x = linspace(0, ts.duration, p.length);
-  Plotly.react(containerId, [{ x, y: p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated Radiated Power (toy)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
+  Plotly.react(elid, [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated Radiated Power (toy)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
 }
 
 /* ============================
-   Orbit 3D init & update
-   ============================ */
-function initOrbit3D(){
+ Orbit initialization (two separate orbits)
+ ============================ */
+function initOrbit(elid){
   const data = [
     { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:14,color:'rgb(255,160,64)'}, name:'BH1' },
     { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color:'rgb(0,212,255)'}, name:'BH2' },
@@ -268,33 +262,33 @@ function initOrbit3D(){
   ];
   const layout = {
     margin:{t:10,l:10,r:10,b:10},
-    scene:{ camera:{ eye:{x:1.2,y:1.0,z:0.7} }, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false}},
+    scene:{ camera:{ eye:{x:1.2,y:1.0,z:0.7} }, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false} },
     paper_bgcolor:'transparent', plot_bgcolor:'transparent'
   };
-  Plotly.react('orbitView', data, layout, {displayModeBar:false, responsive:true});
+  Plotly.react(elid, data, layout, { displayModeBar:false, responsive:true });
 }
-initOrbit3D();
+initOrbit('presetOrbit'); initOrbit('customOrbit');
 
-function updateOrbitPlot(b1,b2,trailPts){
+function updateOrbit(elid, b1, b2, trailPts){
   const xs = trailPts.map(p=>p.x), ys = trailPts.map(p=>p.y), zs = trailPts.map(p=>p.z);
-  Plotly.restyle('orbitView', {'x':[[b1[0]],[b2[0]], xs], 'y':[[b1[1]],[b2[1]], ys], 'z':[[b1[2]],[b2[2]], zs]}, [0,1,2]);
+  Plotly.restyle(elid, {'x':[[b1[0]],[b2[0]], xs], 'y':[[b1[1]],[b2[1]], ys], 'z':[[b1[2]],[b2[2]], zs]}, [0,1,2]);
   const colors = trailPts.map(p=>`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha.toFixed(3)})`);
-  Plotly.restyle('orbitView', {'marker.color': [null, null, colors]}, [0,1,2]);
+  Plotly.restyle(elid, {'marker.color':[null,null,colors]}, [0,1,2]);
 }
 
-/* compute BH positions: inspiral (radius shrinks with tau & freq) */
-function computePositions(frameIndex, ts, params){
-  const idx = clamp(frameIndex, 0, ts.t.length - 1);
+/* compute positions for inspiral */
+function computePositions(frameIdx, ts, params){
+  const idx = clamp(frameIdx, 0, ts.t.length - 1);
   const fr = ts.freq[idx];
   const baseRadius = clamp(params.sep * 0.04, 0.06, 1.8);
   const shrink = clamp((fr / (fr + 250)), 0, 0.95);
   const tau = idx / Math.max(1, ts.t.length - 1);
-  const radius = baseRadius * (1 - 0.6 * shrink) * (1 - 0.5 * tau); // inspiral effect
+  const radius = baseRadius * (1 - 0.6 * shrink) * (1 - 0.5 * tau);
   const total = Math.max(1, params.m1 + params.m2);
   const r1 = radius * (params.m2 / total);
   const r2 = radius * (params.m1 / total);
-  const speed = 0.04 * (1 + fr/200) * (1 + total/120);
-  const theta = frameIndex * speed * 0.45;
+  const speed = 0.04 * (1 + fr / 200) * (1 + total / 120);
+  const theta = frameIdx * speed * 0.45;
   const tilt = 0.2;
   const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.7);
   const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta*0.7);
@@ -303,11 +297,11 @@ function computePositions(frameIndex, ts, params){
 
 /* trail helpers */
 function pushTrail(queue, pos, maxLen){ queue.push(pos.slice()); while(queue.length>maxLen) queue.shift(); }
-function trailToPoints(queue, colorRGB){ const out=[]; const L=queue.length; for(let i=0;i<L;i++){ const frac=i/Math.max(1,L-1); const alpha=0.12+0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
+function trailToPoints(queue, colorRGB){ const out=[]; const L = queue.length; for(let i=0;i<L;i++){ const frac = i/Math.max(1,L-1); const alpha = 0.12 + 0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
 
 /* ============================
-   Preset definitions
-   ============================ */
+ Presets and active states (separate for preset & custom)
+ ============================ */
 const PRESETS = {
   GW150914:{m1:36,m2:29,spin1:0.3,spin2:0.2,sep:15},
   GW170104:{m1:31,m2:19,spin1:0.1,spin2:0.05,sep:14},
@@ -315,128 +309,118 @@ const PRESETS = {
   GW190521:{m1:85,m2:66,spin1:0.7,spin2:0.6,sep:20}
 };
 
-/* Current active simulation state objects */
-let active = { name: null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[], bh2:[]}, audio:{enabled:false, ctx:null, osc:null} };
+let presetState = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[], bh2:[]}, audio:{enabled:false, ctx:null, osc:null} };
+let customState = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[], bh2:[]}, audio:{enabled:false, ctx:null, osc:null} };
 
-/* ============================
-   Run / Playback logic (shared for preset & custom)
-   ============================ */
-function startSimulation(name, params, ts){
-  // stop any active
-  stopActiveSimulation();
-  active.name = name; active.params = params; active.ts = ts;
-  active.trails.bh1 = []; active.trails.bh2 = [];
-  // draw initial plots
-  plotWave('wavePlot', ts, `${name} — waveform`);
-  plotSpectrogram('specPlot', ts, `${name} — spectrogram`);
-  plotEnergy('energyPlot', ts);
-  plotWave('customWave', ts, `${name} — waveform (custom view)`); // keep custom view in sync too
-  plotSpectrogram('customSpec', ts, `${name} — spectrogram (custom view)`);
-  plotEnergy('energyPlot', ts);
-  // init orbit
-  const pos0 = computePositions(0, ts, params);
-  updateOrbitPlot(pos0.bh1, pos0.bh2, []);
-  // ready to play
-  active.playing = false;
-  active.startTime = null;
-}
-
-function playActive(){
-  if(!active.ts) return;
-  // prepare audio if enabled
-  if(active.audio.enabled && !active.audio.ctx) active.audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if(active.audio.enabled && active.audio.ctx && !active.audio.osc){
-    const osc = active.audio.ctx.createOscillator();
-    const gain = active.audio.ctx.createGain(); gain.gain.value = 0.04;
-    osc.type = 'sine'; osc.connect(gain); gain.connect(active.audio.ctx.destination); osc.start();
-    active.audio.osc = {osc,gain};
+/* play loop for a given state (preset or custom) and orbit element id */
+function playState(state, orbitElId, waveElId, specElId, energyElId){
+  if(!state.ts) return;
+  state.playing = true;
+  state.startTime = performance.now();
+  if(state.audio.enabled && !state.audio.ctx) state.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
+  if(state.audio.enabled && state.audio.ctx && !state.audio.osc){
+    const osc = state.audio.ctx.createOscillator();
+    const gain = state.audio.ctx.createGain(); gain.gain.value = 0.04;
+    osc.type='sine'; osc.connect(gain); gain.connect(state.audio.ctx.destination); osc.start();
+    state.audio.osc = {osc,gain};
   }
-  active.playing = true;
-  active.startTime = performance.now();
-  // RAF loop
+
   function step(){
-    if(!active.playing){ active.raf = null; return; }
-    const elapsed = (performance.now() - active.startTime) / 1000;
-    const frac = elapsed / active.ts.duration;
-    const idx = Math.floor(frac * (active.ts.t.length - 1));
-    if(idx >= active.ts.t.length - 1){
-      // finished
-      active.playing = false;
-      if(active.audio.osc){ try{ active.audio.osc.osc.stop(); }catch(e){} active.audio.osc = null; }
-      active.raf = null;
+    if(!state.playing){ state.raf = null; return; }
+    const elapsed = (performance.now() - state.startTime)/1000;
+    const frac = elapsed / state.ts.duration;
+    const idx = Math.floor(frac * (state.ts.t.length - 1));
+    if(idx >= state.ts.t.length - 1){
+      state.playing = false;
+      if(state.audio.osc){ try{ state.audio.osc.osc.stop(); }catch(e){} state.audio.osc=null; }
+      state.raf = null;
       return;
     }
-    // compute positions and push trails
-    const pos = computePositions(idx, active.ts, active.params);
+    const pos = computePositions(idx, state.ts, state.params);
     const maxTrail = Number(document.getElementById('trailLen').value) || 40;
-    const perBH = Math.max(4, Math.round(maxTrail/6)); // short per BH
-    pushTrail(active.trails.bh1, pos.bh1, perBH);
-    pushTrail(active.trails.bh2, pos.bh2, perBH);
-    // build trail points with colors: BH1 orange, BH2 blue
-    const t1 = trailToPoints(active.trails.bh1, [255,160,64]).slice(-perBH);
-    const t2 = trailToPoints(active.trails.bh2, [0,212,255]).slice(-perBH);
-    const trailPts = t1.concat(t2).slice(-maxTrail);
-    updateOrbitPlot(pos.bh1, pos.bh2, trailPts);
-    // audio update
-    if(active.audio.enabled && active.audio.osc && active.ts.freq[idx]){
-      const audible = Math.min(2000, 80 + active.ts.freq[idx] * 1.1);
-      try{ active.audio.osc.osc.frequency.setValueAtTime(audible, active.audio.ctx.currentTime); }catch(e){}
+    const perBH = Math.max(4, Math.round(maxTrail/6));
+    pushTrail(state.trails.bh1, pos.bh1, perBH); pushTrail(state.trails.bh2, pos.bh2, perBH);
+    const pts1 = trailToPoints(state.trails.bh1, [255,160,64]).slice(-perBH);
+    const pts2 = trailToPoints(state.trails.bh2, [0,212,255]).slice(-perBH);
+    const trailPts = pts1.concat(pts2).slice(-maxTrail);
+    updateOrbit(orbitElId, pos.bh1, pos.bh2, trailPts);
+    if(state.audio.enabled && state.audio.osc && state.ts.freq[idx]){
+      const aud = Math.min(2000, 80 + state.ts.freq[idx] * 1.1);
+      try{ state.audio.osc.osc.frequency.setValueAtTime(aud, state.audio.ctx.currentTime); }catch(e){}
     }
-    active.raf = requestAnimationFrame(step);
+    state.raf = requestAnimationFrame(step);
   }
-  if(!active.raf) active.raf = requestAnimationFrame(step);
+  if(!state.raf) state.raf = requestAnimationFrame(step);
 }
 
-function pauseActive(){
-  active.playing = false;
-  if(active.audio.osc){ try{ active.audio.osc.osc.stop(); }catch(e){} active.audio.osc = null; }
-  if(active.raf){ cancelAnimationFrame(active.raf); active.raf = null; }
+function pauseState(state){
+  state.playing = false;
+  if(state.audio.osc){ try{ state.audio.osc.osc.stop(); }catch(e){} state.audio.osc = null; }
+  if(state.raf){ cancelAnimationFrame(state.raf); state.raf = null; }
 }
 
-function stopActiveSimulation(){
-  pauseActive();
-  active = { name:null, params:null, ts:null, playing:false, startTime:0, raf:null, trails:{bh1:[], bh2:[]}, audio:{enabled:active && active.audio ? active.audio.enabled : false, ctx:null, osc:null} };
+/* start/sync functions */
+function startPreset(key){
+  const params = Object.assign({}, PRESETS[key]);
+  const ts = generateChirp(params);
+  presetState.name = key; presetState.params = params; presetState.ts = ts;
+  presetState.trails.bh1 = []; presetState.trails.bh2 = [];
+  // plots
+  plotWave('presetWave', ts, `${key} — waveform`);
+  plotSpec('presetSpec', ts, `${key} — spectrogram`);
+  plotEnergy('presetEnergy', ts);
+  // init orbit
+  const p = computePositions(0, ts, params);
+  updateOrbit('presetOrbit', p.bh1, p.bh2, []);
+  pauseState(presetState);
+}
+
+function startCustom(params){
+  const ts = generateChirp(params);
+  customState.name = 'Custom'; customState.params = params; customState.ts = ts;
+  customState.trails.bh1 = []; customState.trails.bh2 = [];
+  plotWave('customWave', ts, `Custom — waveform`);
+  plotSpec('customSpec', ts, `Custom — spectrogram`);
+  plotEnergy('customEnergy', ts);
+  const p = computePositions(0, ts, params);
+  updateOrbit('customOrbit', p.bh1, p.bh2, []);
+  pauseState(customState);
 }
 
 /* ============================
-   Export helpers (params.json, waveform.csv, metadata.json, waveform.png in ZIP)
-   ============================ */
-async function exportPackage(filenamePrefix){
-  if(!active.ts || !active.params){ alert('Run a simulation first'); return; }
+ Export helpers (JSON + ZIP)
+ ============================ */
+async function exportPackageForState(state, filenamePrefix){
+  if(!state.ts || !state.params){ alert('Run simulation first'); return; }
   const zip = new JSZip();
-  // params.json
-  zip.file('params.json', JSON.stringify(active.params, null, 2));
-  // waveform.csv
+  zip.file('params.json', JSON.stringify(state.params, null, 2));
+  // waveform csv
   let csv = 'time,strain\n';
-  for(let i=0;i<active.ts.t.length;i++) csv += `${active.ts.t[i]},${active.ts.h[i]}\n`;
+  for(let i=0;i<state.ts.t.length;i++) csv += `${state.ts.t[i]},${state.ts.h[i]}\n`;
   zip.file('waveform.csv', csv);
-  // metadata.json
-  const metadata = { simulation: active.name || 'custom', duration: active.ts.duration, samples: active.ts.t.length, units: 'geometric (G=c=1)', created: new Date().toISOString() };
-  zip.file('metadata.json', JSON.stringify(metadata, null, 2));
-  // waveform.png (capture from wavePlot)
+  // metadata
+  const meta = { simulation: state.name || 'sim', duration: state.ts.duration, samples: state.ts.t.length, created: new Date().toISOString() };
+  zip.file('metadata.json', JSON.stringify(meta, null, 2));
+  // capture waveform png (try)
   try{
-    const imgData = await Plotly.toImage(document.getElementById('wavePlot'), {format:'png', width:1200, height:400});
-    // dataURL -> binary
-    const blob = await (await fetch(imgData)).blob();
-    const arrayBuf = await blob.arrayBuffer();
-    zip.file('waveform.png', arrayBuf);
-  }catch(e){
-    console.warn('Could not capture waveform PNG:', e);
-  }
+    const dataUrl = await Plotly.toImage(document.getElementById(state===presetState? 'presetWave':'customWave'), {format:'png', width:1200, height:400});
+    const blob = await (await fetch(dataUrl)).blob();
+    const arr = await blob.arrayBuffer();
+    zip.file('waveform.png', arr);
+  }catch(e){ console.warn('Could not capture waveform image:', e); }
   const content = await zip.generateAsync({type:'blob'});
   downloadBlob(content, `${filenamePrefix}_package.zip`);
 }
-
-/* export params only */
-function exportParamsJSON(filename){
-  if(!active.params){ alert('Run a simulation first'); return; }
-  const blob = new Blob([JSON.stringify(active.params, null, 2)], {type:'application/json'});
+function exportParamsJSONForState(state, filename){
+  if(!state.params){ alert('Run simulation first'); return; }
+  const blob = new Blob([JSON.stringify(state.params, null, 2)], {type:'application/json'});
   downloadBlob(blob, filename);
 }
 
 /* ============================
-   UI wiring
-   ============================ */
+ UI Wiring
+ ============================ */
+/* Tabs */
 document.getElementById('tabPreset').addEventListener('click', ()=>{
   document.getElementById('presetCard').style.display='block';
   document.getElementById('customCard').style.display='none';
@@ -452,75 +436,70 @@ document.getElementById('tabCustom').addEventListener('click', ()=>{
 
 /* About modal */
 document.getElementById('aboutBtn').addEventListener('click', ()=>{
-  const m = document.getElementById('aboutModal'); m.style.display = (m.style.display==='block' ? 'none' : 'block');
+  const m=document.getElementById('aboutModal'); m.style.display = m.style.display==='block'?'none':'block';
 });
 document.getElementById('aboutClose').addEventListener('click', ()=>{ document.getElementById('aboutModal').style.display='none'; });
 
-/* Trail length display */
-document.getElementById('trailLen').addEventListener('input', (e)=>{ document.getElementById('trailVal').textContent = e.target.value; });
-
-/* Preset run */
-document.getElementById('runEvent').addEventListener('click', ()=>{
-  const key = document.getElementById('eventSelect').value || 'GW150914';
-  const params = Object.assign({}, PRESETS[key]);
-  const ts = generateChirp(params);
-  startSimulation(key, params, ts);
+/* Preset run + controls */
+document.getElementById('presetRun').addEventListener('click', ()=>{
+  const key = document.getElementById('presetEventSelect').value || 'GW150914';
+  startPreset(key);
 });
-
-/* Preset playback controls */
-document.getElementById('presetPlay').addEventListener('click', ()=>{ playActive(); });
-document.getElementById('presetPause').addEventListener('click', ()=>{ pauseActive(); });
+document.getElementById('presetPlay').addEventListener('click', ()=>{ playState(presetState, 'presetOrbit', 'presetWave', 'presetSpec', 'presetEnergy'); });
+document.getElementById('presetPause').addEventListener('click', ()=>{ pauseState(presetState); });
 document.getElementById('presetRestart').addEventListener('click', ()=>{
-  if(!active.params) return; startSimulation(active.name || 'preset', active.params, generateChirp(active.params)); playActive();
+  if(!presetState.params) return; startPreset(presetState.name); playState(presetState, 'presetOrbit', 'presetWave', 'presetSpec', 'presetEnergy');
 });
 document.getElementById('presetSound').addEventListener('click', ()=>{
-  if(!active) { alert('Run a simulation first'); return; }
-  active.audio.enabled = !active.audio.enabled;
-  document.getElementById('presetSound').textContent = active.audio.enabled ? 'Disable Sound' : 'Enable Sound';
+  presetState.audio.enabled = !presetState.audio.enabled;
+  document.getElementById('presetSound').textContent = presetState.audio.enabled ? 'Disable Sound' : 'Enable Sound';
 });
 
 /* Preset export */
-document.getElementById('presetExportParams').addEventListener('click', ()=>{ exportParamsJSON(`${(active.name||'preset')}_params.json`); });
-document.getElementById('presetExportZip').addEventListener('click', ()=>{ exportPackage((active.name||'preset')); });
+document.getElementById('presetExportJSON').addEventListener('click', ()=>{ exportParamsJSONForState(presetState, `${(presetState.name||'preset')}_params.json`); });
+document.getElementById('presetExportZIP').addEventListener('click', ()=>{ exportPackageForState(presetState, (presetState.name||'preset')); });
 
-/* Custom run */
-document.getElementById('runCustom').addEventListener('click', ()=>{
+/* Custom run + controls */
+document.getElementById('customRun').addEventListener('click', ()=>{
   const params = {
     m1: parseFloat(document.getElementById('c_m1').value) || 36,
     m2: parseFloat(document.getElementById('c_m2').value) || 29,
-    spin1: parseFloat(document.getElementById('c_s1').value) || 0.0,
-    spin2: parseFloat(document.getElementById('c_s2').value) || 0.0,
+    spin1: parseFloat(document.getElementById('c_s1').value) || 0,
+    spin2: parseFloat(document.getElementById('c_s2').value) || 0,
     sep: parseFloat(document.getElementById('c_sep').value) || 15
   };
-  const ts = generateChirp(params);
-  startSimulation('Custom', params, ts);
+  startCustom(params);
 });
-
-/* Custom playback */
-document.getElementById('customPlay').addEventListener('click', ()=>{ playActive(); });
-document.getElementById('customPause').addEventListener('click', ()=>{ pauseActive(); });
-document.getElementById('customRestart').addEventListener('click', ()=>{ if(!active.params) return; startSimulation('Custom', active.params, generateChirp(active.params)); playActive(); });
-document.getElementById('customSound').addEventListener('click', ()=>{ if(!active) { alert('Run a simulation first'); return; } active.audio.enabled = !active.audio.enabled; document.getElementById('customSound').textContent = active.audio.enabled ? 'Disable Sound' : 'Enable Sound'; });
+document.getElementById('customPlay').addEventListener('click', ()=>{ playState(customState, 'customOrbit', 'customWave', 'customSpec', 'customEnergy'); });
+document.getElementById('customPause').addEventListener('click', ()=>{ pauseState(customState); });
+document.getElementById('customRestart').addEventListener('click', ()=>{ if(!customState.params) return; startCustom(customState.params); playState(customState, 'customOrbit', 'customWave', 'customSpec', 'customEnergy'); });
+document.getElementById('customSound').addEventListener('click', ()=>{ customState.audio.enabled = !customState.audio.enabled; document.getElementById('customSound').textContent = customState.audio.enabled ? 'Disable Sound' : 'Enable Sound'; });
 
 /* Custom export */
-document.getElementById('customExportParams').addEventListener('click', ()=>{ exportParamsJSON(`custom_params.json`); });
-document.getElementById('customExportZip').addEventListener('click', ()=>{ exportPackage('custom'); });
+document.getElementById('customExportJSON').addEventListener('click', ()=>{ exportParamsJSONForState(customState, `custom_params.json`); });
+document.getElementById('customExportZIP').addEventListener('click', ()=>{ exportPackageForState(customState, 'custom'); });
 
-/* Initialize with a default preset visible */
+/* Trail length display */
+document.getElementById('trailLen').addEventListener('input',(e)=>{ document.getElementById('trailVal').textContent = e.target.value; });
+
+/* Initialize defaults */
 (function init(){
-  // load default preset
-  document.getElementById('eventSelect').value = 'GW150914';
-  const params = Object.assign({}, PRESETS['GW150914']);
-  const ts = generateChirp(params);
-  startSimulation('GW150914', params, ts);
-  // ensure orbit resize after layout
-  setTimeout(()=>{ Plotly.Plots.resize(document.getElementById('orbitView')); Plotly.Plots.resize(document.getElementById('wavePlot')); }, 300);
+  document.getElementById('presetEventSelect').value = 'GW150914';
+  startPreset('GW150914');
+  // default custom
+  const defaultCustom = { m1:36,m2:29,spin1:0.3,spin2:0.2,sep:15 };
+  document.getElementById('c_m1').value = defaultCustom.m1;
+  document.getElementById('c_m2').value = defaultCustom.m2;
+  document.getElementById('c_s1').value = defaultCustom.spin1;
+  document.getElementById('c_s2').value = defaultCustom.spin2;
+  document.getElementById('c_sep').value = defaultCustom.sep;
+  startCustom(defaultCustom);
+  // resize
+  setTimeout(()=>{ ['presetOrbit','customOrbit','presetWave','presetSpec','customWave','customSpec'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); }); }, 300);
 })();
 
-/* Responsive resize */
-window.addEventListener('resize', ()=>{
-  ['wavePlot','specPlot','customWave','customSpec','orbitView','energyPlot'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); });
-});
+/* responsive resize */
+window.addEventListener('resize', ()=>{ ['presetOrbit','customOrbit','presetWave','presetSpec','customWave','customSpec'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); }); });
 </script>
 </body>
 </html>
