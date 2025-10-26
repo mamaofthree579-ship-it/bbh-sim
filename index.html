@@ -623,5 +623,41 @@ document.getElementById('openFullNotes').addEventListener('click',()=>{
 /* responsive resize */
 window.addEventListener('resize',()=>{ ['presetOrbit','customOrbit','presetWave','presetSpec','customWave','customSpec'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); }); });
 </script>
+    <script>
+  // --- TAB SWITCHING LOGIC ---
+  const tabs = document.querySelectorAll(".tab-button");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  tabs.forEach((button) => {
+    button.addEventListener("click", () => {
+      // Deactivate all tabs
+      tabs.forEach((b) => b.classList.remove("active-tab"));
+      tabContents.forEach((c) => (c.style.display = "none"));
+
+      // Activate selected tab
+      button.classList.add("active-tab");
+      const target = button.getAttribute("data-target");
+      document.getElementById(target).style.display = "block";
+    });
+  });
+
+  // Default: show first tab only
+  document.querySelectorAll(".tab-content").forEach((c) => (c.style.display = "none"));
+  document.getElementById("overview").style.display = "block";
+</script>
+<style>
+  .active-tab {
+    background-color: rgba(0, 255, 255, 0.2);
+    border-bottom: 2px solid cyan;
+  }
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
 </body>
 </html>
