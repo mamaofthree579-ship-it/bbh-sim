@@ -1,136 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Visualizer — Tabs, Trails & Nebula</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BBH Visualizer — Celestial Sync (v3.4)</title>
 
 <!-- Plotly -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 
 <style>
   :root{
-    --bg1:#03031a; --bg2:#071133; --nebula1:#0b2447; --nebula2:#2b0b3a;
-    --accent:#00d4ff; --accent2:#ff2e8a; --muted:#aab;
+    --bg1:#060417; --bg2:#0b1630; --nebula1:#0b2447; --nebula2:#2b0b3a;
+    --accent:#00d4ff; --accent2:#ff2e8a; --muted:#9fb0c6;
   }
   html,body { height:100%; margin:0; }
   body{
     background:
-      radial-gradient(circle at 10% 20%, rgba(255,255,255,0.02), transparent 8%),
-      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.02), transparent 12%),
-      radial-gradient(circle at 40% 30%, rgba(3,12,60,0.25), transparent 35%),
+      radial-gradient(circle at 10% 10%, rgba(255,255,255,0.02), transparent 6%),
+      radial-gradient(circle at 70% 80%, rgba(255,255,255,0.02), transparent 12%),
+      radial-gradient(circle at 40% 30%, rgba(12,24,60,0.20), transparent 35%),
       linear-gradient(180deg,var(--nebula1),var(--nebula2));
     color:#eaf6ff;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
     -webkit-font-smoothing:antialiased;
     -moz-osx-font-smoothing:grayscale;
   }
-  /* subtle stars layer */
+
+  /* fixed twinkling stars overlay (subtle) */
   #stars {
     position:fixed; inset:0; pointer-events:none; z-index:0;
     background-image:
-      radial-gradient(white 1px, transparent 1px),
-      radial-gradient(white 1px, transparent 1px);
-    background-size: 600px 600px, 400px 400px;
-    opacity:0.06;
-    mix-blend-mode:screen;
+      radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 2px),
+      radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 2px);
+    background-size: 700px 700px, 430px 430px;
+    mix-blend-mode: screen;
+    opacity: .06;
   }
 
-  .app {
-    position:relative; z-index:1; padding:10px; max-width:1200px; margin:0 auto;
+  .container { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:12px; }
+
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 4px; }
+  .brand { display:flex; gap:12px; align-items:center; }
+  .title { font-size:1.05rem; color:var(--accent); font-weight:600; }
+  .tabs { display:flex; gap:8px; }
+  .tab-btn {
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.04);
+    color: #eaf6ff;
+    padding:8px 10px; border-radius:8px; cursor:pointer;
   }
+  .tab-btn.active { background:linear-gradient(90deg, rgba(0,212,255,0.08), rgba(255,46,138,0.04)); box-shadow:0 6px 18px rgba(0,0,0,0.4); border-color:rgba(0,212,255,0.12); }
 
-  header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 6px; }
-  header .title { font-size:1.1rem; color:var(--accent); font-weight:600; }
-  .tabs { display:flex; gap:6px; margin-left:8px; }
-  .tab-btn { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:8px 10px; border-radius:8px; cursor:pointer; }
-  .tab-btn.active { background:linear-gradient(90deg, rgba(0,212,255,0.09), rgba(255,46,138,0.06)); box-shadow:0 4px 24px rgba(0,0,0,0.4); border-color:rgba(0,212,255,0.18); }
+  .header-right { display:flex; gap:8px; align-items:center; color:var(--muted); font-size:0.95rem; }
 
-  .top-controls { display:flex; gap:8px; align-items:center; }
-  select,input[type=number],button{ background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:8px 10px; border-radius:8px; }
-
-  .layout { display:grid; grid-template-columns:1fr; gap:12px; }
+  /* Layout: left column main plots; right column orbit + energy */
+  .layout { display:grid; grid-template-columns: 1fr; gap:12px; margin-top:10px; }
   @media(min-width:1000px){ .layout { grid-template-columns: 1fr 420px; } }
 
-  .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:10px; padding:10px; box-shadow:0 6px 30px rgba(0,0,0,0.45); }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:10px; padding:10px; box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+  }
 
-  /* plot containers */
-  .plot { width:100%; height:360px; border-radius:8px; background:transparent; }
-  .spec { height:220px; }
+  .controls-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
-  .controls-block { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .plot { width:100%; border-radius:8px; background:transparent; }
+  .plot-main { height:340px; }
+  .plot-spec { height:220px; margin-top:10px; }
+  .orbit { height:420px; margin-top:10px; }
 
-  /* player - fixed under visuals per tab */
-  .player { display:flex; gap:8px; align-items:center; justify-content:center; padding:8px; margin-top:8px; border-radius:8px; background:rgba(0,0,0,0.20); }
-  .player button{ background:transparent; border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:6px 8px; border-radius:6px; cursor:pointer; }
-  .player small { color:var(--muted); margin-left:6px; }
-
+  .player { display:flex; gap:8px; align-items:center; justify-content:center; padding:8px; margin-top:8px; border-radius:8px; background: rgba(0,0,0,0.18); }
+  .player button { background:transparent; border:1px solid rgba(255,255,255,0.04); color:#eaf6ff; padding:6px 8px; border-radius:6px; cursor:pointer; }
   .muted { color:var(--muted); font-size:0.9rem; }
-  .info-panel { position:fixed; right:12px; top:80px; min-width:220px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:none; z-index:5; }
 
-  footer { text-align:center; color:var(--muted); padding:12px; font-size:0.9rem; }
+  .custom-controls { margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+  .info-panel { position:fixed; right:12px; top:72px; min-width:240px; background:rgba(0,0,0,0.5); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:none; z-index:20; color:#dfeaff; }
+
+  footer { text-align:center; color:var(--muted); padding:10px; margin-top:12px; font-size:0.9rem; }
+
+  label,input,select,button { font-size:0.95rem; }
+  input[type=range] { vertical-align:middle; }
 </style>
 </head>
 <body>
   <div id="stars" aria-hidden="true"></div>
 
-  <div class="app">
+  <div class="container">
     <header>
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div class="brand">
         <div class="title">Open BBH Visualizer</div>
         <div class="tabs" role="tablist">
-          <button class="tab-btn active" data-tab="preset" id="tabPreset" role="tab" aria-selected="true">Preset Simulations</button>
-          <button class="tab-btn" data-tab="custom" id="tabCustom" role="tab" aria-selected="false">Custom Simulation</button>
+          <button class="tab-btn active" id="tabPreset" data-tab="preset" role="tab" aria-selected="true">Preset Simulations</button>
+          <button class="tab-btn" id="tabCustom" data-tab="custom" role="tab" aria-selected="false">Custom Simulation</button>
         </div>
       </div>
-
-      <div class="top-controls" style="gap:10px;">
-        <button id="infoBtn" title="Details">ℹ️</button>
-        <div class="muted">v3.2 — Nebula + Trails</div>
+      <div class="header-right">
+        <div class="muted">v3.4 • Nebula + Trails</div>
+        <button id="infoButton" title="Details">ℹ️</button>
       </div>
     </header>
 
-    <main class="layout">
-      <!-- Left column (main plots) -->
+    <div class="layout">
+      <!-- LEFT: main plots -->
       <div>
-        <!-- PRESET TAB CONTENT -->
-        <div id="presetPanel" class="card" style="display:block;">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <!-- PRESET CARD -->
+        <div class="card" id="presetCard" style="display:block;">
+          <div class="controls-row">
             <label class="muted">Event:</label>
             <select id="presetSelect">
               <option value="GW150914">GW150914</option>
               <option value="GW170104">GW170104</option>
               <option value="GW190521">GW190521</option>
             </select>
-            <button id="presetGenerate">Load Event</button>
+            <button id="presetLoad">Load</button>
             <button id="presetPlay">Play</button>
             <button id="presetPause">Pause</button>
             <button id="presetRestart">Restart</button>
             <button id="presetSound">Enable Sound</button>
           </div>
 
-          <div style="margin-top:8px;">
-            <div id="presetWave" class="plot"></div>
-            <div id="presetSpec" class="plot spec" style="margin-top:10px;"></div>
-            <div class="player" style="margin-top:10px;">
-              <small class="muted">Preset player — waveform, spectrogram, 3D orbit synced</small>
+          <div style="margin-top:10px;">
+            <div id="presetWave" class="plot plot-main"></div>
+            <div id="presetSpec" class="plot plot-spec"></div>
+            <div class="player">
+              <small class="muted">Preset player — waveform & spectrogram synced to 3D orbit</small>
             </div>
           </div>
         </div>
 
-        <!-- CUSTOM TAB CONTENT -->
-        <div id="customPanel" class="card" style="display:none;">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <!-- CUSTOM CARD -->
+        <div class="card" id="customCard" style="display:none;">
+          <div class="controls-row">
             <label class="muted">Mode:</label>
             <select id="customMode">
-              <option value="interactive">Interactive (generate)</option>
-              <option value="quick">Quick (single-run)</option>
+              <option value="interactive">Interactive</option>
+              <option value="quick">Quick</option>
             </select>
             <button id="customGenerate">Generate</button>
           </div>
 
-          <div class="controls-block">
+          <div class="custom-controls">
             <div class="row">
               <label>m₁ <input id="c_m1" type="number" value="36" min="1" style="width:90px"></label>
               <label>m₂ <input id="c_m2" type="number" value="29" min="1" style="width:90px"></label>
@@ -144,104 +155,97 @@
               <button id="customPause">Pause</button>
               <button id="customRestart">Restart</button>
               <button id="customSound">Enable Sound</button>
-              <span class="muted">Custom player — own simulation</span>
+              <div class="muted">Custom player</div>
             </div>
           </div>
 
           <div style="margin-top:10px;">
-            <div id="customWave" class="plot"></div>
-            <div id="customSpec" class="plot spec" style="margin-top:10px;"></div>
+            <div id="customWave" class="plot plot-main"></div>
+            <div id="customSpec" class="plot plot-spec"></div>
           </div>
         </div>
       </div>
 
-      <!-- Right column (orbit + info + energy) -->
-      <div style="display:flex;flex-direction:column;gap:12px;">
+      <!-- RIGHT: orbit + energy -->
+      <div>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>3D Orbit (Zoomed)</strong></div>
-            <div class="muted">Trail length adjustable</div>
+            <div><strong>3D Orbit — zoomed</strong></div>
+            <div class="muted">short trail (few degrees)</div>
           </div>
-          <div id="orbit3d" class="plot" style="height:420px;margin-top:10px;"></div>
 
-          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <div id="orbit3d" class="orbit"></div>
+
+          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
             <label class="muted">Trail length</label>
-            <input type="range" id="trailLen" min="5" max="200" value="60">
-            <span id="trailVal" class="muted">60</span>
+            <input id="trailLen" type="range" min="5" max="120" value="40">
+            <span id="trailLenVal" class="muted">40</span>
           </div>
         </div>
 
-        <div class="card" id="energyCard">
+        <div class="card" style="margin-top:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div><strong>Estimated Radiated Power (toy)</strong></div>
             <div class="muted">arbitrary units</div>
           </div>
-          <div id="energyPlot" class="plot" style="height:180px;margin-top:8px"></div>
+          <div id="energyPlot" class="plot" style="height:180px;margin-top:10px;"></div>
         </div>
       </div>
-    </main>
-
-    <div id="infoPanel" class="info-panel" role="dialog" aria-hidden="true">
-      <div style="font-weight:700;margin-bottom:6px">Event details</div>
-      <div id="infoText" class="muted">Select an event to view details.</div>
-      <div style="margin-top:8px"><button id="closeInfo">Close</button></div>
     </div>
 
-    <footer>Open BBH Visualizer • Demo (toy models)</footer>
+    <!-- Info panel -->
+    <div id="infoPanel" class="info-panel" role="dialog" aria-hidden="true">
+      <div style="font-weight:700;margin-bottom:6px">About / Details</div>
+      <div id="infoContent" class="muted"></div>
+      <div style="margin-top:8px;"><button id="infoClose">Close</button></div>
+    </div>
+
+    <footer>
+      <div>Open BBH Visualizer — Celestial Sync (v3.4)</div>
+      <div style="font-size:0.86rem;color:var(--muted);margin-top:6px">Powered by Plotly & a toy chirp generator — for teaching and demo purposes. For NR-quality waveforms, I can add LALSuite or surrogate data next.</div>
+    </footer>
   </div>
 
 <script>
-/* ===========================================================
-   Architecture:
-   - Two separate simulators: presetSim and customSim (separate states)
-   - A single 3D orbit view is shared but driven by the active simulator
-   - Trails implemented as limited queue of positions for BH1 and BH2
-   - RAF loops for each simulator are independent but do not conflict
-   =========================================================== */
+/* ============================================================
+   v3.4 Celestial Sync — single-file implementation
+   - Two simulators: presetSim & customSim
+   - Shared 3D orbit view with short trails
+   - Fixed twinkling stars background (CSS)
+   - Audio requires user gesture to enable
+   ============================================================ */
 
 /* -------------------------
-   Utilities
+   Utility helpers
    ------------------------- */
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function linspace(a,b,n){ const out=[]; for(let i=0;i<n;i++) out.push(a + (b-a)*i/(n-1)); return out; }
+function linspace(a,b,n){ const r=[]; for(let i=0;i<n;i++) r.push(a + (b-a)*i/(n-1)); return r; }
 
 /* -------------------------
-   Preset Simulator Object
+   Simulator state objects
    ------------------------- */
 const presetSim = {
-  params: null, // current params for event
-  ts: null,     // {t,h,freq,duration}
-  frameTime0: 0,
-  playing: false,
-  raf: null,
-  audio: { ctx:null, osc:null, enabled:false },
+  params:null, ts:null, startTime:null, playing:false, rafId:null,
+  audio:{enabled:false, ctx:null, osc:null}
 };
-
 const customSim = {
-  params: null,
-  ts: null,
-  frameTime0: 0,
-  playing: false,
-  raf: null,
-  audio: { ctx:null, osc:null, enabled:false },
-  trailQueues: { bh1:[], bh2:[] }
+  params:null, ts:null, startTime:null, playing:false, rafId:null,
+  audio:{enabled:false, ctx:null, osc:null}, trails:{bh1:[], bh2:[]}
 };
 
 /* -------------------------
-   Common Chirp generator (toy physically-inspired)
-   Input: params {m1,m2,spin1,spin2,sep}
-   Output: ts = { t:[], h:[], freq:[], duration }
+   Chirp generator (toy model)
    ------------------------- */
 function generateChirp(params){
-  const m1 = params.m1, m2 = params.m2;
-  const total = Math.max(1, m1 + m2);
+  const m1 = params.m1 || 36, m2 = params.m2 || 29;
+  const total = Math.max(1, m1+m2);
   const chirpMass = Math.pow((m1*m2), 3/5) / Math.pow(total, 1/5);
-  const duration = clamp(6 * (30 / Math.max(1,chirpMass)), 2.5, 14); // seconds
+  const duration = clamp(5 * (30 / Math.max(1,chirpMass)), 2.5, 12); // seconds
   const sr = 1024;
   const N = Math.round(duration * sr);
   const t = new Array(N), h = new Array(N), freq = new Array(N);
-  const f0 = 20 * Math.sqrt(30 / Math.max(1,chirpMass));
-  const f1 = 700 * Math.sqrt(30 / Math.max(1,chirpMass));
+  const f0 = 25 * Math.sqrt(30 / Math.max(1,chirpMass));
+  const f1 = 550 * Math.sqrt(30 / Math.max(1,chirpMass));
   for(let i=0;i<N;i++){
     const tt = i / sr;
     const tau = tt / duration;
@@ -255,198 +259,165 @@ function generateChirp(params){
 }
 
 /* -------------------------
-   Plot helpers (Plotly wrappers)
+   Plot helpers (Plotly)
    ------------------------- */
-function plotWave(targetId, ts, title){
-  const trace = { x: ts.t, y: ts.h, mode: 'lines', line:{color:'#00d4ff'} };
-  const layout = { title, margin:{t:34,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
-  Plotly.react(targetId, [trace], layout, {displayModeBar:false,responsive:true});
+function plotWave(target, ts, title){
+  const tr = { x: ts.t, y: ts.h, mode:'lines', line:{color:'#00d4ff'} };
+  const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
+  Plotly.react(target, [tr], layout, {displayModeBar:false, responsive:true});
 }
-
-function plotSpec(targetId, ts, title){
-  const w = 256, hop = 128, mags = [];
-  for(let i=0; i + w < ts.h.length; i += hop){
-    const seg = ts.h.slice(i, i + w);
-    mags.push(seg.map(v => Math.abs(v)));
+function plotSpectrogram(target, ts, title){
+  const w=256, hop=128, mags=[];
+  for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v)));
+  const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
+  Plotly.react(target, [{ z:mags, type:'heatmap', colorscale:'Viridis' }], layout, {displayModeBar:false, responsive:true});
+}
+function plotEnergy(target, ts){
+  const step = Math.max(1, Math.round(ts.h.length / 200));
+  const p = [];
+  for(let i=0;i<ts.h.length;i+=step){
+    const a = Math.abs(ts.h[i]);
+    const f = ts.freq[i]||1;
+    p.push(a*a*f*f);
   }
-  const layout = { title, margin:{t:34,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react(targetId, [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, {displayModeBar:false,responsive:true});
+  const x = linspace(0, ts.duration, p.length);
+  Plotly.react(target, [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated Radiated Power (toy)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
 }
 
-function initOrbitPlot(){
-  // three traces: BH1 marker, BH2 marker, trail marker cloud (we will update them)
+/* -------------------------
+   3D orbit initialization
+   ------------------------- */
+function initOrbit3D(){
   const data = [
-    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color:'#00d4ff',opacity:1}, name:'BH1' },
-    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:10,color:'#ff2e8a',opacity:1}, name:'BH2' },
+    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color:'#00d4ff'}, name:'BH1' },
+    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:10,color:'#ff2e8a'}, name:'BH2' },
     { x:[], y:[], z:[], type:'scatter3d', mode:'markers', marker:{size:6,color:[],opacity:1}, name:'Trail', showlegend:false }
   ];
   const layout = {
     margin:{t:20,l:20,r:20,b:20},
-    scene:{ camera: { eye:{x:1.2,y:1.0,z:0.8} }, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false} },
+    scene:{ camera:{ eye:{x:1.2,y:1.0,z:0.8} }, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false} },
     paper_bgcolor:'transparent', plot_bgcolor:'transparent'
   };
   Plotly.react('orbit3d', data, layout, {displayModeBar:false, responsive:true});
 }
-initOrbitPlot();
-
-/* Utility: update orbit traces */
-function updateOrbitPlot(bh1Pos, bh2Pos, trailPositions){
-  // bh1Pos & bh2Pos are [x,y,z]; trailPositions is array of {x,y,z,alpha,color}
-  // update BH markers
-  Plotly.restyle('orbit3d', {'x':[[bh1Pos[0]],[bh2Pos[0]],[trailPositions.map(p=>p.x)]],
-                             'y':[[bh1Pos[1]],[bh2Pos[1]],[trailPositions.map(p=>p.y)]],
-                             'z':[[bh1Pos[2]],[bh2Pos[2]],[trailPositions.map(p=>p.z)]]},
-                             [0,1,2]);
-  // update trail marker colors with per-point rgba color if supported
-  const colors = trailPositions.map(p => `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha})`);
-  Plotly.restyle('orbit3d', {'marker.color': [null,null,colors]}, [0,1,2]); // marker.color expects array for traces, using null for first two
-}
+initOrbit3D();
 
 /* -------------------------
-   Orbit/trails generation (shared helper)
+   Orbit compute & trail helpers
    ------------------------- */
-function computeOrbitPositions(frameIndex, ts, params){
-  const N = ts.t.length;
-  const i = Math.min(frameIndex, N-1);
-  const fr = ts.freq[i];
-  // radius base from separation
+function computePositions(frame, ts, params){
+  const idx = clamp(frame, 0, ts.t.length-1);
+  const fr = ts.freq[idx];
   const baseRadius = clamp(params.sep * 0.04, 0.08, 1.6);
-  // shrink factor from freq (higher freq => smaller radius)
-  const shrink = clamp((fr/(fr+250)), 0, 0.95);
-  const radius = baseRadius * (1 - 0.6*shrink);
+  const shrink = clamp((fr / (fr + 250)), 0, 0.95);
+  const radius = baseRadius * (1 - 0.6 * shrink); // shrink as freq rises
   const total = Math.max(1, params.m1 + params.m2);
   const r1 = radius * (params.m2 / total);
   const r2 = radius * (params.m1 / total);
-  const speed = 0.035 * (1 + fr/200) * (1 + total/100); // angular speed scalar
-  const theta = frameIndex * speed * 0.6;
-  const tilt = 0.28;
-  const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta * 0.7);
-  const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta * 0.7);
-  return { bh1:[x1,y1,z1], bh2:[x2,y2,z2], radius, theta };
+  const speed = 0.035 * (1 + fr/200) * (1 + total/100);
+  const theta = frame * speed * 0.45;
+  const tilt = 0.22;
+  const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.7);
+  const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta*0.7);
+  return { bh1:[x1,y1,z1], bh2:[x2,y2,z2], radius, theta, freq:fr };
 }
-
-/* -------------------------
-   Trail queue helpers
-   ------------------------- */
-function pushTrail(queue, pos, trailLen){
-  queue.push(pos);
-  while(queue.length > trailLen) queue.shift();
+function pushTrail(queue, pos, maxLen){
+  queue.push(pos.slice());
+  while(queue.length > maxLen) queue.shift();
 }
-function trailToPoints(queue){
-  // produce array of objects with alpha ramp and color
+function trailToPoints(q, colorRGB=[0,212,255]){
   const out = [];
-  const len = queue.length;
-  for(let i=0;i<len;i++){
-    const frac = i / Math.max(1, len-1);
-    const alpha = 0.15 + 0.85 * frac; // older points dimmer (low frac) -> more transparent
-    out.push({ x: queue[i][0], y: queue[i][1], z: queue[i][2], alpha: alpha, color: [0,212,255] });
+  const L = q.length;
+  for(let i=0;i<L;i++){
+    const frac = i / Math.max(1, L-1);
+    const alpha = 0.12 + 0.9 * frac; // older points lower frac => smaller alpha
+    out.push({ x:q[i][0], y:q[i][1], z:q[i][2], alpha, color:colorRGB });
   }
   return out;
 }
 
-/* -------------------------
-   Energy plot (toy) - power ~ amp^2 * freq^2 (very rough)
-   ------------------------- */
-function plotEnergy(targetId, ts){
-  const N = ts.h.length;
-  const window = 32;
-  const pow = [];
-  for(let i=0;i<N;i+=Math.max(1,Math.floor(N/200))){
-    const amp = Math.abs(ts.h[i]);
-    const f = ts.freq[i] || 1;
-    const p = amp*amp*f*f;
-    pow.push(p);
-  }
-  const t = linspace(0, ts.duration, pow.length);
-  Plotly.react(targetId, [{ x:t, y:pow, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title:'Estimated radiated power (arb)', margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
+/* update orbit plot data */
+function updateOrbitPlot(b1, b2, trailPts){
+  // set coords for BH1, BH2, Trail
+  const xsTrail = trailPts.map(p=>p.x), ysTrail = trailPts.map(p=>p.y), zsTrail = trailPts.map(p=>p.z);
+  Plotly.restyle('orbit3d', {
+    'x':[[b1[0]],[b2[0]], xsTrail],
+    'y':[[b1[1]],[b2[1]], ysTrail],
+    'z':[[b1[2]],[b2[2]], zsTrail]
+  }, [0,1,2]);
+
+  // colors for trail: rgba strings
+  const colors = trailPts.map(p => `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha.toFixed(3)})`);
+  // Plotly.restyle for marker.color on 3rd trace:
+  Plotly.restyle('orbit3d', {'marker.color': [null, null, colors] }, [0,1,2]);
 }
 
-/* ===========================================================
-   Preset simulation functions
-   =========================================================== */
+/* -------------------------
+   Preset simulator logic
+   ------------------------- */
 const presetEvents = {
   GW150914: { m1:36, m2:29, s1:0.3, s2:0.2, sep:15 },
   GW170104: { m1:31, m2:19, s1:0.1, s2:0.05, sep:14 },
   GW190521: { m1:85, m2:66, s1:0.7, s2:0.6, sep:20 }
 };
 
-function loadPreset(eventKey){
-  const params = presetEvents[eventKey] || presetEvents.GW150914;
-  presetSim.params = params;
-  presetSim.ts = generateChirp(params);
-  // prep plot
-  plotWave('presetWave', presetSim.ts, `${eventKey} — waveform`);
-  plotSpec('presetSpec', presetSim.ts, `${eventKey} — spectrogram`);
+function loadPreset(key){
+  const params = presetEvents[key] || presetEvents.GW150914;
+  presetSim.params = Object.assign({}, params);
+  presetSim.ts = generateChirp(presetSim.params);
+  // reset trail storage in customSim to share trail rendering
+  customSim.trails.bh1 = []; customSim.trails.bh2 = [];
+  // plot preset charts
+  plotWave('presetWave', presetSim.ts, `${key} — waveform`);
+  plotSpectrogram('presetSpec', presetSim.ts, `${key} — spectrogram`);
   plotEnergy('energyPlot', presetSim.ts);
-  // clear trails & orbit initial pos (use customSim queues too to keep consistent)
-  customSim.trailQueues.bh1 = []; customSim.trailQueues.bh2 = [];
-  // initialize orbit with first frame driven by preset
-  const pos = computeOrbitPositions(0, presetSim.ts, params);
-  updateOrbitPlot(pos.bh1, pos.bh2, []); // no trail
-  // reset playback state
-  presetSim.playing = false; if(presetSim.raf){ cancelAnimationFrame(presetSim.raf); presetSim.raf = null; }
-  presetSim.frameTime0 = null;
+  // initialize orbit at frame 0
+  const pos = computePositions(0, presetSim.ts, presetSim.params);
+  updateOrbitPlot(pos.bh1, pos.bh2, []);
+  // stop any running playback
+  presetSim.playing = false; if(presetSim.rafId) { cancelAnimationFrame(presetSim.rafId); presetSim.rafId = null; }
 }
 
-/* preset RAF loop - uses time mapping so play/pause/resume works smoothly */
 function presetPlay(){
   if(!presetSim.ts) return;
   presetSim.playing = true;
-  const startTime = performance.now() - (presetSim.frameTime0 || 0);
-  presetSim.frameTime0 = startTime;
-  // ensure any preset audio prepared
-  if(presetSim.audio.enabled && !presetSim.audio.ctx){
-    presetSim.audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = presetSim.audio.ctx.createOscillator();
-    const gain = presetSim.audio.ctx.createGain();
-    gain.gain.value = 0.04;
-    osc.type = 'sine';
-    osc.connect(gain); gain.connect(presetSim.audio.ctx.destination);
-    osc.start();
-    presetSim.audio.osc = { osc, gain };
-  }
+  presetSim.startTime = performance.now();
+  // audio setup on user enable is handled by UI toggle
   function step(){
-    if(!presetSim.playing){ presetSim.raf = null; return; }
-    const now = performance.now();
-    const elapsed = (now - presetSim.frameTime0) / 1000; // seconds since start
+    if(!presetSim.playing) { presetSim.rafId = null; return; }
+    const elapsed = (performance.now() - presetSim.startTime)/1000;
     const frac = elapsed / presetSim.ts.duration;
-    const idx = Math.floor(frac * (presetSim.ts.t.length - 1));
-    if(idx >= presetSim.ts.t.length - 1){
-      // end
+    const idx = Math.floor(frac * (presetSim.ts.t.length-1));
+    if(idx >= presetSim.ts.t.length-1){
       presetSim.playing = false;
-      if(presetSim.audio.osc){ try{ presetSim.audio.osc.osc.stop(); }catch(e){} presetSim.audio.osc = null; }
-      presetSim.raf = null;
+      if(presetSim.audio.osc){ try{ presetSim.audio.osc.osc.stop(); }catch(e){} presetSim.audio.osc=null; }
+      presetSim.rafId = null;
       return;
     }
-    // update orbit and trail: we'll use customSim's trail queues to display (shared)
-    const pos = computeOrbitPositions(idx, presetSim.ts, presetSim.params);
-    // push to trail queues and convert to points
-    pushTrail(customSim.trailQueues.bh1, pos.bh1.slice(), Number(document.getElementById('trailLen').value));
-    pushTrail(customSim.trailQueues.bh2, pos.bh2.slice(), Number(document.getElementById('trailLen').value));
-    // merge trail points (bh1 then bh2)
-    const trailPoints = (trailToPoints(customSim.trailQueues.bh1).concat(trailToPoints(customSim.trailQueues.bh2))).slice(-Number(document.getElementById('trailLen').value));
-    updateOrbitPlot(pos.bh1, pos.bh2, trailPoints);
-
-    // audio freq update
-    if(presetSim.audio.osc && presetSim.ts.freq[idx]){
-      const audible = Math.min(2000, 80 + presetSim.ts.freq[idx] * 1.1);
-      try{ presetSim.audio.osc.osc.frequency.setValueAtTime(audible, presetSim.audio.ctx.currentTime); } catch(e){}
+    // compute positions, push to trail queues (short trail length)
+    const pos = computePositions(idx, presetSim.ts, presetSim.params);
+    const maxTrail = Number(document.getElementById('trailLen').value) || 40;
+    pushTrail(customSim.trails.bh1, pos.bh1, Math.max(5, Math.round(maxTrail/2)));
+    pushTrail(customSim.trails.bh2, pos.bh2, Math.max(5, Math.round(maxTrail/2)));
+    const pts = trailToPoints(customSim.trails.bh1).slice(-maxTrail/2).concat(trailToPoints(customSim.trails.bh2).slice(-maxTrail/2));
+    updateOrbitPlot(pos.bh1, pos.bh2, pts);
+    // audio update
+    if(presetSim.audio.enabled && presetSim.audio.osc && presetSim.ts.freq[idx]){
+      const aud = Math.min(2000, 80 + presetSim.ts.freq[idx]*1.1);
+      try{ presetSim.audio.osc.osc.frequency.setValueAtTime(aud, presetSim.audio.ctx.currentTime); }catch(e){}
     }
-    presetSim.raf = requestAnimationFrame(step);
+    presetSim.rafId = requestAnimationFrame(step);
   }
-  if(!presetSim.raf) presetSim.raf = requestAnimationFrame(step);
+  if(!presetSim.rafId) presetSim.rafId = requestAnimationFrame(step);
 }
-
 function presetPause(){
   presetSim.playing = false;
-  if(presetSim.audio.osc){ try{ presetSim.audio.osc.osc.stop(); }catch(e){} presetSim.audio.osc = null; }
-  if(presetSim.raf){ cancelAnimationFrame(presetSim.raf); presetSim.raf = null; }
-  // store last elapsed time as frameTime0 offset for resume
-  // do not adjust frameTime0 here; presetPlay handles mapping
+  if(presetSim.audio.osc){ try{ presetSim.audio.osc.osc.stop(); }catch(e){} presetSim.audio.osc=null; }
+  if(presetSim.rafId){ cancelAnimationFrame(presetSim.rafId); presetSim.rafId = null; }
 }
 
 /* -------------------------
-   Custom simulator functions
+   Custom simulator logic
    ------------------------- */
 function loadCustomFromInputs(){
   const params = {
@@ -458,30 +429,22 @@ function loadCustomFromInputs(){
   };
   customSim.params = params;
   customSim.ts = generateChirp(params);
-  // reset frame and trails
-  customSim.frameTime0 = null;
-  customSim.trailQueues.bh1 = [];
-  customSim.trailQueues.bh2 = [];
-  // plot
+  customSim.trails.bh1 = []; customSim.trails.bh2 = [];
   plotWave('customWave', customSim.ts, 'Custom waveform');
-  plotSpec('customSpec', customSim.ts, 'Custom spectrogram');
+  plotSpectrogram('customSpec', customSim.ts, 'Custom spectrogram');
   plotEnergy('energyPlot', customSim.ts);
-  // initialize orbit frame
-  const pos = computeOrbitPositions(0, customSim.ts, params);
+  // init orbit
+  const pos = computePositions(0, customSim.ts, customSim.params);
   updateOrbitPlot(pos.bh1, pos.bh2, []);
-  // stop playback
-  customSim.playing = false;
-  if(customSim.raf){ cancelAnimationFrame(customSim.raf); customSim.raf = null; }
+  customSim.playing = false; if(customSim.rafId){ cancelAnimationFrame(customSim.rafId); customSim.rafId = null; }
 }
 
-/* custom RAF loop (driven by elapsed time & uses own audio) */
 function customPlay(){
   if(!customSim.ts) return;
   customSim.playing = true;
-  const startTime = performance.now() - (customSim.frameTime0 || 0);
-  customSim.frameTime0 = startTime;
-  if(customSim.audio.enabled && !customSim.audio.ctx){
-    customSim.audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  customSim.startTime = performance.now();
+  if(customSim.audio.enabled && !customSim.audio.ctx) customSim.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
+  if(customSim.audio.enabled && customSim.audio.ctx && !customSim.audio.osc){
     const osc = customSim.audio.ctx.createOscillator();
     const gain = customSim.audio.ctx.createGain();
     gain.gain.value = 0.04;
@@ -490,114 +453,121 @@ function customPlay(){
     osc.start();
     customSim.audio.osc = { osc, gain };
   }
+
   function step(){
-    if(!customSim.playing){ customSim.raf = null; return; }
-    const now = performance.now();
-    const elapsed = (now - customSim.frameTime0) / 1000;
+    if(!customSim.playing){ customSim.rafId = null; return; }
+    const elapsed = (performance.now() - customSim.startTime) / 1000;
     const frac = elapsed / customSim.ts.duration;
-    const idx = Math.floor(frac * (customSim.ts.t.length - 1));
-    if(idx >= customSim.ts.t.length - 1){
+    const idx = Math.floor(frac * (customSim.ts.t.length-1));
+    if(idx >= customSim.ts.t.length-1){
       customSim.playing = false;
-      if(customSim.audio.osc){ try{ customSim.audio.osc.osc.stop(); }catch(e){} customSim.audio.osc = null; }
-      customSim.raf = null;
+      if(customSim.audio.osc){ try{ customSim.audio.osc.osc.stop(); }catch(e){} customSim.audio.osc=null; }
+      customSim.rafId = null;
       return;
     }
-    // compute positions and update trail queues
-    const pos = computeOrbitPositions(idx, customSim.ts, customSim.params);
-    pushTrail(customSim.trailQueues.bh1, pos.bh1.slice(), Number(document.getElementById('trailLen').value));
-    pushTrail(customSim.trailQueues.bh2, pos.bh2.slice(), Number(document.getElementById('trailLen').value));
-    const trailPoints = trailToPoints(customSim.trailQueues.bh1).concat(trailToPoints(customSim.trailQueues.bh2)).slice(-Number(document.getElementById('trailLen').value));
-    updateOrbitPlot(pos.bh1, pos.bh2, trailPoints);
-    // audio
+    // compute pos and push trails
+    const pos = computePositions(idx, customSim.ts, customSim.params);
+    const maxTrail = Number(document.getElementById('trailLen').value) || 40;
+    // keep short per your request: few degrees motion -> effectively small trail length
+    const perBH = Math.max(4, Math.round(maxTrail / 6));
+    pushTrail(customSim.trails.bh1, pos.bh1, perBH);
+    pushTrail(customSim.trails.bh2, pos.bh2, perBH);
+    const pts = trailToPoints(customSim.trails.bh1).slice(-perBH).concat(trailToPoints(customSim.trails.bh2).slice(-perBH));
+    updateOrbitPlot(pos.bh1, pos.bh2, pts);
+    // audio update
     if(customSim.audio.osc && customSim.ts.freq[idx]){
-      const audible = Math.min(2000, 80 + customSim.ts.freq[idx] * 1.1);
-      try{ customSim.audio.osc.osc.frequency.setValueAtTime(audible, customSim.audio.ctx.currentTime); } catch(e){}
+      const aud = Math.min(2000, 80 + customSim.ts.freq[idx] * 1.1);
+      try{ customSim.audio.osc.osc.frequency.setValueAtTime(aud, customSim.audio.ctx.currentTime); }catch(e){}
     }
-    customSim.raf = requestAnimationFrame(step);
+    customSim.rafId = requestAnimationFrame(step);
   }
-  if(!customSim.raf) customSim.raf = requestAnimationFrame(step);
+  if(!customSim.rafId) customSim.rafId = requestAnimationFrame(step);
 }
-
 function customPause(){
   customSim.playing = false;
-  if(customSim.audio.osc){
-    try{ customSim.audio.osc.osc.stop(); }catch(e){}
-    customSim.audio.osc = null;
-  }
-  if(customSim.raf){ cancelAnimationFrame(customSim.raf); customSim.raf = null; }
+  if(customSim.audio.osc){ try{ customSim.audio.osc.osc.stop(); }catch(e){} customSim.audio.osc=null; }
+  if(customSim.rafId){ cancelAnimationFrame(customSim.rafId); customSim.rafId = null; }
 }
 
 /* -------------------------
-   Wiring UI controls
+   UI wiring
    ------------------------- */
+/* Tabs */
+const tabPreset = document.getElementById('tabPreset'), tabCustom = document.getElementById('tabCustom');
+tabPreset.addEventListener('click', ()=>{
+  document.getElementById('presetCard').style.display='block';
+  document.getElementById('customCard').style.display='none';
+  tabPreset.classList.add('active'); tabCustom.classList.remove('active');
+});
+tabCustom.addEventListener('click', ()=>{
+  document.getElementById('presetCard').style.display='none';
+  document.getElementById('customCard').style.display='block';
+  tabCustom.classList.add('active'); tabPreset.classList.remove('active');
+});
 
-// Tabs
-document.getElementById('tabPreset').addEventListener('click', ()=>{ document.getElementById('presetPanel').style.display='block'; document.getElementById('customPanel').style.display='none'; document.getElementById('tabPreset').classList.add('active'); document.getElementById('tabCustom').classList.remove('active'); });
-document.getElementById('tabCustom').addEventListener('click', ()=>{ document.getElementById('presetPanel').style.display='none'; document.getElementById('customPanel').style.display='block'; document.getElementById('tabCustom').classList.add('active'); document.getElementById('tabPreset').classList.remove('active'); });
-
-// Info panel
-document.getElementById('infoBtn').addEventListener('click', ()=>{
+/* Info panel */
+document.getElementById('infoButton').addEventListener('click', ()=>{
   const ip = document.getElementById('infoPanel');
-  if(ip.style.display === 'block'){ ip.style.display='none'; ip.setAttribute('aria-hidden','true'); }
-  else {
-    // populate with preset or custom depending on active tab
-    const activePreset = document.getElementById('presetPanel').style.display !== 'none';
-    if(activePreset && presetSim.params){
-      const p = presetSim.params;
-      document.getElementById('infoText').innerHTML = `Preset: m₁=${p.m1} M☉<br>m₂=${p.m2} M☉<br>spin₁=${p.s1 || p.s1}<br>sep=${p.sep} M`;
-    } else if(!activePreset && customSim.params){
-      const p = customSim.params;
-      document.getElementById('infoText').innerHTML = `Custom: m₁=${p.m1} M☉<br>m₂=${p.m2} M☉<br>spin₁=${p.spin1}<br>sep=${p.sep} M`;
-    } else {
-      document.getElementById('infoText').textContent = 'No simulation loaded.';
-    }
-    ip.style.display='block'; ip.setAttribute('aria-hidden','false');
-  }
+  if(ip.style.display === 'block'){ ip.style.display='none'; ip.setAttribute('aria-hidden','true'); return; }
+  // show details for active panel
+  if(document.getElementById('presetCard').style.display !== 'none' && presetSim.params){
+    const p = presetSim.params;
+    document.getElementById('infoContent').innerHTML = `<strong>Preset</strong><br>m₁=${p.m1} M☉<br>m₂=${p.m2} M☉<br>sep=${p.sep} M`;
+  } else if(customSim.params){
+    const p = customSim.params;
+    document.getElementById('infoContent').innerHTML = `<strong>Custom</strong><br>m₁=${p.m1} M☉<br>m₂=${p.m2} M☉<br>spin₁=${p.spin1}<br>spin₂=${p.spin2}<br>sep=${p.sep} M`;
+  } else document.getElementById('infoContent').textContent = 'No simulation loaded.';
+  ip.style.display='block'; ip.setAttribute('aria-hidden','false');
 });
-document.getElementById('closeInfo').addEventListener('click', ()=>{ document.getElementById('infoPanel').style.display='none'; });
+document.getElementById('infoClose').addEventListener('click', ()=>{ document.getElementById('infoPanel').style.display='none'; });
 
-// Trail slider
-const trailLenInput = document.getElementById('trailLen');
-const trailVal = document.getElementById('trailVal');
-trailLenInput.addEventListener('input', ()=>{ trailVal.textContent = trailLenInput.value; });
+/* Trail length display */
+const trailLen = document.getElementById('trailLen'), trailLenVal = document.getElementById('trailLenVal');
+trailLen.addEventListener('input', ()=>{ trailLenVal.textContent = trailLen.value; });
 
-// Preset controls
-document.getElementById('presetGenerate').addEventListener('click', ()=>{
-  const key = document.getElementById('presetSelect').value;
-  loadPreset(key);
+/* Preset wiring */
+document.getElementById('presetLoad').addEventListener('click', ()=>{
+  const k = document.getElementById('presetSelect').value;
+  loadPreset(k);
 });
-document.getElementById('presetPlay').addEventListener('click', ()=>{ // stop custom if running
-  customPause();
-  presetPlay();
+document.getElementById('presetPlay').addEventListener('click', ()=>{
+  // stop custom if it runs
+  customPause(); presetPlay();
 });
 document.getElementById('presetPause').addEventListener('click', ()=>{ presetPause(); });
-document.getElementById('presetRestart').addEventListener('click', ()=>{ presetPause(); if(presetSim.audio.osc){ try{ presetSim.audio.osc.osc.stop(); }catch(e){} presetSim.audio.osc=null; } loadPreset(document.getElementById('presetSelect').value); presetPlay(); });
+document.getElementById('presetRestart').addEventListener('click', ()=>{
+  presetPause();
+  if(presetSim.audio.osc){ try{ presetSim.audio.osc.osc.stop(); }catch(e){} presetSim.audio.osc=null; }
+  loadPreset(document.getElementById('presetSelect').value);
+  presetPlay();
+});
 document.getElementById('presetSound').addEventListener('click', ()=>{
   presetSim.audio.enabled = !presetSim.audio.enabled;
   document.getElementById('presetSound').textContent = presetSim.audio.enabled ? 'Disable Sound' : 'Enable Sound';
-  // create audio context on enable (must be user gesture)
   if(presetSim.audio.enabled && !presetSim.audio.ctx) presetSim.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
 });
 
-// Custom controls
+/* Custom wiring */
 document.getElementById('customGenerate').addEventListener('click', ()=>{ loadCustomFromInputs(); });
 document.getElementById('customPlay').addEventListener('click', ()=>{ presetPause(); customPlay(); });
 document.getElementById('customPause').addEventListener('click', ()=>{ customPause(); });
-document.getElementById('customRestart').addEventListener('click', ()=>{ customPause(); customSim.frameTime0 = null; customPlay(); });
-document.getElementById('customSound').addEventListener('click', ()=>{ customSim.audio.enabled = !customSim.audio.enabled; document.getElementById('customSound').textContent = customSim.audio.enabled ? 'Disable Sound' : 'Enable Sound'; if(customSim.audio.enabled && !customSim.audio.ctx) customSim.audio.ctx = new (window.AudioContext||window.webkitAudioContext)(); });
+document.getElementById('customRestart').addEventListener('click', ()=>{ customPause(); customSim.startTime=null; customPlay(); });
+document.getElementById('customSound').addEventListener('click', ()=>{
+  customSim.audio.enabled = !customSim.audio.enabled;
+  document.getElementById('customSound').textContent = customSim.audio.enabled ? 'Disable Sound' : 'Enable Sound';
+  if(customSim.audio.enabled && !customSim.audio.ctx) customSim.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
+});
 
-// initial load
+/* Initial load */
 loadPreset('GW150914');
 loadCustomFromInputs();
 
-/* Resize handling for Plotly responsiveness */
+/* Responsive resize for plotly */
 window.addEventListener('resize', ()=>{
-  if(document.getElementById('presetWave')) Plotly.Plots.resize(document.getElementById('presetWave'));
-  if(document.getElementById('presetSpec')) Plotly.Plots.resize(document.getElementById('presetSpec'));
-  if(document.getElementById('customWave')) Plotly.Plots.resize(document.getElementById('customWave'));
-  if(document.getElementById('customSpec')) Plotly.Plots.resize(document.getElementById('customSpec'));
-  if(document.getElementById('orbit3d')) Plotly.Plots.resize(document.getElementById('orbit3d'));
-  if(document.getElementById('energyPlot')) Plotly.Plots.resize(document.getElementById('energyPlot'));
+  ['presetWave','presetSpec','customWave','customSpec','orbit3d','energyPlot'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.data) Plotly.Plots.resize(el);
+  });
 });
 </script>
 </body>
