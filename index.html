@@ -4,10 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cosmic Event Simulator</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <style>
     body {
       margin: 0;
-      background: radial-gradient(ellipse at center, #000015 0%, #000010 100%);
+      background: radial-gradient(ellipse at center, #000010 0%, #000005 100%);
       color: #eee;
       font-family: "Segoe UI", sans-serif;
       overflow-x: hidden;
@@ -79,11 +81,6 @@
       to { opacity: 1; transform: translate(-50%, -50%); }
     }
 
-    .mini-window header {
-      font-size: 1.2rem;
-      margin-bottom: 0.5rem;
-    }
-
     .close-btn {
       float: right;
       background: #c33;
@@ -95,8 +92,40 @@
       cursor: pointer;
     }
 
-    .info-section {
-      margin-top: 1.5rem;
+    #threeContainer {
+      width: 100%;
+      height: 400px;
+      background: radial-gradient(circle, #000010, #000000);
+      border: 1px solid #222;
+      border-radius: 12px;
+      margin-top: 1rem;
+    }
+
+    #chirpGraph, #spectrogram {
+      width: 100%;
+      height: 300px;
+      border-radius: 12px;
+      margin-top: 1rem;
+    }
+
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    label {
+      flex: 1 1 200px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 0.4rem;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #111;
+      color: #eee;
     }
 
     footer {
@@ -117,72 +146,164 @@
     </nav>
   </header>
 
+  <!-- Overview -->
   <section id="overview" class="tab-content active">
     <h2>Black Hole Overview</h2>
     <p>
-      Black holes are regions where gravity is so intense that nothing, not even light, can escape.
-      This simulator models the merger of compact objects and visualizes their gravitational wave emissions.
+      Black holes warp spacetime so intensely that even light cannot escape.
+      This simulator shows their interactions, gravitational waves, and energetic signatures.
     </p>
-    <button onclick="openWindow('simulatorInfo')">🌀 View Black Hole Simulation Info</button>
+
+    <div id="threeContainer"></div>
+    <button onclick="toggleChirp()">🔊 Play Chirp</button>
+
+    <div id="chirpGraph"></div>
+    <div id="spectrogram"></div>
   </section>
 
+  <!-- Events -->
   <section id="events" class="tab-content">
     <h2>Known Gravitational Wave Events</h2>
-    <p>Select and replay real detections like GW150914 or GW170817.</p>
-    <button onclick="openWindow('eventInfo')">📈 Event Details</button>
+    <p>Select and replay real detections:</p>
+    <select id="eventSelect" onchange="loadEvent()">
+      <option value="">-- Select Event --</option>
+      <option value="GW150914">GW150914</option>
+      <option value="GW170817">GW170817</option>
+    </select>
+    <div id="eventGraph" style="width:100%; height:300px; margin-top:1rem;"></div>
   </section>
 
+  <!-- Advanced Physics -->
   <section id="advanced" class="tab-content">
-    <h2>Advanced Physics Framework</h2>
-    <p>This section contains detailed equations, notes, and experimental models.</p>
-    <button onclick="openWindow('advancedPhysicsWindow')">📘 View Equations & Notes</button>
+    <h2>Advanced Physics & Custom Simulations</h2>
+    <p>Experiment with physical parameters or open the equations reference.</p>
+
+    <div id="controls">
+      <label>Mass 1 (M☉): <input id="mass1" type="number" value="30"></label>
+      <label>Mass 2 (M☉): <input id="mass2" type="number" value="35"></label>
+      <label>Distance (Mpc): <input id="distance" type="number" value="400"></label>
+      <button onclick="runCustomSimulation()">Run Custom Simulation</button>
+      <button onclick="openWindow('advancedPhysicsWindow')">📘 View Equations</button>
+    </div>
+
+    <div id="advanced3D" style="width:100%; height:400px; margin-top:1rem; border-radius:12px; background:#000;"></div>
   </section>
 
-  <!-- Mini Windows -->
-  <div id="simulatorInfo" class="mini-window">
-    <button class="close-btn" onclick="closeWindow('simulatorInfo')">✖</button>
-    <header>Black Hole Simulation</header>
-    <p>This visualization models two orbiting black holes using basic relativistic mechanics.
-       You can observe how their separation and orbital speed influence gravitational wave amplitude.</p>
-  </div>
-
-  <div id="eventInfo" class="mini-window">
-    <button class="close-btn" onclick="closeWindow('eventInfo')">✖</button>
-    <header>Known Events</header>
-    <p>Here you can load and view strain data from actual LIGO detections such as GW150914 and GW170817.</p>
-  </div>
-
+  <!-- Advanced Equations Mini Window -->
   <div id="advancedPhysicsWindow" class="mini-window">
     <button class="close-btn" onclick="closeWindow('advancedPhysicsWindow')">✖</button>
     <header>Advanced Physics Equations</header>
     <div style="max-height:60vh; overflow-y:auto; font-size:0.9rem;">
-      <p><strong>I. Schwarzschild Radius:</strong> rₛ = 2GM / c²</p>
-      <p><strong>II. Chirp Mass:</strong> 𝓜 = (M₁M₂)^{3/5} / (M₁+M₂)^{1/5}</p>
-      <p><strong>III. GW Frequency Evolution:</strong> ẋf = (96/5)π^{8/3}(G𝓜)^{5/3}/c⁵ f^{11/3}</p>
-      <p><strong>IV. Strain Amplitude:</strong> h(f) ≈ (4G^{5/3}/c⁴)π^{2/3} 𝓜^{5/3}f^{2/3}/D</p>
-      <p><strong>V. Neutrino Coupling:</strong> ΔE_ν = α ∫ Φ(r(t)) dt</p>
-      <p><strong>VI. Timing Relation:</strong> Δt_{ν−GW} ≈ (D/c)(1/√(1−m_ν²c⁴/E²) − 1)</p>
-      <p><em>All parameters are phenomenological and best-fit using observed multimessenger data.</em></p>
+      <p><strong>Chirp Mass:</strong> 𝓜 = (M₁M₂)^{3/5} / (M₁+M₂)^{1/5}</p>
+      <p><strong>GW Frequency Evolution:</strong> ẋf = (96/5)π^{8/3}(G𝓜)^{5/3}/c⁵ f^{11/3}</p>
+      <p><strong>Strain Amplitude:</strong> h(f) ≈ (4G^{5/3}/c⁴)π^{2/3} 𝓜^{5/3}f^{2/3}/D</p>
+      <p><strong>Neutrino Coupling:</strong> ΔE_ν = α ∫ Φ(r(t)) dt</p>
+      <p><em>Adjust α and β coupling constants for energy transfer hypotheses.</em></p>
     </div>
   </div>
 
   <footer>
-    <p>Tip: If tabs stop responding, clear your browser cache or hold <strong>Ctrl + Shift + R</strong>.</p>
+    <p>© 2025 Cosmic Event Simulator | If tabs freeze, press <strong>Ctrl + Shift + R</strong></p>
   </footer>
 
   <script>
+    // --- Tab control ---
     function openTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
     }
 
-    function openWindow(id) {
-      document.getElementById(id).style.display = 'block';
+    // --- Mini window control ---
+    function openWindow(id) { document.getElementById(id).style.display = 'block'; }
+    function closeWindow(id) { document.getElementById(id).style.display = 'none'; }
+
+    // --- Chirp sound ---
+    let chirpCtx, oscillator;
+    function toggleChirp() {
+      if (!chirpCtx) chirpCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (oscillator) { oscillator.stop(); oscillator = null; return; }
+      oscillator = chirpCtx.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(50, chirpCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(400, chirpCtx.currentTime + 2);
+      oscillator.connect(chirpCtx.destination);
+      oscillator.start();
+      oscillator.stop(chirpCtx.currentTime + 2);
     }
 
-    function closeWindow(id) {
-      document.getElementById(id).style.display = 'none';
+    // --- Chirp graph (mock waveform) ---
+    function plotChirp() {
+      const t = Array.from({length:1000}, (_,i)=>i/1000*2);
+      const h = t.map(v => Math.sin(2*Math.PI*50*v*v)*Math.exp(-v));
+      Plotly.newPlot('chirpGraph', [{x:t, y:h, mode:'lines', name:'h(t)'}],
+        {title:'Mock Gravitational Wave Chirp', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'}});
     }
+
+    // --- Spectrogram placeholder ---
+    function plotSpectrogram() {
+      const z = Array.from({length:40}, ()=>Array.from({length:40}, ()=>Math.random()));
+      Plotly.newPlot('spectrogram', [{z, type:'heatmap', colorscale:'Viridis'}],
+        {title:'Spectrogram', xaxis:{title:'Time'}, yaxis:{title:'Frequency'}});
+    }
+
+    // --- Event loader ---
+    function loadEvent() {
+      const event = document.getElementById('eventSelect').value;
+      if (!event) return;
+      const t = Array.from({length:1000}, (_,i)=>i/1000*4);
+      const strain = t.map(v => Math.sin(2*Math.PI*30*v)*Math.exp(-v*0.5));
+      Plotly.newPlot('eventGraph', [{x:t, y:strain, mode:'lines', name:event}],
+        {title:`Simulated ${event} Strain`, xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'}});
+    }
+
+    // --- Custom Simulation Placeholder ---
+    function runCustomSimulation() {
+      const m1 = parseFloat(document.getElementById('mass1').value);
+      const m2 = parseFloat(document.getElementById('mass2').value);
+      const D = parseFloat(document.getElementById('distance').value);
+      alert(`Running simulation:\nMass1 = ${m1} M☉\nMass2 = ${m2} M☉\nDistance = ${D} Mpc`);
+    }
+
+    // --- Three.js binary inspiral ---
+    function initThree() {
+      const container = document.getElementById('threeContainer');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
+
+      const stars = new THREE.BufferGeometry();
+      const starCount = 500;
+      const positions = [];
+      for (let i=0; i<starCount; i++) {
+        positions.push((Math.random()-0.5)*400, (Math.random()-0.5)*400, (Math.random()-0.5)*400);
+      }
+      stars.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      const starMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 0.8});
+      const starField = new THREE.Points(stars, starMaterial);
+      scene.add(starField);
+
+      const orb1 = new THREE.Mesh(new THREE.SphereGeometry(3,32,32), new THREE.MeshBasicMaterial({color:0xffaa00}));
+      const orb2 = new THREE.Mesh(new THREE.SphereGeometry(2.8,32,32), new THREE.MeshBasicMaterial({color:0x66ccff}));
+      scene.add(orb1); scene.add(orb2);
+      camera.position.z = 80;
+
+      function animate(time) {
+        requestAnimationFrame(animate);
+        const t = time*0.001;
+        const radius = 20;
+        orb1.position.set(Math.cos(t)*radius, Math.sin(t)*radius, 0);
+        orb2.position.set(-Math.cos(t)*radius, -Math.sin(t)*radius, 0);
+        starField.rotation.y += 0.0005;
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    plotChirp();
+    plotSpectrogram();
+    initThree();
   </script>
 </body>
 </html>
