@@ -1,24 +1,24 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Black Hole & GW Simulator</title>
 <style>
-  body { margin:0; font-family: Arial, sans-serif; background: radial-gradient(ellipse at center, #000010 0%, #000000 100%); color:white; overflow-x:hidden; }
-  .tabs { display:flex; background:#111; }
-  .tabButton { flex:1; padding:12px; cursor:pointer; background:#222; border:none; color:white; transition:0.3s; font-weight:bold; }
-  .tabButton:hover { background:#333; }
-  .tabButton.active { background:#555; }
+  body { margin:0; font-family:Arial, sans-serif; background:#05000a; color:white; overflow-x:hidden; }
+  .tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
+  .tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; transition:0.3s; font-weight:bold; }
+  .tabButton:hover { background:#33003d; }
+  .tabButton.active { background:#550066; color:#fff; }
   .tabContent { display:none; padding:20px; }
-  canvas { background:rgba(0,0,0,0.6); border:1px solid #444; border-radius:8px; display:block; margin:15px 0; }
+  canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; background:radial-gradient(circle at center, #14001a 0%, #05000a 100%); }
   button, select, input { margin:5px 0; padding:8px; border:none; border-radius:4px; }
-  button { background:#ff9500; color:white; cursor:pointer; transition:0.3s; }
-  button:hover { background:#ffaa33; }
-  #eventInfo, #scienceSummary { background:rgba(20,20,20,0.8); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #444; }
+  button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
+  button:hover { background:#a64dff; }
+  #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
   #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
-  #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #333; }
-  #amplitudeCanvas { border:1px solid #333; border-radius:6px; background:rgba(0,0,0,0.5); }
+  #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
+  h2, h3, h4 { color:#e5ccff; }
 </style>
 </head>
 <body>
@@ -29,14 +29,14 @@
   <button class="tabButton" data-tab="eventsTab">Events</button>
 </div>
 
-<!-- Overview Tab -->
+<!-- Overview -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>🌌 Black Hole Overview</h2>
-  <p>Visualize a rotating black hole with its glowing accretion disk. This represents the intense gravitational field bending light around the event horizon.</p>
+  <p>Visualize a rotating black hole surrounded by its glowing accretion disk — light bent by extreme gravity.</p>
   <canvas id="bhCanvas" width="800" height="400"></canvas>
 </div>
 
-<!-- Events Tab -->
+<!-- Events -->
 <div id="eventsTab" class="tabContent">
   <h2>💫 Gravitational-Wave Events</h2>
   <label for="eventSelect">Select Event:</label>
@@ -45,7 +45,7 @@
   <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
   <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1"><br>
   
-  <canvas id="orbitCanvas" width="600" height="300"></canvas>
+  <canvas id="orbitCanvas" width="700" height="400"></canvas>
   <canvas id="chirpCanvas" width="800" height="200"></canvas>
   <button id="playChirpBtn">🔊 Play Chirp</button>
 
@@ -65,15 +65,19 @@
     </table>
     <h4>Chirp Amplitude Graph</h4>
     <canvas id="amplitudeCanvas" width="800" height="200"></canvas>
+    <h4>Energy Loss Rate</h4>
+    <canvas id="energyCanvas" width="800" height="200"></canvas>
+    <h4>Frequency Evolution</h4>
+    <canvas id="freqCanvas" width="800" height="200"></canvas>
   </div>
 </div>
 
 <script>
 // --- Tabs ---
-const tabButtons = document.querySelectorAll('.tabButton');
-const tabContents = document.querySelectorAll('.tabContent');
+const tabButtons=document.querySelectorAll('.tabButton');
+const tabContents=document.querySelectorAll('.tabContent');
 tabButtons.forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click',()=>{
     tabButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     tabContents.forEach(tc=>tc.style.display='none');
@@ -81,196 +85,155 @@ tabButtons.forEach(btn=>{
   });
 });
 
-// --- Overview: Rotating black hole ---
+// --- Overview Visual ---
 const bhCanvas=document.getElementById('bhCanvas');
 const bhCtx=bhCanvas.getContext('2d');
 let angle=0;
-function drawBlackHole(){
+function drawBH(){
   bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
   const cx=bhCanvas.width/2, cy=bhCanvas.height/2;
+  const grad=bhCtx.createRadialGradient(cx,cy,10,cx,cy,200);
+  grad.addColorStop(0,'#000');
+  grad.addColorStop(1,'#33003d');
+  bhCtx.fillStyle=grad;
+  bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
   bhCtx.beginPath();
   bhCtx.arc(cx,cy,50,0,Math.PI*2);
-  bhCtx.fillStyle='black'; bhCtx.fill();
-  for(let i=0;i<100;i++){
+  bhCtx.fillStyle='black';
+  bhCtx.fill();
+  for(let i=0;i<120;i++){
     bhCtx.beginPath();
-    bhCtx.arc(cx,cy,60+i,0,Math.PI*2);
-    bhCtx.strokeStyle=`rgba(255,140,0,${0.02})`;
+    bhCtx.arc(cx,cy,55+i,0,Math.PI*2);
+    bhCtx.strokeStyle=`rgba(180,0,255,${0.015})`;
     bhCtx.stroke();
   }
   const x=cx+Math.cos(angle)*100;
-  const y=cy+Math.sin(angle)*20;
+  const y=cy+Math.sin(angle)*30;
   bhCtx.beginPath();
-  bhCtx.arc(x,y,5,0,Math.PI*2);
-  bhCtx.fillStyle='rgba(255,255,200,0.8)';
+  bhCtx.arc(x,y,6,0,Math.PI*2);
+  bhCtx.fillStyle='#ffcc99';
   bhCtx.fill();
   angle+=0.03;
-  requestAnimationFrame(drawBlackHole);
+  requestAnimationFrame(drawBH);
 }
-drawBlackHole();
+drawBH();
 
-// --- Events ---
+// --- GW Events ---
 const gwEvents={
   "GW150914":{m1:36,m2:29},
   "GW170104":{m1:31,m2:19},
   "Custom":{m1:30,m2:30}
 };
 const eventDescriptions={
-  "GW150914":"First GW detection (2015): Two black holes (36 M☉ and 29 M☉) merged ~1.3 billion light-years away.",
-  "GW170104":"2017 detection: Merger of 31 and 19 solar-mass black holes, ~3 billion light-years away.",
-  "Custom":"Set your own binary system parameters and simulate its GW chirp."
+  "GW150914":"First gravitational wave detection (2015): two black holes of 36 and 29 solar masses merged 1.3 billion light-years away.",
+  "GW170104":"2017 detection: merger of 31 and 19 solar-mass black holes, ~3 billion light-years away.",
+  "Custom":"Set custom masses and simulate."
 };
 const eventSelect=document.getElementById('eventSelect');
-for(let key in gwEvents){
-  let opt=document.createElement('option');
-  opt.value=key; opt.text=key; eventSelect.add(opt);
+for(let e in gwEvents){
+  const opt=document.createElement('option');
+  opt.value=e; opt.text=e;
+  eventSelect.add(opt);
 }
 
+// --- Orbit Simulation ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
-const chirpCanvas=document.getElementById('chirpCanvas');
-const chirpCtx=chirpCanvas.getContext('2d');
-let waveformData=[];
-const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-let chirpBuffer;
-
-// --- Orbit Animation ---
 let orbitAngle=0;
 function drawOrbit(m1,m2){
   orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
   const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
-  const r1=60, r2=120;
+  const r1=70, r2=140;
   const x1=cx+Math.cos(orbitAngle)*r1;
   const y1=cy+Math.sin(orbitAngle)*r1;
   const x2=cx-Math.cos(orbitAngle)*r2;
   const y2=cy-Math.sin(orbitAngle)*r2;
+
+  const grad=orbitCtx.createRadialGradient(cx,cy,50,cx,cy,300);
+  grad.addColorStop(0,'rgba(50,0,70,0.6)');
+  grad.addColorStop(1,'rgba(0,0,0,1)');
+  orbitCtx.fillStyle=grad;
+  orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
+
+  for(let i=0;i<4;i++){
+    orbitCtx.beginPath();
+    orbitCtx.arc(cx,cy,80+i*40,0,Math.PI*2);
+    orbitCtx.strokeStyle=`rgba(160,0,255,${0.05*(4-i)})`;
+    orbitCtx.stroke();
+  }
+
   orbitCtx.beginPath();
-  orbitCtx.arc(cx,cy,r1,0,Math.PI*2);
-  orbitCtx.arc(cx,cy,r2,0,Math.PI*2);
-  orbitCtx.strokeStyle='rgba(255,255,255,0.2)';
-  orbitCtx.stroke();
-  orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,Math.PI*2);
-  orbitCtx.fillStyle='orange'; orbitCtx.fill();
-  orbitCtx.beginPath(); orbitCtx.arc(x2,y2,16,0,Math.PI*2);
-  orbitCtx.fillStyle='blue'; orbitCtx.fill();
-  orbitAngle+=0.03;
+  orbitCtx.arc(x1,y1,10,0,Math.PI*2);
+  orbitCtx.fillStyle='#ff66ff';
+  orbitCtx.fill();
+
+  orbitCtx.beginPath();
+  orbitCtx.arc(x2,y2,16,0,Math.PI*2);
+  orbitCtx.fillStyle='#00ccff';
+  orbitCtx.fill();
+
+  orbitAngle+=0.025;
   requestAnimationFrame(()=>drawOrbit(m1,m2));
 }
 
-// --- Chirp ---
-function createChirpAudioAndPlot(m1,m2,duration=3){
-  const sampleRate=audioCtx.sampleRate;
-  const length=sampleRate*duration;
-  const buffer=audioCtx.createBuffer(1,length,sampleRate);
-  const data=buffer.getChannelData(0);
-  waveformData=[];
-  const f0=20; const f1=400;
-  for(let i=0;i<length;i++){
-    const t=i/sampleRate;
-    const freq=f0+(f1-f0)*(t/duration);
-    data[i]=0.2*Math.sin(2*Math.PI*freq*t);
-    waveformData.push(data[i]);
+// --- Chirp + Graphs ---
+const chirpCanvas=document.getElementById('chirpCanvas');
+const chirpCtx=chirpCanvas.getContext('2d');
+const ampCanvas=document.getElementById('amplitudeCanvas');
+const ampCtx=ampCanvas.getContext('2d');
+const energyCanvas=document.getElementById('energyCanvas');
+const energyCtx=energyCanvas.getContext('2d');
+const freqCanvas=document.getElementById('freqCanvas');
+const freqCtx=freqCanvas.getContext('2d');
+
+function drawGraph(ctx,color,func){
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.beginPath();
+  for(let i=0;i<ctx.canvas.width;i++){
+    const t=i/ctx.canvas.width;
+    const y=ctx.canvas.height/2 - func(t)*ctx.canvas.height/3;
+    if(i===0) ctx.moveTo(i,y);
+    else ctx.lineTo(i,y);
   }
-  chirpBuffer=buffer;
-  drawWaveform();
-  drawAmplitudeGraph(m1,m2);
-}
-function drawWaveform(highlightIndex=-1){
-  chirpCtx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
-  chirpCtx.beginPath();
-  chirpCtx.moveTo(0,chirpCanvas.height/2);
-  for(let i=0;i<waveformData.length;i+=Math.floor(waveformData.length/chirpCanvas.width)){
-    const x=i/waveformData.length*chirpCanvas.width;
-    const y=chirpCanvas.height/2 - waveformData[i]*chirpCanvas.height/2;
-    chirpCtx.lineTo(x,y);
-  }
-  chirpCtx.strokeStyle='orange'; chirpCtx.lineWidth=2; chirpCtx.stroke();
-  if(highlightIndex>=0){
-    const x=highlightIndex/waveformData.length*chirpCanvas.width;
-    chirpCtx.beginPath(); chirpCtx.moveTo(x,0); chirpCtx.lineTo(x,chirpCanvas.height);
-    chirpCtx.strokeStyle='red'; chirpCtx.lineWidth=1; chirpCtx.stroke();
-  }
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
+  ctx.stroke();
 }
 
-// --- Play Chirp ---
-document.getElementById('playChirpBtn').addEventListener('click', ()=>{
-  if(!chirpBuffer) return;
-  const source=audioCtx.createBufferSource();
-  source.buffer=chirpBuffer; source.connect(audioCtx.destination);
-  const startTime=audioCtx.currentTime;
-  const duration=chirpBuffer.duration;
-  function animate(){
-    const elapsed=audioCtx.currentTime-startTime;
-    if(elapsed>duration) return;
-    const index=Math.floor(elapsed/duration*waveformData.length);
-    drawWaveform(index);
-    requestAnimationFrame(animate);
-  }
-  animate();
-  source.start();
-});
-
-// --- Scientific Summary ---
-function updateScientificSummary(m1,m2){
-  const chirpMass = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  const freqRange = "20–400";
-  const strain = (4e-21 * (chirpMass/30)**(5/3)).toExponential(2);
-  const distance = `${(chirpMass*40).toFixed(0)} million ly`;
-  document.getElementById('chirpMass').textContent = chirpMass.toFixed(2) + " M☉";
-  document.getElementById('freqRange').textContent = freqRange + " Hz";
-  document.getElementById('gwStrain').textContent = strain;
-  document.getElementById('distance').textContent = distance;
-}
-
-// --- Chirp Amplitude Graph ---
-const ampCanvas = document.getElementById('amplitudeCanvas');
-const ampCtx = ampCanvas.getContext('2d');
-function drawAmplitudeGraph(m1,m2){
-  ampCtx.clearRect(0,0,ampCanvas.width,ampCanvas.height);
-  const chirpMass = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  const steps = 200;
-  ampCtx.beginPath();
-  for(let i=0;i<steps;i++){
-    const t = i/steps;
-    const h = Math.pow(t,3)*Math.sin(20*t*Math.PI*5);
-    const x = i/steps*ampCanvas.width;
-    const y = ampCanvas.height/2 - h*ampCanvas.height/3;
-    if(i===0) ampCtx.moveTo(x,y);
-    else ampCtx.lineTo(x,y);
-  }
-  ampCtx.strokeStyle='lime';
-  ampCtx.lineWidth=2;
-  ampCtx.stroke();
-  ampCtx.fillStyle='rgba(255,255,255,0.7)';
-  ampCtx.fillText("GW amplitude (h) vs time",10,15);
-}
-
-// --- Event Info ---
+// --- Update Event ---
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
   if(!ev) return;
   document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
-  createChirpAudioAndPlot(ev.m1,ev.m2);
   drawOrbit(ev.m1,ev.m2);
-  updateScientificSummary(ev.m1,ev.m2);
+  updateSummary(ev.m1,ev.m2);
+  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
+  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
+  drawGraph(freqCtx,'#00ccff',t=>t*t);
 }
 
-// --- Event Change ---
-eventSelect.addEventListener('change', ()=>{
-  updateEvent(eventSelect.value);
-});
+// --- Summary ---
+function updateSummary(m1,m2){
+  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
+  document.getElementById('freqRange').textContent="20–400 Hz";
+  document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
+  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
+}
 
-// --- Custom Simulation ---
-document.getElementById('runCustomBtn').addEventListener('click', ()=>{
+// --- Custom ---
+document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m1=parseFloat(document.getElementById('m1Input').value);
   const m2=parseFloat(document.getElementById('m2Input').value);
-  if(!m1||!m2) return alert("Enter valid masses!");
   gwEvents["Custom"]={m1,m2};
   eventDescriptions["Custom"]= `Custom simulation: m1=${m1} M☉, m2=${m2} M☉`;
   eventSelect.value="Custom";
   updateEvent("Custom");
 });
 
-// --- Initialize first event ---
+eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
+
+// --- Init ---
 updateEvent("GW150914");
 </script>
 </body>
