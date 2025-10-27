@@ -10,8 +10,9 @@
   .tabButton { flex:1; padding:10px; cursor:pointer; background:#222; border:none; color:white; }
   .tabButton.active { background:#555; }
   .tabContent { display:none; padding:10px; }
-  canvas { background:rgba(0,0,0,0.6); border:1px solid #444; margin-bottom:10px; }
-  select, input, button { margin:5px 0; }
+  canvas { background:rgba(0,0,0,0.6); border:1px solid #444; display:block; margin:10px 0; }
+  input, select, button { margin:5px 5px 10px 0; }
+  #eventInfo { background:#111; padding:10px; margin:10px 0; border:1px solid #444; }
 </style>
 </head>
 <body>
@@ -25,19 +26,30 @@
 <!-- Overview Tab -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>Black Hole Overview</h2>
-  <p>Black holes are regions of spacetime exhibiting extremely strong gravity. The event horizon marks the boundary beyond which nothing can escape, not even light.</p>
   <canvas id="bhCanvas" width="800" height="400"></canvas>
 </div>
 
 <!-- Events Tab -->
 <div id="eventsTab" class="tabContent">
   <h2>Binary Black Hole Mergers</h2>
+
+  <!-- Event selection -->
   <label for="eventSelect">Choose Event:</label>
   <select id="eventSelect"></select><br>
+
+  <!-- Custom masses -->
   <label>Custom Masses:</label>
   <input type="number" id="m1Input" placeholder="Mass 1 (M☉)" style="width:100px;">
   <input type="number" id="m2Input" placeholder="Mass 2 (M☉)" style="width:100px;">
   <button id="runCustomBtn">Run Custom Simulation</button>
+
+  <!-- Dynamic Event Info -->
+  <div id="eventInfo">
+    <strong>Event Info:</strong>
+    <p id="infoText">Select an event to see details.</p>
+  </div>
+
+  <!-- Visuals -->
   <canvas id="orbitCanvas" width="800" height="300"></canvas>
   <canvas id="chirpCanvas" width="800" height="150"></canvas>
   <button id="playChirpBtn">Play Chirp</button>
@@ -56,7 +68,7 @@ tabButtons.forEach(btn => {
   });
 });
 
-// --- Overview black hole ---
+// --- Overview black hole canvas ---
 const bhCanvas = document.getElementById('bhCanvas');
 const bhCtx = bhCanvas.getContext('2d');
 function drawBlackHole(){
@@ -77,47 +89,39 @@ function drawBlackHole(){
 drawBlackHole();
 
 // --- Events tab ---
+// Mock event data
 const gwEvents = {
   "GW150914": { m1: 36, m2: 29 },
   "GW170104": { m1: 31, m2: 19 },
   "Custom": { m1: 30, m2: 30 }
 };
 
+// Event descriptions
+const eventDescriptions = {
+  "GW150914": "First gravitational wave detection: 36+29 M☉ black holes merged ~1.3 billion light-years away.",
+  "GW170104": "Second confirmed detection: 31+19 M☉ black holes merged ~3 billion light-years away.",
+  "Custom": "Custom simulation with user-defined black hole masses."
+};
+
+// Populate event dropdown
 const eventSelect = document.getElementById('eventSelect');
 for (let key in gwEvents){
   let opt = document.createElement('option'); opt.value=key; opt.text=key; eventSelect.add(opt);
 }
 
-// Canvas & audio
+// Orbit canvas
 const orbitCanvas = document.getElementById('orbitCanvas');
 const orbitCtx = orbitCanvas.getContext('2d');
+let orbitTime=0, orbitAnim;
+
+// Chirp canvas & audio
 const chirpCanvas = document.getElementById('chirpCanvas');
 const chirpCtx = chirpCanvas.getContext('2d');
-let waveformData = [];
+let waveformData=[];
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 let chirpBuffer;
 
-// --- Orbit visualization ---
-function drawOrbit(m1,m2,t){
-  orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
-  const cx = orbitCanvas.width/2;
-  const cy = orbitCanvas.height/2;
-  const a = 50 + (m1+m2); // semi-major proportional to total mass
-  const b = a/2;
-  const angle = t*0.02;
-  // Body 1
-  orbitCtx.beginPath();
-  orbitCtx.arc(cx + a*Math.cos(angle), cy + b*Math.sin(angle), 10, 0, Math.PI*2);
-  orbitCtx.fillStyle='orange';
-  orbitCtx.fill();
-  // Body 2
-  orbitCtx.beginPath();
-  orbitCtx.arc(cx - a*Math.cos(angle), cy - b*Math.sin(angle), 10, 0, Math.PI*2);
-  orbitCtx.fillStyle='blue';
-  orbitCtx.fill();
-}
-
-// --- Chirp waveform & audio ---
+// --- Create chirp waveform & audio ---
 function createChirpAudioAndPlot(m1,m2,duration=3){
   const sampleRate = audioCtx.sampleRate;
   const length = sampleRate*duration;
@@ -148,8 +152,7 @@ function drawWaveform(highlightIndex=-1){
   chirpCtx.strokeStyle='orange'; chirpCtx.lineWidth=2; chirpCtx.stroke();
   if(highlightIndex>=0){
     const x = highlightIndex / waveformData.length * chirpCanvas.width;
-    chirpCtx.beginPath();
-    chirpCtx.moveTo(x,0); chirpCtx.lineTo(x,chirpCanvas.height);
+    chirpCtx.beginPath(); chirpCtx.moveTo(x,0); chirpCtx.lineTo(x,chirpCanvas.height);
     chirpCtx.strokeStyle='red'; chirpCtx.lineWidth=1; chirpCtx.stroke();
   }
 }
@@ -172,28 +175,46 @@ document.getElementById('playChirpBtn').addEventListener('click', ()=>{
   source.start();
 });
 
-// Event selection
-let orbitTime=0;
-let orbitAnim;
+// --- Orbit simulation ---
+function drawOrbit(m1,m2,t){
+  orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+  const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
+  const R = 100; // orbit radius
+  const angle = t*0.02;
+  // BH positions
+  const x1 = cx + R*Math.cos(angle), y1 = cy + R*Math.sin(angle);
+  const x2 = cx - R*Math.cos(angle), y2 = cy - R*Math.sin(angle);
+  // draw
+  orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle='blue'; orbitCtx.fill();
+  orbitCtx.beginPath(); orbitCtx.arc(x2,y2,10,0,2*Math.PI); orbitCtx.fillStyle='orange'; orbitCtx.fill();
+  orbitCtx.beginPath(); orbitCtx.moveTo(x1,y1); orbitCtx.lineTo(x2,y2); orbitCtx.strokeStyle='white'; orbitCtx.stroke();
+}
+
+// --- Update event ---
 function updateEvent(eventName){
   const ev = gwEvents[eventName];
   if(!ev) return;
-  createChirpAudioAndPlot(ev.m1,ev.m2);
+  document.getElementById('infoText').textContent = eventDescriptions[eventName] || "No information available.";
+  createChirpAudioAndPlot(ev.m1, ev.m2);
   if(orbitAnim) cancelAnimationFrame(orbitAnim);
   function animateOrbit(){
-    drawOrbit(ev.m1,ev.m2,orbitTime);
+    drawOrbit(ev.m1, ev.m2, orbitTime);
     orbitTime+=1;
     orbitAnim = requestAnimationFrame(animateOrbit);
   }
   animateOrbit();
 }
-eventSelect.addEventListener('change', ()=>updateEvent(eventSelect.value));
+
+// Event change
+eventSelect.addEventListener('change', ()=>{ updateEvent(eventSelect.value); });
 
 // Custom simulation
 document.getElementById('runCustomBtn').addEventListener('click', ()=>{
-  const m1 = parseFloat(document.getElementById('m1Input').value)||30;
-  const m2 = parseFloat(document.getElementById('m2Input').value)||30;
+  const m1=parseFloat(document.getElementById('m1Input').value);
+  const m2=parseFloat(document.getElementById('m2Input').value);
+  if(!m1 || !m2) return alert("Enter valid masses!");
   gwEvents["Custom"]={m1,m2};
+  eventDescriptions["Custom"]=`Custom simulation: m1=${m1} M☉, m2=${m2} M☉`;
   eventSelect.value="Custom";
   updateEvent("Custom");
 });
