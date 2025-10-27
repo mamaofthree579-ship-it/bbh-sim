@@ -1,425 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Simulation Project — Physical Chirp</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black Hole & GW Simulator</title>
 <style>
-  :root{
-    --bg:#05000a;
-    --panel:#14001a;
-    --accent:#a64dff;
-    --accent-2:#00ccff;
-    --muted:#8a68a9;
-    --text:#e8ddff;
-  }
-  body{ margin:0; font-family:Inter, Arial, sans-serif; background:var(--bg); color:var(--text); }
-  .tabs{ display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
-  .tabButton{ flex:1; padding:12px; cursor:pointer; background:#22002b; color:var(--muted); border:none; font-weight:700; }
-  .tabButton.active{ background:#550066; color:var(--text); }
-  .tabContent{ display:none; padding:18px; }
-  .tabContent.active{ display:block; }
-  canvas{ display:block; margin:12px auto; border-radius:8px; background: radial-gradient(circle at center, rgba(20,0,40,0.45), rgba(5,0,10,0.9)); border:1px solid rgba(80,0,120,0.2); }
-  button, select, input{ margin:6px 6px 6px 0; padding:8px 10px; border-radius:6px; border:none; }
-  button.action{ background:var(--accent); color:#fff; cursor:pointer; }
-  button.action:hover{ background:#c78bff; }
-  .panel{ background:rgba(20,0,40,0.6); padding:12px; border-radius:8px; border:1px solid #33003d; margin-top:12px; }
-  h2,h3{ color:var(--text); margin:6px 0; }
-  label{ display:inline-block; margin-right:6px; color:var(--muted); }
-  .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:start; }
-  table{ width:100%; border-collapse:collapse; color:var(--text); }
-  th,td{ padding:6px 8px; border-bottom:1px solid rgba(120,60,160,0.08); text-align:left; }
-  .small{ font-size:0.9rem; color:var(--muted); }
+  body { margin:0; font-family:Arial, sans-serif; background:#05000a; color:white; overflow-x:hidden; }
+  .tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
+  .tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; transition:0.3s; font-weight:bold; }
+  .tabButton:hover { background:#33003d; }
+  .tabButton.active { background:#550066; color:#fff; }
+  .tabContent { display:none; padding:20px; }
+  canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; background:radial-gradient(circle at center, #14001a 0%, #05000a 100%); }
+  button, select, input { margin:5px 0; padding:8px; border:none; border-radius:4px; }
+  button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
+  button:hover { background:#a64dff; }
+  #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
+  #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
+  #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
+  h2, h3, h4 { color:#e5ccff; }
 </style>
 </head>
 <body>
-  <div class="tabs">
-    <button class="tabButton active" data-tab="overviewTab">Overview</button>
-    <button class="tabButton" data-tab="eventsTab">Events</button>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tabButton active" data-tab="overviewTab">Overview</button>
+  <button class="tabButton" data-tab="eventsTab">Events</button>
+</div>
+
+<!-- Overview -->
+<div id="overviewTab" class="tabContent" style="display:block;">
+  <h2>🌌 Black Hole Overview</h2>
+  <p>Visualize a rotating black hole surrounded by its glowing accretion disk — light bent by extreme gravity.</p>
+  <canvas id="bhCanvas" width="800" height="400"></canvas>
+</div>
+
+<!-- Events -->
+<div id="eventsTab" class="tabContent">
+  <h2>💫 Gravitational-Wave Events</h2>
+  <label for="eventSelect">Select Event:</label>
+  <select id="eventSelect"></select>
+  <button id="runCustomBtn">Run Custom Simulation</button><br>
+  <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
+  <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1"><br>
+  
+  <canvas id="orbitCanvas" width="700" height="400"></canvas>
+  <canvas id="chirpCanvas" width="800" height="200"></canvas>
+  <button id="playChirpBtn">🔊 Play Chirp</button>
+
+  <div id="eventInfo">
+    <strong>Event Information:</strong>
+    <p id="eventDescription"></p>
   </div>
 
-  <!-- Overview -->
-  <div id="overviewTab" class="tabContent active">
-    <h2>🌌 Black Hole Overview</h2>
-    <p class="small">Single rotating black hole with an accretion disk. No chirp audio here.</p>
-    <canvas id="bhCanvas" width="900" height="420"></canvas>
+  <div id="scienceSummary">
+    <strong>Scientific Summary:</strong>
+    <table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Chirp Mass (ℳ)</td><td id="chirpMass">--</td></tr>
+      <tr><td>Frequency Range (Hz)</td><td id="freqRange">--</td></tr>
+      <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
+      <tr><td>Estimated Distance</td><td id="distance">--</td></tr>
+    </table>
+    <h4>Chirp Amplitude Graph</h4>
+    <canvas id="amplitudeCanvas" width="800" height="200"></canvas>
+    <h4>Energy Loss Rate</h4>
+    <canvas id="energyCanvas" width="800" height="200"></canvas>
+    <h4>Frequency Evolution</h4>
+    <canvas id="freqCanvas" width="800" height="200"></canvas>
   </div>
-
-  <!-- Events -->
-  <div id="eventsTab" class="tabContent">
-    <h2>💫 Gravitational-Wave Events</h2>
-
-    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-      <label for="eventSelect">Select Event</label>
-      <select id="eventSelect"></select>
-
-      <label for="distanceInput">Distance (Mpc)</label>
-      <input id="distanceInput" type="number" value="500" step="10" style="width:100px" />
-
-      <button id="runCustomBtn" class="action">Run Custom Simulation</button>
-      <label style="margin-left:10px">m₁ (M☉)</label><input id="m1Input" type="number" value="30" step="0.1" style="width:90px" />
-      <label>m₂ (M☉)</label><input id="m2Input" type="number" value="30" step="0.1" style="width:90px" />
-    </div>
-
-    <div class="panel" style="margin-top:14px;">
-      <h3>Orbit (visual)</h3>
-      <canvas id="orbitCanvas" width="900" height="380"></canvas>
-    </div>
-
-    <div class="panel grid">
-      <div>
-        <h3>Chirp waveform (audio samples)</h3>
-        <canvas id="chirpCanvas" width="600" height="180"></canvas>
-      </div>
-
-      <div>
-        <h3>Scientific summary</h3>
-        <div id="eventInfo" style="margin-bottom:8px;">
-          <div id="eventDescription" class="small">Select an event or run a custom simulation.</div>
-        </div>
-        <div id="scienceSummary">
-          <table>
-            <tr><th>Parameter</th><th>Value</th></tr>
-            <tr><td>Chirp mass (ℳ)</td><td id="chirpMass">—</td></tr>
-            <tr><td>Freq range (Hz)</td><td id="freqRange">—</td></tr>
-            <tr><td>Characteristic strain (relative)</td><td id="gwStrain">—</td></tr>
-            <tr><td>Distance</td><td id="distance">—</td></tr>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Graphs (Amplitude · Energy · Frequency)</h3>
-      <canvas id="amplitudeCanvas" width="900" height="180"></canvas>
-      <canvas id="energyCanvas" width="900" height="120" style="margin-top:8px"></canvas>
-      <canvas id="freqCanvas" width="900" height="120" style="margin-top:8px"></canvas>
-      <div style="margin-top:10px;">
-        <button id="playChirpBtn" class="action">🔊 Play Chirp (Physical PN)</button>
-        <span class="small" style="margin-left:12px">Note: audio follows leading-order PN evolution; distance scales amplitude. If audio is quiet, increase distance or adjust masses.</span>
-      </div>
-    </div>
-  </div>
+</div>
 
 <script>
-/* ------------------------------
-   Physical constants & helpers
-   ------------------------------ */
-const G = 6.67430e-11; // m^3 kg^-1 s^-2
-const c = 299792458; // m/s
-const M_sun = 1.98847e30; // kg
-const parsec = 3.085677581491367e16; // m
-const Mpc = 1e6 * parsec;
+// --- Tabs ---
+const tabButtons=document.querySelectorAll('.tabButton');
+const tabContents=document.querySelectorAll('.tabContent');
+tabButtons.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    tabButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    tabContents.forEach(tc=>tc.style.display='none');
+    document.getElementById(btn.dataset.tab).style.display='block';
+  });
+});
 
-// Utility: compute chirp mass (kg) from solar masses
-function chirpMassSI(m1_solar, m2_solar){
-  const m1 = m1_solar * M_sun;
-  const m2 = m2_solar * M_sun;
-  const Mc = Math.pow(m1*m2, 3/5) / Math.pow(m1+m2, 1/5);
-  return Mc;
+// --- Overview Visual ---
+const bhCanvas=document.getElementById('bhCanvas');
+const bhCtx=bhCanvas.getContext('2d');
+let angle=0;
+function drawBH(){
+  bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
+  const cx=bhCanvas.width/2, cy=bhCanvas.height/2;
+  const grad=bhCtx.createRadialGradient(cx,cy,10,cx,cy,200);
+  grad.addColorStop(0,'#000');
+  grad.addColorStop(1,'#33003d');
+  bhCtx.fillStyle=grad;
+  bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
+  bhCtx.beginPath();
+  bhCtx.arc(cx,cy,50,0,Math.PI*2);
+  bhCtx.fillStyle='black';
+  bhCtx.fill();
+  for(let i=0;i<120;i++){
+    bhCtx.beginPath();
+    bhCtx.arc(cx,cy,55+i,0,Math.PI*2);
+    bhCtx.strokeStyle=`rgba(180,0,255,${0.015})`;
+    bhCtx.stroke();
+  }
+  const x=cx+Math.cos(angle)*100;
+  const y=cy+Math.sin(angle)*30;
+  bhCtx.beginPath();
+  bhCtx.arc(x,y,6,0,Math.PI*2);
+  bhCtx.fillStyle='#ffcc99';
+  bhCtx.fill();
+  angle+=0.03;
+  requestAnimationFrame(drawBH);
 }
+drawBH();
 
-/* ------------------------------
-   Page elements & default data
-   ------------------------------ */
-const eventSelect = document.getElementById('eventSelect');
-const m1Input = document.getElementById('m1Input');
-const m2Input = document.getElementById('m2Input');
-const distanceInput = document.getElementById('distanceInput');
-const runCustomBtn = document.getElementById('runCustomBtn');
-const playChirpBtn = document.getElementById('playChirpBtn');
-
-const eventDescription = document.getElementById('eventDescription');
-const chirpMassEl = document.getElementById('chirpMass');
-const freqRangeEl = document.getElementById('freqRange');
-const gwStrainEl = document.getElementById('gwStrain');
-const distanceEl = document.getElementById('distance');
-
-/* default events (masses in M_sun) */
-const gwEvents = {
-  "GW150914": { m1: 36, m2: 29, desc: "GW150914 — first direct GW detection (36 + 29 M☉)" },
-  "GW170104": { m1: 31, m2: 19, desc: "GW170104 — 31 + 19 M☉ merger" },
-  "GW170817": { m1: 1.46, m2: 1.27, desc: "GW170817 — binary neutron star (for demo)" },
-  "Custom": { m1: 30, m2: 30, desc: "Custom simulation" }
+// --- GW Events ---
+const gwEvents={
+  "GW150914":{m1:36,m2:29},
+  "GW170104":{m1:31,m2:19},
+  "Custom":{m1:30,m2:30}
 };
-for(const k in gwEvents){
-  const opt = document.createElement('option');
-  opt.value = k; opt.text = k;
+const eventDescriptions={
+  "GW150914":"First gravitational wave detection (2015): two black holes of 36 and 29 solar masses merged 1.3 billion light-years away.",
+  "GW170104":"2017 detection: merger of 31 and 19 solar-mass black holes, ~3 billion light-years away.",
+  "Custom":"Set custom masses and simulate."
+};
+const eventSelect=document.getElementById('eventSelect');
+for(let e in gwEvents){
+  const opt=document.createElement('option');
+  opt.value=e; opt.text=e;
   eventSelect.add(opt);
 }
 
-/* ------------------------------
-   Canvas & drawing helpers
-   ------------------------------ */
-function makeCtx(id){ return document.getElementById(id).getContext('2d'); }
+// --- Orbit Simulation ---
+const orbitCanvas=document.getElementById('orbitCanvas');
+const orbitCtx=orbitCanvas.getContext('2d');
+let orbitAngle=0;
+function drawOrbit(m1,m2){
+  orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+  const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
+  const r1=70, r2=140;
+  const x1=cx+Math.cos(orbitAngle)*r1;
+  const y1=cy+Math.sin(orbitAngle)*r1;
+  const x2=cx-Math.cos(orbitAngle)*r2;
+  const y2=cy-Math.sin(orbitAngle)*r2;
 
-const bhCtx = makeCtx('bhCanvas');
-const orbitCtx = makeCtx('orbitCanvas');
-const chirpCtx = makeCtx('chirpCanvas');
-const ampCtx = makeCtx('amplitudeCanvas');
-const energyCtx = makeCtx('energyCanvas');
-const freqCtx = makeCtx('freqCanvas');
+  const grad=orbitCtx.createRadialGradient(cx,cy,50,cx,cy,300);
+  grad.addColorStop(0,'rgba(50,0,70,0.6)');
+  grad.addColorStop(1,'rgba(0,0,0,1)');
+  orbitCtx.fillStyle=grad;
+  orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
 
-/* Overview black hole visual (keeps it pretty) */
-(function drawBH(){
-  const w = 900, h = 420;
-  const cx = w/2, cy = h/2;
-  bhCtx.clearRect(0,0,w,h);
-  const grad = bhCtx.createRadialGradient(cx,cy,20,cx,cy,300);
-  grad.addColorStop(0,'#11001a'); grad.addColorStop(1,'#020008');
-  bhCtx.fillStyle = grad; bhCtx.fillRect(0,0,w,h);
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,64,0,2*Math.PI); bhCtx.fillStyle='#000'; bhCtx.fill();
-  // Disk
-  for(let i=0;i<120;i+=2){
-    bhCtx.beginPath();
-    bhCtx.arc(cx,cy,80+i,0,2*Math.PI);
-    bhCtx.strokeStyle = `rgba(150,50,200,${0.008})`;
-    bhCtx.stroke();
+  for(let i=0;i<4;i++){
+    orbitCtx.beginPath();
+    orbitCtx.arc(cx,cy,80+i*40,0,Math.PI*2);
+    orbitCtx.strokeStyle=`rgba(160,0,255,${0.05*(4-i)})`;
+    orbitCtx.stroke();
   }
-  // Sparkle
-  const t = Date.now()/800;
-  const x = cx + Math.cos(t)*120;
-  const y = cy + Math.sin(t*0.5)*24;
-  bhCtx.beginPath(); bhCtx.arc(x,y,6,0,2*Math.PI); bhCtx.fillStyle='#ffd9b3'; bhCtx.fill();
-  requestAnimationFrame(drawBH);
-})();
 
-/* ------------------------------
-   Physical chirp generator (PN LO)
-   We'll integrate df/dt numerically:
-     df/dt = (96/5) * pi^(8/3) * (G*Mc)^(5/3) / c^5 * f^(11/3)
-   We'll step f forward in small dt until f reaches f_max or time limit.
-   ------------------------------ */
+  orbitCtx.beginPath();
+  orbitCtx.arc(x1,y1,10,0,Math.PI*2);
+  orbitCtx.fillStyle='#ff66ff';
+  orbitCtx.fill();
 
-function generateChirpSignal(m1, m2, distanceMpc, f0 = 20, fMax = 800, maxDuration = 32) {
-  // m1,m2 in solar masses, distanceMpc in Mpc.
-  const Mc = chirpMassSI(m1, m2); // kg
-  const D = Math.max(1, distanceMpc) * Mpc; // m (avoid zero)
-  // constant K in SI for df/dt = K * f^(11/3)
-  const K = (96/5) * Math.pow(Math.PI, 8/3) * Math.pow(G * Mc, 5/3) / Math.pow(c, 5);
-  // audio sample rate
-  const sampleRate = 44100;
-  const dt = 1 / sampleRate; // step for integration = audio sample step
-  // arrays
-  const freqs = [];
-  const amps = [];
-  const times = [];
-  // integrate
-  let f = f0;
-  let t = 0;
-  let steps = 0;
-  const maxSteps = sampleRate * maxDuration;
-  while (f < fMax && steps < maxSteps) {
-    freqs.push(f);
-    // amplitude scaling using leading-order: h ∝ Mc^(5/3) f^(2/3)/D
-    const h = Math.pow(Mc, 5/3) * Math.pow(2*Math.PI*f, 2/3) / (Math.pow(c,4) * D); // rough scaling (units adjusted)
-    amps.push(h);
-    times.push(t);
-    // advance f using df = K f^(11/3) dt
-    const df = K * Math.pow(f, 11/3) * dt;
-    f += df;
-    t += dt;
-    steps++;
-  }
-  // If too short, pad by continuing last values
-  if (times.length < 100) {
-    const lastF = freqs[freqs.length-1] || f0;
-    for(let i=0;i<sampleRate*1;i++){
-      freqs.push(lastF);
-      amps.push(amps[amps.length-1] || 1e-50);
-      times.push(times[times.length-1] + dt);
-    }
-  }
-  // return arrays
-  return { times, freqs, amps, sampleRate };
+  orbitCtx.beginPath();
+  orbitCtx.arc(x2,y2,16,0,Math.PI*2);
+  orbitCtx.fillStyle='#00ccff';
+  orbitCtx.fill();
+
+  orbitAngle+=0.025;
+  requestAnimationFrame(()=>drawOrbit(m1,m2));
 }
 
-/* ------------------------------
-   Build audio buffer & waveform arrays
-   ------------------------------ */
-function buildAudioBufferFromChirp(ctxAudio, chirp, gainScale = 1e6) {
-  // map physical h(t) to audible amplitude by scaling
-  const { times, freqs, amps, sampleRate } = chirp;
-  const length = times.length;
-  const audioBuffer = ctxAudio.createBuffer(1, length, sampleRate);
-  const channel = audioBuffer.getChannelData(0);
-  let phase = 0;
-  // scale amps so that max amplitude ~0.25
-  let maxH = 0;
-  for (let i=0;i<length;i++) if (Math.abs(amps[i]) > maxH) maxH = Math.abs(amps[i]);
-  const scale = (maxH > 0) ? (0.25 / (maxH * gainScale)) : 1e6;
-  for (let i=0;i<length;i++){
-    const f = freqs[i];
-    const h = amps[i] * scale;
-    // simple sinusoid with instantaneous frequency f
-    channel[i] = h * Math.sin(2*Math.PI*phase);
-    phase += f / sampleRate; // increment cycles per sample
-  }
-  return audioBuffer;
-}
+// --- Chirp + Graphs ---
+const chirpCanvas=document.getElementById('chirpCanvas');
+const chirpCtx=chirpCanvas.getContext('2d');
+const ampCanvas=document.getElementById('amplitudeCanvas');
+const ampCtx=ampCanvas.getContext('2d');
+const energyCanvas=document.getElementById('energyCanvas');
+const energyCtx=energyCanvas.getContext('2d');
+const freqCanvas=document.getElementById('freqCanvas');
+const freqCtx=freqCanvas.getContext('2d');
 
-/* ------------------------------
-   Plotting helper: downsample and plot time series
-   ------------------------------ */
-function plotTimeSeries(ctx, times, values, color = '#a64dff', label = '') {
-  const w = ctx.canvas.width, h = ctx.canvas.height;
-  ctx.clearRect(0,0,w,h);
+function drawGraph(ctx,color,func){
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
-  const N = values.length;
-  const step = Math.max(1, Math.floor(N / w));
-  for (let i=0; i<N; i+=step){
-    const x = (i / N) * w;
-    const y = h/2 - (values[i]) * (h/2) * 0.9;
-    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  for(let i=0;i<ctx.canvas.width;i++){
+    const t=i/ctx.canvas.width;
+    const y=ctx.canvas.height/2 - func(t)*ctx.canvas.height/3;
+    if(i===0) ctx.moveTo(i,y);
+    else ctx.lineTo(i,y);
   }
-  ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.stroke();
-  if (label){
-    ctx.fillStyle = '#e6ddff'; ctx.font = '12px Arial'; ctx.fillText(label, 8, 14);
-  }
-}
-
-/* ------------------------------
-   Playback and synchronized animation
-   ------------------------------ */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let activeSource = null;
-let currentChirp = null;
-
-// play and animate
-async function playChirpForEvent(m1,m2,distanceMpc){
-  // generate chirp arrays
-  const chirp = generateChirpSignal(m1,m2,distanceMpc, 20, 600, 40);
-  currentChirp = chirp;
-  // build audio buffer
-  const audioBuffer = buildAudioBufferFromChirp(audioCtx, chirp, 1e6);
-  // show static plots before play
-  plotTimeSeries(chirpCtx, chirp.times, chirp.amps.map(a=>Math.abs(a)), '#a64dff', 'waveform (abs h)');
-  plotTimeSeries(ampCtx, chirp.times, chirp.amps.map(a=>Math.abs(a)), '#a64dff', 'amplitude (|h|)');
-  plotTimeSeries(energyCtx, chirp.times, chirp.amps.map(a=>Math.abs(a)).map(x=>Math.pow(x,2)), '#ff66ff', 'energy proxy');
-  plotTimeSeries(freqCtx, chirp.times, chirp.freqs.map(f=>f/1000), '#00ccff', 'f (kHz)');
-
-  // play
-  if (activeSource) { try{ activeSource.stop(); } catch(e){} }
-  const src = audioCtx.createBufferSource();
-  src.buffer = audioBuffer;
-  const g = audioCtx.createGain();
-  g.gain.value = 1.0;
-  src.connect(g).connect(audioCtx.destination);
-  src.start();
-  activeSource = src;
-
-  // animate playhead over amplitudeCanvas & chirp canvas
-  const totalSamples = audioBuffer.length;
-  const sr = audioBuffer.sampleRate;
-  const startTime = audioCtx.currentTime;
-  function frame(){
-    const elapsed = audioCtx.currentTime - startTime;
-    const idx = Math.floor(elapsed * sr);
-    if (idx >= totalSamples) {
-      // finished
-      drawPlayhead(1.0, ampCtx.canvas, ampCtx);
-      drawPlayhead(1.0, chirpCtx.canvas, chirpCtx);
-      return;
-    }
-    const frac = idx / totalSamples;
-    drawPlayhead(frac, ampCtx.canvas, ampCtx);
-    drawPlayhead(frac, chirpCtx.canvas, chirpCtx);
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-}
-
-// draw vertical playhead line
-function drawPlayhead(frac, canvasEl, ctx) {
-  const w = canvasEl.width, h = canvasEl.height;
-  // re-draw underlying content from currentChirp to keep it in sync:
-  if (currentChirp){
-    const { times, amps, freqs } = currentChirp;
-    // redraw amplitude and waveform quickly:
-    // amplitude:
-    ctx.clearRect(0,0,w,h);
-    // choose which canvas: detect by id via canvasEl
-    if (canvasEl.id === 'amplitudeCanvas') {
-      plotTimeSeries(ctx, times, amps.map(a=>Math.abs(a)), '#a64dff', 'amplitude (|h|)');
-    } else if (canvasEl.id === 'chirpCanvas') {
-      plotTimeSeries(ctx, times, amps.map(a=>Math.abs(a)), '#a64dff', 'waveform (abs h)');
-    }
-  }
-  // playhead
-  ctx.beginPath();
-  ctx.moveTo(frac * canvasEl.width, 0);
-  ctx.lineTo(frac * canvasEl.width, canvasEl.height);
-  ctx.strokeStyle = '#ffb3ff';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
   ctx.stroke();
 }
 
-/* ------------------------------
-   Orbit visual (multi-color)
-   ------------------------------ */
-(function orbitLoop(){
-  const w = orbitCtx.canvas.width, h = orbitCtx.canvas.height;
-  const cx = w/2, cy = h/2;
-  orbitCtx.clearRect(0,0,w,h);
-  // purple space gradient
-  const g = orbitCtx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(w,h));
-  g.addColorStop(0,'rgba(30,0,50,0.4)'); g.addColorStop(1,'rgba(2,0,6,0.9)');
-  orbitCtx.fillStyle = g; orbitCtx.fillRect(0,0,w,h);
-  // ripples
-  for (let r=80; r<320; r+=40){
-    orbitCtx.beginPath(); orbitCtx.arc(cx,cy,r,0,2*Math.PI);
-    orbitCtx.strokeStyle = `rgba(160,60,255,${0.03*Math.sin(r*0.05 + Date.now()/600) + 0.05})`;
-    orbitCtx.lineWidth=1; orbitCtx.stroke();
-  }
-  // bodies (animated)
-  const t = Date.now()/700;
-  const x1 = cx + Math.cos(t)*90, y1 = cy + Math.sin(t)*50;
-  const x2 = cx - Math.cos(t)*140, y2 = cy - Math.sin(t)*60;
-  // trail (simple)
-  orbitCtx.beginPath(); orbitCtx.arc(x1,y1,12,0,2*Math.PI); orbitCtx.fillStyle='#ff66ff'; orbitCtx.fill();
-  orbitCtx.beginPath(); orbitCtx.arc(x2,y2,18,0,2*Math.PI); orbitCtx.fillStyle='#00ccff'; orbitCtx.fill();
-  requestAnimationFrame(orbitLoop);
-})();
+// --- Update Event ---
+function updateEvent(eventKey){
+  const ev=gwEvents[eventKey];
+  if(!ev) return;
+  document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
+  drawOrbit(ev.m1,ev.m2);
+  updateSummary(ev.m1,ev.m2);
+  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
+  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
+  drawGraph(freqCtx,'#00ccff',t=>t*t);
+}
 
-/* ------------------------------
-   UI: event selection, custom run
-   ------------------------------ */
-eventSelect.addEventListener('change', ()=> {
-  const key = eventSelect.value;
-  const ev = gwEvents[key];
-  if (!ev) return;
-  eventDescription.textContent = ev.desc || key;
-  // update scientific summary
-  const Mc_kg = chirpMassSI(ev.m1, ev.m2);
-  const Mc_sol = Math.pow(Math.pow(ev.m1*ev.m2,3/5)/Math.pow(ev.m1+ev.m2,1/5),1); // approx in solar units
-  chirpMassEl.textContent = Mc_sol.toFixed(2) + " M☉";
-  freqRangeEl.textContent = "20–600 Hz (approx)";
-  gwStrainEl.textContent = "∝ ℳ^(5/3) f^(2/3) / D (relative)";
-  distanceEl.textContent = (distanceInput.value || "500") + " Mpc";
+// --- Summary ---
+function updateSummary(m1,m2){
+  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
+  document.getElementById('freqRange').textContent="20–400 Hz";
+  document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
+  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
+}
+
+// --- Custom ---
+document.getElementById('runCustomBtn').addEventListener('click',()=>{
+  const m1=parseFloat(document.getElementById('m1Input').value);
+  const m2=parseFloat(document.getElementById('m2Input').value);
+  gwEvents["Custom"]={m1,m2};
+  eventDescriptions["Custom"]= `Custom simulation: m1=${m1} M☉, m2=${m2} M☉`;
+  eventSelect.value="Custom";
+  updateEvent("Custom");
 });
 
-runCustomBtn.addEventListener('click', ()=>{
-  const m1 = parseFloat(m1Input.value);
-  const m2 = parseFloat(m2Input.value);
-  if (!m1 || !m2) { alert("Enter valid masses"); return; }
-  gwEvents.Custom = { m1, m2, desc: `Custom: ${m1} M☉ + ${m2} M☉` };
-  eventSelect.value = "Custom";
-  eventSelect.dispatchEvent(new Event('change'));
-});
+eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
 
-// when pressing play: generate chirp from selected event & play
-playChirpBtn.addEventListener('click', async ()=>{
-  const key = eventSelect.value || "GW150914";
-  const ev = gwEvents[key] || gwEvents["Custom"];
-  const distanceMpc = parseFloat(distanceInput.value) || 500;
-  // ensure resume audio context if needed (user gesture)
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
-  playChirpForEvent(ev.m1, ev.m2, distanceMpc);
-});
-
-/* initialize selection */
-eventSelect.value = "GW150914";
-eventSelect.dispatchEvent(new Event('change'));
+// --- Init ---
+updateEvent("GW150914");
 </script>
 </body>
 </html>
