@@ -1,309 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cosmic Event Simulator</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      background: radial-gradient(ellipse at center, #000010 0%, #000005 100%);
-      color: #eee;
-      font-family: "Segoe UI", sans-serif;
-      overflow-x: hidden;
-    }
-
-    header {
-      background: rgba(20, 20, 30, 0.9);
-      text-align: center;
-      padding: 1rem 0;
-      font-size: 1.6rem;
-      letter-spacing: 1px;
-      box-shadow: 0 2px 10px #000;
-    }
-
-    nav {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 0.5rem;
-    }
-
-    nav button {
-      background: #222;
-      border: 1px solid #555;
-      color: #eee;
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s, transform 0.2s;
-    }
-    nav button:hover {
-      background: #444;
-      transform: scale(1.05);
-    }
-
-    .tab-content {
-      display: none;
-      padding: 2rem;
-      animation: fadeIn 0.5s ease;
-    }
-    .tab-content.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .mini-window {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(20, 20, 30, 0.95);
-      color: #eee;
-      padding: 1.2rem;
-      width: 90%;
-      max-width: 800px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.6);
-      z-index: 1000;
-      animation: popIn 0.4s ease;
-    }
-
-    @keyframes popIn {
-      from { opacity: 0; transform: translate(-50%, -60%); }
-      to { opacity: 1; transform: translate(-50%, -50%); }
-    }
-
-    .close-btn {
-      float: right;
-      background: #c33;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-    }
-
-    #threeContainer {
-      width: 100%;
-      height: 400px;
-      background: radial-gradient(circle, #000010, #000000);
-      border: 1px solid #222;
-      border-radius: 12px;
-      margin-top: 1rem;
-    }
-
-    #chirpGraph, #spectrogram {
-      width: 100%;
-      height: 300px;
-      border-radius: 12px;
-      margin-top: 1rem;
-    }
-
-    #controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    label {
-      flex: 1 1 200px;
-    }
-
-    input, select, button {
-      width: 100%;
-      padding: 0.4rem;
-      border-radius: 8px;
-      border: 1px solid #444;
-      background: #111;
-      color: #eee;
-    }
-
-    footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.9rem;
-      color: #777;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBH Simulation Dashboard</title>
+<style>
+  body { margin:0; font-family: Arial, sans-serif; background: #0a0a1a; color: #eee; }
+  .tab { overflow: hidden; background-color: #111; }
+  .tab button { background-color: inherit; float: left; border: none; outline: none; color: white; padding: 12px 16px; cursor: pointer; }
+  .tab button:hover { background-color: #222; }
+  .tab button.active { background-color: #444; }
+  .tabcontent { display: none; padding: 10px; }
+  canvas { display: block; margin: 10px auto; background: radial-gradient(circle at center, #111, #000); border-radius: 6px; }
+  #chirpAudio { display: block; margin: 10px auto; }
+  .mini-window { position: fixed; top: 50px; right: 20px; width: 300px; max-height: 400px; background:#111; border:1px solid #555; padding:10px; overflow:auto; color:#eee; display:none; z-index:999; }
+  .mini-window button { float:right; background:#333; color:#eee; border:none; cursor:pointer; }
+  label, input, select { margin:5px; }
+  .section { margin:10px 0; }
+</style>
 </head>
 <body>
-  <header>
-    <div>🌌 Cosmic Event Simulator</div>
-    <nav>
-      <button onclick="openTab('overview')">Overview</button>
-      <button onclick="openTab('events')">Known Events</button>
-      <button onclick="openTab('advanced')">Advanced Physics</button>
-    </nav>
-  </header>
 
-  <!-- Overview -->
-  <section id="overview" class="tab-content active">
-    <h2>Black Hole Overview</h2>
-    <p>
-      Black holes warp spacetime so intensely that even light cannot escape.
-      This simulator shows their interactions, gravitational waves, and energetic signatures.
-    </p>
+<h1 style="text-align:center;">Binary Black Hole Simulation Dashboard</h1>
 
-    <div id="threeContainer"></div>
-    <button onclick="toggleChirp()">🔊 Play Chirp</button>
+<div class="tab">
+  <button class="tablinks active" onclick="openTab(event,'Overview')">Overview</button>
+  <button class="tablinks" onclick="openTab(event,'EventsCustom')">Events & Custom Simulation</button>
+  <button class="tablinks" onclick="openTab(event,'AdvancedPhysics')">Advanced Physics</button>
+</div>
 
-    <div id="chirpGraph"></div>
-    <div id="spectrogram"></div>
-  </section>
+<!-- Overview Tab -->
+<div id="Overview" class="tabcontent" style="display:block;">
+  <h2>Overview of BBH Simulation</h2>
+  <p>This tab shows a basic binary black hole inspiral simulation.</p>
+  <div class="section">
+    <canvas id="orbit3D" width="400" height="400"></canvas>
+  </div>
+  <div class="section">
+    <canvas id="chirpGraph" width="600" height="200"></canvas>
+  </div>
+  <div class="section">
+    <canvas id="spectrogram" width="600" height="200"></canvas>
+  </div>
+  <audio id="chirpAudio" controls>
+    <source src="" type="audio/wav">
+    Your browser does not support audio playback.
+  </audio>
+</div>
 
-  <!-- Events -->
-  <section id="events" class="tab-content">
-    <h2>Known Gravitational Wave Events</h2>
-    <p>Select and replay real detections:</p>
-    <select id="eventSelect" onchange="loadEvent()">
-      <option value="">-- Select Event --</option>
+<!-- Events & Custom Simulation Tab -->
+<div id="EventsCustom" class="tabcontent">
+  <h2>Known Events & Custom Simulation</h2>
+  <div class="section">
+    <label for="eventSelect">Choose an event:</label>
+    <select id="eventSelect" onchange="updateSimulation()">
+      <option value="">--Select Event--</option>
       <option value="GW150914">GW150914</option>
       <option value="GW170817">GW170817</option>
+      <option value="Custom">Custom Simulation</option>
     </select>
-    <div id="eventGraph" style="width:100%; height:300px; margin-top:1rem;"></div>
-  </section>
-
-  <!-- Advanced Physics -->
-  <section id="advanced" class="tab-content">
-    <h2>Advanced Physics & Custom Simulations</h2>
-    <p>Experiment with physical parameters or open the equations reference.</p>
-
-    <div id="controls">
-      <label>Mass 1 (M☉): <input id="mass1" type="number" value="30"></label>
-      <label>Mass 2 (M☉): <input id="mass2" type="number" value="35"></label>
-      <label>Distance (Mpc): <input id="distance" type="number" value="400"></label>
-      <button onclick="runCustomSimulation()">Run Custom Simulation</button>
-      <button onclick="openWindow('advancedPhysicsWindow')">📘 View Equations</button>
-    </div>
-
-    <div id="advanced3D" style="width:100%; height:400px; margin-top:1rem; border-radius:12px; background:#000;"></div>
-  </section>
-
-  <!-- Advanced Equations Mini Window -->
-  <div id="advancedPhysicsWindow" class="mini-window">
-    <button class="close-btn" onclick="closeWindow('advancedPhysicsWindow')">✖</button>
-    <header>Advanced Physics Equations</header>
-    <div style="max-height:60vh; overflow-y:auto; font-size:0.9rem;">
-      <p><strong>Chirp Mass:</strong> 𝓜 = (M₁M₂)^{3/5} / (M₁+M₂)^{1/5}</p>
-      <p><strong>GW Frequency Evolution:</strong> ẋf = (96/5)π^{8/3}(G𝓜)^{5/3}/c⁵ f^{11/3}</p>
-      <p><strong>Strain Amplitude:</strong> h(f) ≈ (4G^{5/3}/c⁴)π^{2/3} 𝓜^{5/3}f^{2/3}/D</p>
-      <p><strong>Neutrino Coupling:</strong> ΔE_ν = α ∫ Φ(r(t)) dt</p>
-      <p><em>Adjust α and β coupling constants for energy transfer hypotheses.</em></p>
-    </div>
   </div>
+  <div id="customParams" class="section" style="display:none;">
+    <label>Mass1 (M☉): <input type="number" id="mass1" value="30"></label>
+    <label>Mass2 (M☉): <input type="number" id="mass2" value="30"></label>
+    <label>Spin1: <input type="number" id="spin1" value="0"></label>
+    <label>Spin2: <input type="number" id="spin2" value="0"></label>
+  </div>
+  <div class="section">
+    <canvas id="orbit3DEvent" width="400" height="400"></canvas>
+    <canvas id="chirpGraphEvent" width="600" height="200"></canvas>
+    <canvas id="spectrogramEvent" width="600" height="200"></canvas>
+  </div>
+  <audio id="chirpAudioEvent" controls>
+    <source src="" type="audio/wav">
+    Your browser does not support audio playback.
+  </audio>
+  <div class="section">
+    <button onclick="exportSimulation()">Export Simulation Data</button>
+  </div>
+</div>
 
-  <footer>
-    <p>© 2025 Cosmic Event Simulator | If tabs freeze, press <strong>Ctrl + Shift + R</strong></p>
-  </footer>
+<!-- Advanced Physics Tab -->
+<div id="AdvancedPhysics" class="tabcontent">
+  <h2>Advanced Physics</h2>
+  <button onclick="toggleMini('equationsWin')">Show/Hide Equations</button>
+  <div id="equationsWin" class="mini-window">
+    <button onclick="closeMini('equationsWin')">X</button>
+    <h3>Key Equations</h3>
+    <p>Schwarzschild radius: r_s = 2GM/c²</p>
+    <p>Chirp mass: ℳ = (M1 M2)^(3/5)/(M1+M2)^(1/5)</p>
+    <p>GW strain: h ~ (4G^(5/3)/c⁴) (ℳ^(5/3) f^(2/3)/D)</p>
+    <p>Neutrino flux: Fν ~ Lν/(4πD²)</p>
+    <p>Timing: t_arr = t_em + D/v</p>
+  </div>
+</div>
 
-  <script>
-    // --- Tab control ---
-    function openTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script>
+function openTab(evt, tabName) {
+  const tabcontent = document.getElementsByClassName("tabcontent");
+  for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+  const tablinks = document.getElementsByClassName("tablinks");
+  for (let i = 0; i < tablinks.length; i++) tablinks[i].className = tablinks[i].className.replace(" active", "");
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+// Mini windows
+function toggleMini(id) { 
+  const win = document.getElementById(id);
+  win.style.display = win.style.display === "block" ? "none" : "block"; 
+}
+function closeMini(id) { document.getElementById(id).style.display="none"; }
+
+// Placeholder for Overview visuals
+function drawOrbit3D(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, canvas.width/canvas.height, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({canvas: canvas, alpha:true});
+  renderer.setSize(canvas.width, canvas.height);
+  const geometry = new THREE.SphereGeometry(0.2, 16,16);
+  const material1 = new THREE.MeshBasicMaterial({color:0xffaa00});
+  const material2 = new THREE.MeshBasicMaterial({color:0x00aaff});
+  const bh1 = new THREE.Mesh(geometry, material1);
+  const bh2 = new THREE.Mesh(geometry, material2);
+  scene.add(bh1); scene.add(bh2);
+  camera.position.z = 5;
+  let t=0;
+  function animate() {
+    t+=0.01;
+    bh1.position.x = Math.sin(t)*1; bh1.position.y = Math.cos(t)*1;
+    bh2.position.x = -Math.sin(t)*1; bh2.position.y = -Math.cos(t)*1;
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// Placeholder for Chirp Graph
+function drawChirp(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  const t = Array.from({length:600}, (_,i)=>i/10);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = "#ff8800"; ctx.beginPath();
+  t.forEach((x,i)=>{const y=50*Math.sin(0.2*x)*Math.exp(-0.002*x)+100; if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);});
+  ctx.stroke();
+}
+
+// Placeholder Spectrogram
+function drawSpectrogram(canvasId){
+  const canvas=document.getElementById(canvasId);
+  const ctx=canvas.getContext("2d");
+  const w=canvas.width,h=canvas.height;
+  const img=ctx.createImageData(w,h);
+  for(let i=0;i<w;i++){
+    for(let j=0;j<h;j++){
+      const index=(j*w+i)*4;
+      img.data[index]=Math.floor(100+155*Math.random());
+      img.data[index+1]=Math.floor(50+50*Math.random());
+      img.data[index+2]=Math.floor(200*Math.random());
+      img.data[index+3]=255;
     }
+  }
+  ctx.putImageData(img,0,0);
+}
 
-    // --- Mini window control ---
-    function openWindow(id) { document.getElementById(id).style.display = 'block'; }
-    function closeWindow(id) { document.getElementById(id).style.display = 'none'; }
+// Overview visuals
+drawOrbit3D("orbit3D"); drawChirp("chirpGraph"); drawSpectrogram("spectrogram");
 
-    // --- Chirp sound ---
-    let chirpCtx, oscillator;
-    function toggleChirp() {
-      if (!chirpCtx) chirpCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (oscillator) { oscillator.stop(); oscillator = null; return; }
-      oscillator = chirpCtx.createOscillator();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(50, chirpCtx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(400, chirpCtx.currentTime + 2);
-      oscillator.connect(chirpCtx.destination);
-      oscillator.start();
-      oscillator.stop(chirpCtx.currentTime + 2);
-    }
+// Event & Custom Simulation handling
+document.getElementById("eventSelect").addEventListener("change", function(){
+  const customDiv = document.getElementById("customParams");
+  customDiv.style.display = this.value==="Custom"?"block":"none";
+  updateSimulation();
+});
 
-    // --- Chirp graph (mock waveform) ---
-    function plotChirp() {
-      const t = Array.from({length:1000}, (_,i)=>i/1000*2);
-      const h = t.map(v => Math.sin(2*Math.PI*50*v*v)*Math.exp(-v));
-      Plotly.newPlot('chirpGraph', [{x:t, y:h, mode:'lines', name:'h(t)'}],
-        {title:'Mock Gravitational Wave Chirp', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'}});
-    }
+function updateSimulation(){
+  const val = document.getElementById("eventSelect").value;
+  const mass1=parseFloat(document.getElementById("mass1")?.value||30);
+  const mass2=parseFloat(document.getElementById("mass2")?.value||30);
+  drawOrbit3D("orbit3DEvent"); drawChirp("chirpGraphEvent"); drawSpectrogram("spectrogramEvent");
+  const audio=document.getElementById("chirpAudioEvent");
+  audio.src=""; // Placeholder: could map to actual chirp audio
+}
 
-    // --- Spectrogram placeholder ---
-    function plotSpectrogram() {
-      const z = Array.from({length:40}, ()=>Array.from({length:40}, ()=>Math.random()));
-      Plotly.newPlot('spectrogram', [{z, type:'heatmap', colorscale:'Viridis'}],
-        {title:'Spectrogram', xaxis:{title:'Time'}, yaxis:{title:'Frequency'}});
-    }
+// Export button
+function exportSimulation(){
+  alert("Simulation data exported! (placeholder)");
+}
+</script>
 
-    // --- Event loader ---
-    function loadEvent() {
-      const event = document.getElementById('eventSelect').value;
-      if (!event) return;
-      const t = Array.from({length:1000}, (_,i)=>i/1000*4);
-      const strain = t.map(v => Math.sin(2*Math.PI*30*v)*Math.exp(-v*0.5));
-      Plotly.newPlot('eventGraph', [{x:t, y:strain, mode:'lines', name:event}],
-        {title:`Simulated ${event} Strain`, xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'}});
-    }
-
-    // --- Custom Simulation Placeholder ---
-    function runCustomSimulation() {
-      const m1 = parseFloat(document.getElementById('mass1').value);
-      const m2 = parseFloat(document.getElementById('mass2').value);
-      const D = parseFloat(document.getElementById('distance').value);
-      alert(`Running simulation:\nMass1 = ${m1} M☉\nMass2 = ${m2} M☉\nDistance = ${D} Mpc`);
-    }
-
-    // --- Three.js binary inspiral ---
-    function initThree() {
-      const container = document.getElementById('threeContainer');
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-      const renderer = new THREE.WebGLRenderer({antialias: true});
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      container.appendChild(renderer.domElement);
-
-      const stars = new THREE.BufferGeometry();
-      const starCount = 500;
-      const positions = [];
-      for (let i=0; i<starCount; i++) {
-        positions.push((Math.random()-0.5)*400, (Math.random()-0.5)*400, (Math.random()-0.5)*400);
-      }
-      stars.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      const starMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 0.8});
-      const starField = new THREE.Points(stars, starMaterial);
-      scene.add(starField);
-
-      const orb1 = new THREE.Mesh(new THREE.SphereGeometry(3,32,32), new THREE.MeshBasicMaterial({color:0xffaa00}));
-      const orb2 = new THREE.Mesh(new THREE.SphereGeometry(2.8,32,32), new THREE.MeshBasicMaterial({color:0x66ccff}));
-      scene.add(orb1); scene.add(orb2);
-      camera.position.z = 80;
-
-      function animate(time) {
-        requestAnimationFrame(animate);
-        const t = time*0.001;
-        const radius = 20;
-        orb1.position.set(Math.cos(t)*radius, Math.sin(t)*radius, 0);
-        orb2.position.set(-Math.cos(t)*radius, -Math.sin(t)*radius, 0);
-        starField.rotation.y += 0.0005;
-        renderer.render(scene, camera);
-      }
-      animate();
-    }
-
-    plotChirp();
-    plotSpectrogram();
-    initThree();
-  </script>
 </body>
 </html>
