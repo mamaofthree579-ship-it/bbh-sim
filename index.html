@@ -201,6 +201,91 @@ function drawOrbit(m1,m2,time){
   requestAnimationFrame(()=>drawOrbit(m1,m2,performance.now()));
 }
 
+    // --- Chirp Audio + Waveform ---
+const chirpCanvas=document.getElementById('chirpCanvas');
+const chirpCtx=chirpCanvas.getContext('2d');
+let waveformData=[];
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+let chirpBuffer=null;
+
+// Create chirp audio buffer
+function createChirp(m1,m2,duration=3){
+  const sampleRate=audioCtx.sampleRate;
+  const length=sampleRate*duration;
+  const buffer=audioCtx.createBuffer(1,length,sampleRate);
+  const data=buffer.getChannelData(0);
+  waveformData=[];
+  const f0=20; // start freq
+  const f1=400; // end freq
+  for(let i=0;i<length;i++){
+    const t=i/sampleRate;
+    const freq=f0 + (f1-f0)*(t/duration);
+    data[i]=0.2*Math.sin(2*Math.PI*freq*t);
+    waveformData.push(data[i]);
+  }
+  chirpBuffer=buffer;
+  drawChirpWaveform();
+}
+
+// Draw waveform
+function drawChirpWaveform(playheadIndex=-1){
+  chirpCtx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
+  chirpCtx.beginPath();
+  chirpCtx.moveTo(0,chirpCanvas.height/2);
+  const step=Math.floor(waveformData.length/chirpCanvas.width);
+  for(let i=0;i<waveformData.length;i+=step){
+    const x=i/waveformData.length*chirpCanvas.width;
+    const y=chirpCanvas.height/2 - waveformData[i]*chirpCanvas.height/2;
+    chirpCtx.lineTo(x,y);
+  }
+  chirpCtx.strokeStyle='#ff66ff';
+  chirpCtx.lineWidth=2;
+  chirpCtx.stroke();
+
+  if(playheadIndex>=0){
+    const x=playheadIndex/waveformData.length*chirpCanvas.width;
+    chirpCtx.beginPath();
+    chirpCtx.moveTo(x,0);
+    chirpCtx.lineTo(x,chirpCanvas.height);
+    chirpCtx.strokeStyle='red';
+    chirpCtx.lineWidth=1;
+    chirpCtx.stroke();
+  }
+
+
+// Play chirp
+document.getElementById('playChirpBtn').addEventListener('click',()=>{
+  if(!chirpBuffer) return;
+  const source=audioCtx.createBufferSource();
+  source.buffer=chirpBuffer;
+  source.connect(audioCtx.destination);
+  const startTime=audioCtx.currentTime;
+  const duration=chirpBuffer.duration;
+
+  function animate(){
+    const elapsed=audioCtx.currentTime-startTime;
+    if(elapsed>duration) return;
+    const index=Math.floor(elapsed/duration*waveformData.length);
+    drawChirpWaveform(index);
+    requestAnimationFrame(animate);
+  }
+  animate();
+  source.start();
+});
+
+// --- Update event also creates chirp ---
+function updateEvent(eventKey){
+  const ev=gwEvents[eventKey];
+  if(!ev) return;
+  document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
+  drawOrbit(ev.m1,ev.m2,performance.now());
+  updateSummary(ev.m1,ev.m2);
+  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
+  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
+  drawGraph(freqCtx,'#00ccff',t=>t*t);
+  createChirp(ev.m1,ev.m2);
+}
+    
 // --- Update Event ---
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
