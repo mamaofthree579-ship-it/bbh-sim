@@ -1,183 +1,222 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BBH Simulation</title>
 <style>
-  body { margin:0; font-family:sans-serif; background: #0b0c1a; color: #fff; }
-  header { background:#111; padding:10px; text-align:center; }
-  nav { display:flex; justify-content:center; margin:10px 0; }
-  nav button { margin:0 5px; padding:8px 12px; cursor:pointer; background:#222; color:#fff; border:none; border-radius:4px; }
-  nav button.active { background:#0a84ff; }
-  section { display:none; padding:10px; }
-  section.active { display:block; }
-  canvas { background:#111; display:block; margin:10px auto; border:1px solid #444; }
-  .mini-window { position:fixed; top:10px; right:10px; width:300px; max-height:400px; overflow:auto; background:#222; border:1px solid #444; border-radius:6px; padding:10px; display:none; z-index:1000; }
-  .mini-window button.close { float:right; cursor:pointer; background:red; border:none; padding:2px 5px; color:#fff; border-radius:3px; }
-  label { display:block; margin:5px 0 2px; }
-  input { width:60px; margin-right:5px; }
+  body { margin:0; font-family: Arial, sans-serif; background: #0d0d1a; color: #fff; }
+  .tabs { display:flex; background:#1a1a2e; }
+  .tab { padding:10px 20px; cursor:pointer; border-bottom:3px solid transparent; }
+  .tab.active { border-bottom:3px solid #f39c12; }
+  .tab-content { display:none; padding:20px; }
+  .tab-content.active { display:block; }
+  canvas { display:block; margin:0 auto; background: #111; border-radius: 5px; }
+  .button { padding:5px 10px; background:#f39c12; color:#000; border:none; cursor:pointer; border-radius:3px; margin-top:10px; }
+  .mini-window { background:#222; padding:10px; border-radius:5px; margin-top:10px; display:none; position:relative; }
+  .mini-window .close-btn { position:absolute; top:5px; right:5px; cursor:pointer; color:#f39c12; }
+  select, input { margin-top:10px; padding:5px; border-radius:3px; border:none; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Binary Black Hole & Gravitational Wave Simulator</h1>
-</header>
-
-<nav>
-  <button class="tab-btn active" data-tab="overview">Overview</button>
-  <button class="tab-btn" data-tab="events">Events</button>
-  <button class="tab-btn" data-tab="advanced">Advanced Physics</button>
-</nav>
+<div class="tabs">
+  <div class="tab active" data-tab="overview">Overview</div>
+  <div class="tab" data-tab="events">Events</div>
+  <div class="tab" data-tab="advanced">Advanced Physics</div>
+</div>
 
 <!-- Overview Tab -->
-<section id="overview" class="active">
-  <h2>Overview: Black Hole Simulation</h2>
-  <canvas id="orbit3DOverview" width="400" height="400"></canvas>
-  <canvas id="chirpGraphOverview" width="400" height="200"></canvas>
-  <button id="playChirpOverview">Play Chirp</button>
-  <audio id="chirpAudioOverview" src="chirp_mock_overview.mp3"></audio>
-</section>
+<div class="tab-content active" id="overview">
+  <h2>Black Hole Overview</h2>
+  <p>Visualizing a single black hole (static metric, Schwarzschild radius, etc.).</p>
+  <canvas id="bhCanvas" width="600" height="400"></canvas>
+</div>
 
 <!-- Events Tab -->
-<section id="events">
-  <h2>Known GW Events & Custom Simulations</h2>
+<div class="tab-content" id="events">
+  <h2>Binary Black Hole Events</h2>
+
   <label for="eventSelect">Select Event:</label>
-  <select id="eventSelect" onchange="onEventChange()">
-    <option value="">-- Choose --</option>
-    <option value="GW150914">GW150914</option>
-    <option value="GW151226">GW151226</option>
-    <option value="GW170104">GW170104</option>
-    <option value="GW170817">GW170817</option>
-    <option value="Custom">Custom</option>
+  <select id="eventSelect">
+    <option value="gw150914">GW150914</option>
+    <option value="gw170817">GW170817</option>
+    <option value="custom">Custom Simulation</option>
   </select>
 
-  <div id="customParams" style="display:none; margin-top:5px;">
-    <label>Custom Masses (M☉)</label>
-    <input type="number" id="customM1" value="30"> M1
-    <input type="number" id="customM2" value="30"> M2
-    <button onclick="runCustom()">Run Simulation</button>
+  <div id="customParams" style="display:none;">
+    <label>M1 (Solar masses):</label> <input type="number" id="m1" value="30">
+    <label>M2 (Solar masses):</label> <input type="number" id="m2" value="30">
+    <label>Distance (Mpc):</label> <input type="number" id="distance" value="400">
+    <button class="button" id="runCustom">Run Custom Simulation</button>
   </div>
 
-  <canvas id="orbit3DEvent" width="400" height="400"></canvas>
-  <canvas id="chirpGraphEvent" width="400" height="200"></canvas>
-  <canvas id="spectrogramEvent" width="400" height="150"></canvas>
-  <button id="playChirpEvent">Play Chirp</button>
-  <audio id="chirpAudioEvent" src="chirp_mock_default.mp3"></audio>
-</section>
+  <h3>3D Binary Orbit</h3>
+  <canvas id="orbitCanvas" width="600" height="400"></canvas>
+
+  <h3>Chirp Waveform</h3>
+  <canvas id="chirpCanvas" width="600" height="200"></canvas>
+  <button class="button" id="playChirp">Play Chirp</button>
+
+  <h3>Spectrogram</h3>
+  <canvas id="specCanvas" width="600" height="200"></canvas>
+</div>
 
 <!-- Advanced Physics Tab -->
-<section id="advanced">
-  <h2>Advanced Physics & Calculators</h2>
-  <button onclick="toggleMini('advPhysics')">Show/Hide Formulas & Notes</button>
-  <div id="advPhysics" class="mini-window">
-    <button class="close" onclick="toggleMini('advPhysics')">X</button>
-    <h3>Advanced Formulas</h3>
-    <pre>
-Schwarzschild radius: r_s = 2GM/c²
-Chirp mass: M_c = (M1 M2)^(3/5)/(M1+M2)^(1/5)
-GW strain amplitude: h(f) ~ (4G^(5/3)/(c^4)) * (π^(2/3) * M_c^(5/3) * f^(2/3))/D
-Neutrino flux: F_ν ~ L_ν/(4π D²)
-... and more ...
+<div class="tab-content" id="advanced">
+  <h2>Advanced Physics</h2>
+  <button class="button" id="showNeutrino">Show Neutrino / Coupling Info</button>
+  <div class="mini-window" id="neutrinoWindow">
+    <span class="close-btn" onclick="document.getElementById('neutrinoWindow').style.display='none'">X</span>
+    <pre style="white-space: pre-wrap; color:#fff; font-size:12px;">
+# I. Geometry & basic GR quantities
+r_s = 2GM/c^2
+Phi(r) ≈ -GM/r
+E_obs = E_em * sqrt(1-r_s/r)
+...
+# VI. Energetics relations & observables
+F_nu(t) ≈ L_nu(t)/(4πD^2)
+...
+# X. Notes / cautions
+Phenomenological couplings, neutrino timing considerations, etc.
     </pre>
   </div>
-</section>
+</div>
 
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
 <script>
-// --- Tab switching ---
-const tabs = document.querySelectorAll('.tab-btn');
-const sections = document.querySelectorAll('section');
-tabs.forEach(btn => btn.addEventListener('click', () => {
-  tabs.forEach(b => b.classList.remove('active'));
-  sections.forEach(s => s.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(btn.dataset.tab).classList.add('active');
-}));
+  // --- Tab Switching ---
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.tab-content');
+  tabs.forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      tabs.forEach(t=>t.classList.remove('active'));
+      contents.forEach(c=>c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+  });
 
-function toggleMini(id){
-  const elem = document.getElementById(id);
-  elem.style.display = (elem.style.display==='block')?'none':'block';
-}
+  // --- Overview Black Hole Visualization ---
+  const bhCanvas = document.getElementById('bhCanvas');
+  const bhCtx = bhCanvas.getContext('2d');
+  bhCtx.fillStyle = '#f39c12';
+  bhCtx.beginPath();
+  bhCtx.arc(bhCanvas.width/2,bhCanvas.height/2,50,0,2*Math.PI);
+  bhCtx.fill();
 
-// --- Event handling ---
-const eventData = {
-  GW150914: {m1:36, m2:29},
-  GW151226: {m1:14, m2:7.5},
-  GW170104: {m1:31, m2:19},
-  GW170817: {m1:1.4, m2:1.4}
-};
+  // --- Events Tab Custom Selection ---
+  const eventSelect = document.getElementById('eventSelect');
+  const customParams = document.getElementById('customParams');
+  eventSelect.addEventListener('change',()=>{
+    customParams.style.display = (eventSelect.value==='custom')?'block':'none';
+    initVisuals();
+  });
 
-function onEventChange() {
-  const sel = document.getElementById('eventSelect').value;
-  const customDiv = document.getElementById('customParams');
-  if(sel === "Custom"){
-    customDiv.style.display='block';
-    updateEventVisuals(30,30);
-  } else if(sel){
-    customDiv.style.display='none';
-    const data = eventData[sel];
-    updateEventVisuals(data.m1, data.m2);
-  } else {
-    customDiv.style.display='none';
+  // --- Initialize Orbit (Three.js) ---
+  let scene, camera, renderer, orbitObjects=[], orbitAngle=0;
+  function initOrbit(){
+    const canvas = document.getElementById('orbitCanvas');
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(45,canvas.width/canvas.height,0.1,1000);
+    renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true});
+    renderer.setSize(canvas.width,canvas.height);
+    camera.position.z = 50;
+    // black holes
+    const geom = new THREE.SphereGeometry(2,16,16);
+    const mat1 = new THREE.MeshBasicMaterial({color:0xff6600});
+    const mat2 = new THREE.MeshBasicMaterial({color:0x3399ff});
+    const bh1 = new THREE.Mesh(geom, mat1);
+    const bh2 = new THREE.Mesh(geom, mat2);
+    scene.add(bh1); scene.add(bh2);
+    orbitObjects = [bh1,bh2];
   }
-}
-
-function runCustom(){
-  const m1 = parseFloat(document.getElementById('customM1').value);
-  const m2 = parseFloat(document.getElementById('customM2').value);
-  updateEventVisuals(m1,m2);
-}
-
-// --- Update visuals ---
-function updateEventVisuals(m1,m2){
-  drawOrbit3D('orbit3DEvent', m1, m2);
-  drawChirp('chirpGraphEvent', m1, m2);
-  drawSpectrogram('spectrogramEvent');
-  document.getElementById('chirpAudioEvent').src = `chirp_mock_${m1}_${m2}.mp3`;
-}
-
-// --- Drawing functions ---
-function drawOrbit3D(canvasId, m1, m2){
-  const c = document.getElementById(canvasId);
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#000'; ctx.fillRect(0,0,c.width,c.height);
-  const dist = 200 - Math.min(m1,m2);
-  ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(200-dist/2,200,15,0,2*Math.PI); ctx.fill();
-  ctx.fillStyle = 'blue'; ctx.beginPath(); ctx.arc(200+dist/2,200,15,0,2*Math.PI); ctx.fill();
-}
-
-function drawChirp(canvasId, m1, m2){
-  const c = document.getElementById(canvasId);
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#000'; ctx.fillRect(0,0,c.width,c.height);
-  ctx.strokeStyle = '#0f0'; ctx.beginPath();
-  const amp = Math.sqrt(m1*m2)/10;
-  for(let i=0;i<c.width;i++){
-    const y = c.height/2 + Math.sin(i*0.05)*amp*Math.exp(-i/400);
-    ctx.lineTo(i,y);
+  function animateOrbit(){
+    orbitAngle += 0.01;
+    const a = 10;
+    orbitObjects[0].position.set(a*Math.cos(orbitAngle),a*Math.sin(orbitAngle),0);
+    orbitObjects[1].position.set(-a*Math.cos(orbitAngle),-a*Math.sin(orbitAngle),0);
+    renderer.render(scene,camera);
+    requestAnimationFrame(animateOrbit);
   }
-  ctx.stroke();
-}
 
-function drawSpectrogram(canvasId){
-  const c = document.getElementById(canvasId);
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#0b0c1a'; ctx.fillRect(0,0,c.width,c.height);
-  for(let i=0;i<100;i++){
-    for(let j=0;j<50;j++){
-      ctx.fillStyle = `rgba(${i*2},${j*5},255,0.5)`; ctx.fillRect(i*4,j*3,4,3);
+  // --- Chirp waveform ---
+  const chirpCtx = document.getElementById('chirpCanvas').getContext('2d');
+  let chirpData = [];
+  function generateChirp(){
+    chirpData = [];
+    const tMax = 10, N=500;
+    const M1 = parseFloat(document.getElementById('m1')?.value || 30);
+    const M2 = parseFloat(document.getElementById('m2')?.value || 30);
+    const D = parseFloat(document.getElementById('distance')?.value || 400);
+    const Mc = Math.pow(M1*M2,0.6)/Math.pow(M1+M2,0.2); // chirp mass simplified
+    for(let i=0;i<N;i++){
+      const t = i*tMax/N;
+      const f = 0.1 + 0.05*t; // simple linear frequency increase
+      const amp = 1/(1+0.1*t);
+      chirpData.push({t:t, h: amp*Math.sin(2*Math.PI*f*t)});
+    }
+  }
+  function drawChirp(){
+    chirpCtx.clearRect(0,0,600,200);
+    chirpCtx.beginPath();
+    chirpCtx.strokeStyle='#f39c12';
+    chirpData.forEach((p,i)=>{
+      const x = p.t/10*600;
+      const y = 100 - p.h*80;
+      if(i===0) chirpCtx.moveTo(x,y);
+      else chirpCtx.lineTo(x,y);
+    });
+    chirpCtx.stroke();
+  }
+  document.getElementById('playChirp').addEventListener('click',()=>{
+    const synth = new Tone.Synth().toDestination();
+    chirpData.forEach((p,i)=>{
+      synth.triggerAttackRelease(p.h*200+300,'16n',i*0.02);
+    });
+  });
+
+
+// --- Spectrogram (mock) ---
+const specCtx = document.getElementById('specCanvas').getContext('2d');
+function drawSpectrogram(){
+  const N = 200, M = 200;
+  for(let i=0;i<N;i++){
+    for(let j=0;j<M;j++){
+      const val = Math.sin(i*0.1+j*0.1); // mock signal
+      const color = Math.floor((val+1)*127);
+      specCtx.fillStyle = `rgb(${color},${color/2},${255-color})`;
+      specCtx.fillRect(j*3, i, 3, 1);
     }
   }
 }
 
-// --- Initialize default visuals ---
-drawOrbit3D('orbit3DOverview',30,30);
-drawChirp('chirpGraphOverview',30,30);
-document.getElementById('playChirpOverview').onclick = () => document.getElementById('chirpAudioOverview').play();
-document.getElementById('playChirpEvent').onclick = () => document.getElementById('chirpAudioEvent').play();
-onEventChange();
-</script>
+// --- Initialize / Update Visuals ---
+function initVisuals(){
+  generateChirp();
+  drawChirp();
+  drawSpectrogram();
+  if(!scene) initOrbit();
+  animateOrbit();
+}
 
+// --- Custom Simulation Button ---
+document.getElementById('runCustom').addEventListener('click',()=>{
+  initVisuals();
+});
+
+// --- Advanced Physics Mini-Windows ---
+document.getElementById('showNeutrino').addEventListener('click',()=>{
+  document.getElementById('neutrinoWindow').style.display='block';
+});
+
+// --- Start with default visuals ---
+window.onload = initVisuals;
+
+</script>
 </body>
 </html>
+
