@@ -108,6 +108,84 @@ Phenomenological couplings, neutrino timing considerations, etc.
   bhCtx.arc(bhCanvas.width/2,bhCanvas.height/2,50,0,2*Math.PI);
   bhCtx.fill();
 
+  // --- Define known events ---
+const gwEvents = [
+  {
+    name: 'GW150914',
+    m1: 36, m2: 29, distance: 410, // solar masses & Mpc
+    spin1: [0,0,0], spin2:[0,0,0]
+  },
+  {
+    name: 'GW170104',
+    m1: 31, m2: 19, distance: 880,
+    spin1: [0,0,0], spin2:[0,0,0]
+  },
+  {
+    name: 'GW170817 (NS merger)',
+    m1: 1.46, m2: 1.27, distance: 40,
+    spin1: [0,0,0], spin2:[0,0,0]
+  }
+];
+
+// --- Populate dropdown ---
+const eventSelect = document.getElementById('eventSelect');
+gwEvents.forEach((ev,i)=>{
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = ev.name;
+  eventSelect.appendChild(opt);
+});
+
+// --- Update visuals when event is selected ---
+eventSelect.addEventListener('change',()=>{
+  const ev = gwEvents[eventSelect.value];
+  if(!ev) return;
+
+  // Update 3D orbit mock (scale masses, separation)
+  updateOrbit(ev.m1, ev.m2);
+
+  // Update chirp waveform
+  generateChirp(ev.m1, ev.m2, ev.distance);
+  drawChirp();
+
+  // Update spectrogram
+  drawSpectrogram();
+
+  // Optionally update info panel
+  document.getElementById('eventInfo').textContent =
+    `Event: ${ev.name}, Masses: ${ev.m1}M☉ & ${ev.m2}M☉, Distance: ${ev.distance} Mpc`;
+});
+
+// --- Functions to update visuals (mock implementations) ---
+function updateOrbit(m1,m2){
+  // Adjust sphere sizes or orbit speed based on masses
+  if(scene){
+    body1.scale.setScalar(Math.cbrt(m1)/2);
+    body2.scale.setScalar(Math.cbrt(m2)/2);
+    orbitSpeed = 0.01 * Math.sqrt((m1+m2)/50); // arbitrary scaling
+  }
+}
+
+function generateChirp(m1=30,m2=30,D=500){
+  const t = Array.from({length:2000},(_,i)=>i/20);
+  const Mc = Math.pow(m1*m2,3/5)/Math.pow(m1+m2,1/5);
+  h_plus = t.map(tt=>Math.sin(0.2*tt)*Math.exp(-0.002*tt)); // mock
+  h_cross = t.map(tt=>Math.cos(0.2*tt)*Math.exp(-0.002*tt));
+}
+
+function drawChirp(){
+  const ctx = document.getElementById('chirpCanvas').getContext('2d');
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.strokeStyle='orange';
+  ctx.beginPath();
+  h_plus.forEach((val,i)=>{
+    const x = i*h_plus.length/ctx.canvas.width;
+    const y = ctx.canvas.height/2 - val*50;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+  
   // --- Events Tab Custom Selection ---
   const eventSelect = document.getElementById('eventSelect');
   const customParams = document.getElementById('customParams');
