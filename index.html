@@ -227,6 +227,77 @@ function updateEvent(eventKey){
   drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
   drawGraph(freqCtx,'#00ccff',t=>t*t);
 }
+  
+  // --- Update Custom Event with Spin ---
+document.getElementById('runCustomBtn').addEventListener('click',()=>{
+  const m1=parseFloat(document.getElementById('m1Input').value);
+  const m2=parseFloat(document.getElementById('m2Input').value);
+  const s1=parseFloat(document.getElementById('spin1Input').value);
+  const s2=parseFloat(document.getElementById('spin2Input').value);
+  gwEvents["Custom"]={m1,m2,spin1:s1,spin2:s2};
+  eventDescriptions["Custom"]= `Custom simulation: m1=${m1} M☉, m2=${m2} M☉, Spin1=${s1}, Spin2=${s2}`;
+  eventSelect.value="Custom";
+  updateEvent("Custom");
+});
+
+  // --- Update Orbit Drawing to consider spins ---
+function drawOrbit(m1,m2,spin1=0,spin2=0){
+  orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+  const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
+  const r1=70, r2=140;
+  
+  const speedFactor=1+spin1*0.5; // faster rotation for higher spin
+  const speedFactor2=1+spin2*0.5;
+  
+  const x1=cx+Math.cos(orbitAngle*speedFactor)*r1;
+  const y1=cy+Math.sin(orbitAngle*speedFactor)*r1;
+  const x2=cx-Math.cos(orbitAngle*speedFactor2)*r2;
+  const y2=cy-Math.sin(orbitAngle*speedFactor2)*r2;
+
+  // Background gradient
+  const grad=orbitCtx.createRadialGradient(cx,cy,50,cx,cy,300);
+  grad.addColorStop(0,'rgba(50,0,70,0.6)');
+  grad.addColorStop(1,'rgba(0,0,0,1)');
+  orbitCtx.fillStyle=grad;
+  orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
+
+  // Orbits rings
+  for(let i=0;i<4;i++){
+    orbitCtx.beginPath();
+    orbitCtx.arc(cx,cy,80+i*40,0,Math.PI*2);
+    orbitCtx.strokeStyle=`rgba(160,0,255,${0.05*(4-i)})`;
+    orbitCtx.stroke();
+  }
+
+  // BH positions
+  orbitCtx.beginPath();
+  orbitCtx.arc(x1,y1,10,0,Math.PI*2);
+  orbitCtx.fillStyle='#ff66ff';
+  orbitCtx.fill();
+  
+  orbitCtx.beginPath();
+  orbitCtx.arc(x2,y2,16,0,Math.PI*2);
+  orbitCtx.fillStyle='#00ccff';
+  orbitCtx.fill();
+
+  orbitAngle+=0.025;
+  requestAnimationFrame(()=>drawOrbit(m1,m2,spin1,spin2));
+}
+
+// --- UpdateEvent function to pass spins ---
+function updateEvent(eventKey){
+  const ev=gwEvents[eventKey];
+  if(!ev) return;
+  const spin1=ev.spin1||0, spin2=ev.spin2||0;
+  document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
+  drawOrbit(ev.m1,ev.m2,spin1,spin2);
+  updateSummary(ev.m1,ev.m2);
+  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
+  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
+  drawGraph(freqCtx,'#00ccff',t=>t*t);
+  createChirp(ev.m1,ev.m2);
+}
+  
 // --- Chirp Audio + Waveform ---
 const chirpCanvas=document.getElementById('chirpCanvas');
 const chirpCtx=chirpCanvas.getContext('2d');
