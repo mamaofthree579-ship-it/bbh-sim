@@ -171,15 +171,7 @@ function drawSpectrogram(canvasId){
 
 // Initialize Overview
 drawOrbit3D("orbit3D"); drawChirp("chirpGraph"); drawSpectrogram("spectrogram");  
-};
-function playOverviewChirp() {
-  // Default GW chirp audio
-  const audio = new Audio("https://example.com/audio/GW150914.wav");
-  audio.play();
 
-  // Optional: redraw chirp graph dynamically as it plays
-  drawChirp("chirpGraph", 36, 29); // example masses
-  }
 // Events & Custom Simulation
 const eventAudioMap={
   "GW150914":"https://example.com/audio/GW150914.wav",
