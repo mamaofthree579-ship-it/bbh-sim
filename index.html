@@ -12,7 +12,7 @@
   .tab button.active { background-color: #444; }
   .tabcontent { display: none; padding: 10px; }
   canvas { display: block; margin: 10px auto; background: radial-gradient(circle at center, #111, #000); border-radius: 6px; }
-  #chirpAudio { display: block; margin: 10px auto; }
+  audio { display: block; margin: 10px auto; width: 80%; }
   .mini-window { position: fixed; top: 50px; right: 20px; width: 300px; max-height: 400px; background:#111; border:1px solid #555; padding:10px; overflow:auto; color:#eee; display:none; z-index:999; }
   .mini-window button { float:right; background:#333; color:#eee; border:none; cursor:pointer; }
   label, input, select { margin:5px; }
@@ -32,7 +32,7 @@
 <!-- Overview Tab -->
 <div id="Overview" class="tabcontent" style="display:block;">
   <h2>Overview of BBH Simulation</h2>
-  <p>This tab shows a basic binary black hole inspiral simulation.</p>
+  <p>Interactive demonstration of binary black hole inspirals.</p>
   <div class="section">
     <canvas id="orbit3D" width="400" height="400"></canvas>
   </div>
@@ -53,9 +53,11 @@
   <h2>Known Events & Custom Simulation</h2>
   <div class="section">
     <label for="eventSelect">Choose an event:</label>
-    <select id="eventSelect" onchange="updateSimulation()">
+    <select id="eventSelect">
       <option value="">--Select Event--</option>
       <option value="GW150914">GW150914</option>
+      <option value="GW151226">GW151226</option>
+      <option value="GW170104">GW170104</option>
       <option value="GW170817">GW170817</option>
       <option value="Custom">Custom Simulation</option>
     </select>
@@ -97,6 +99,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
 <script>
+// Tab handling
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tabcontent");
   for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
@@ -107,49 +110,44 @@ function openTab(evt, tabName) {
 }
 
 // Mini windows
-function toggleMini(id) { 
-  const win = document.getElementById(id);
-  win.style.display = win.style.display === "block" ? "none" : "block"; 
-}
+function toggleMini(id) { const win = document.getElementById(id); win.style.display = win.style.display === "block" ? "none" : "block"; }
 function closeMini(id) { document.getElementById(id).style.display="none"; }
 
-// Placeholder for Overview visuals
+// Overview visuals
 function drawOrbit3D(canvasId) {
-  const canvas = document.getElementById(canvasId);
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(75, canvas.width/canvas.height, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({canvas: canvas, alpha:true});
-  renderer.setSize(canvas.width, canvas.height);
-  const geometry = new THREE.SphereGeometry(0.2, 16,16);
-  const material1 = new THREE.MeshBasicMaterial({color:0xffaa00});
-  const material2 = new THREE.MeshBasicMaterial({color:0x00aaff});
-  const bh1 = new THREE.Mesh(geometry, material1);
-  const bh2 = new THREE.Mesh(geometry, material2);
+  const canvas=document.getElementById(canvasId);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(75,canvas.width/canvas.height,0.1,1000);
+  const renderer=new THREE.WebGLRenderer({canvas:canvas,alpha:true});
+  renderer.setSize(canvas.width,canvas.height);
+  const geometry=new THREE.SphereGeometry(0.2,16,16);
+  const material1=new THREE.MeshBasicMaterial({color:0xffaa00});
+  const material2=new THREE.MeshBasicMaterial({color:0x00aaff});
+  const bh1=new THREE.Mesh(geometry,material1);
+  const bh2=new THREE.Mesh(geometry,material2);
   scene.add(bh1); scene.add(bh2);
-  camera.position.z = 5;
+  camera.position.z=5;
   let t=0;
-  function animate() {
+  function animate(){
     t+=0.01;
-    bh1.position.x = Math.sin(t)*1; bh1.position.y = Math.cos(t)*1;
-    bh2.position.x = -Math.sin(t)*1; bh2.position.y = -Math.cos(t)*1;
-    renderer.render(scene, camera);
+    bh1.position.x=Math.sin(t)*1; bh1.position.y=Math.cos(t)*1;
+    bh2.position.x=-Math.sin(t)*1; bh2.position.y=-Math.cos(t)*1;
+    renderer.render(scene,camera);
     requestAnimationFrame(animate);
   }
   animate();
 }
 
-// Placeholder for Chirp Graph
-function drawChirp(canvasId) {
-  const canvas = document.getElementById(canvasId);
-  const ctx = canvas.getContext("2d");
-  const t = Array.from({length:600}, (_,i)=>i/10);
+function drawChirp(canvasId){
+  const canvas=document.getElementById(canvasId);
+  const ctx=canvas.getContext("2d");
+  const t=Array.from({length:600},(_,i)=>i/10);
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = "#ff8800"; ctx.beginPath();
-  t.forEach((x,i)=>{const y=50*Math.sin(0.2*x)*Math.exp(-0.002*x)+100; if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);});
+  ctx.strokeStyle="#ff8800"; ctx.beginPath();
+  t.forEach((x,i)=>{const y=50*Math.sin(0.2*x)*Math.exp(-0.002*x)+100;if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);});
   ctx.stroke();
 }
 
-// Placeholder Spectrogram
 function drawSpectrogram(canvasId){
   const canvas=document.getElementById(canvasId);
   const ctx=canvas.getContext("2d");
@@ -167,29 +165,35 @@ function drawSpectrogram(canvasId){
   ctx.putImageData(img,0,0);
 }
 
-// Overview visuals
+// Initialize Overview visuals
 drawOrbit3D("orbit3D"); drawChirp("chirpGraph"); drawSpectrogram("spectrogram");
 
-// Event & Custom Simulation handling
-document.getElementById("eventSelect").addEventListener("change", function(){
-  const customDiv = document.getElementById("customParams");
-  customDiv.style.display = this.value==="Custom"?"block":"none";
-  updateSimulation();
+// Events & Custom Simulation
+const eventAudioMap = {
+  "GW150914": "https://example.com/audio/GW150914.wav",
+  "GW151226": "https://example.com/audio/GW151226.wav",
+  "GW170104": "https://example.com/audio/GW170104.wav",
+  "GW170817": "https://example.com/audio/GW170817.wav",
+  "Custom": ""
+};
+
+const eventSelect=document.getElementById("eventSelect");
+eventSelect.addEventListener("change",()=>{
+  const val=eventSelect.value;
+  document.getElementById("customParams").style.display=val==="Custom"?"block":"none";
+  updateSimulation(val);
 });
 
-function updateSimulation(){
-  const val = document.getElementById("eventSelect").value;
-  const mass1=parseFloat(document.getElementById("mass1")?.value||30);
-  const mass2=parseFloat(document.getElementById("mass2")?.value||30);
+function updateSimulation(eventVal){
+  const val = eventVal || eventSelect.value;
   drawOrbit3D("orbit3DEvent"); drawChirp("chirpGraphEvent"); drawSpectrogram("spectrogramEvent");
   const audio=document.getElementById("chirpAudioEvent");
-  audio.src=""; // Placeholder: could map to actual chirp audio
+  audio.src = eventAudioMap[val] || "";
+  if(audio.src) audio.load();
 }
 
-// Export button
-function exportSimulation(){
-  alert("Simulation data exported! (placeholder)");
-}
+// Export placeholder
+function exportSimulation(){ alert("Simulation data exported! (placeholder)"); }
 </script>
 
 </body>
