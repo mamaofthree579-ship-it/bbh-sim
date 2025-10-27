@@ -72,15 +72,6 @@
   </div>
 </div>
 
-// --- Summary ---
-function updateSummary(m1,m2){
-  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
-  document.getElementById('freqRange').textContent="20–400 Hz";
-  document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
-  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
-}
-
 <script>
 // --- Tabs ---
 const tabButtons=document.querySelectorAll('.tabButton');
