@@ -1,45 +1,51 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BBH Simulation</title>
 <style>
-body { font-family: Arial, sans-serif; margin:0; padding:0; background:#0b0c1a; color:#eee; }
-nav { display:flex; background:#1a1b2a; padding:10px; }
-nav button { margin-right:10px; padding:10px; cursor:pointer; background:#2a2b3a; color:#fff; border:none; border-radius:5px; }
-nav button.active { background:#5555aa; }
-section { padding:20px; display:none; }
-canvas { background:#111; display:block; margin:10px 0; border:1px solid #333; }
-.info-panel { background:#222; padding:10px; margin:10px 0; border-radius:5px; }
-button.btn { margin:5px 5px 5px 0; padding:5px 10px; }
-.mini-window { position:absolute; background:#222; color:#fff; padding:10px; border-radius:5px; top:50px; left:50px; width:300px; display:none; }
-.mini-window button.closeBtn { float:right; background:red; color:#fff; border:none; padding:2px 5px; cursor:pointer; }
+  body { margin:0; font-family:sans-serif; background: #0b0c1a; color: #fff; }
+  header { background:#111; padding:10px; text-align:center; }
+  nav { display:flex; justify-content:center; margin:10px 0; }
+  nav button { margin:0 5px; padding:8px 12px; cursor:pointer; background:#222; color:#fff; border:none; border-radius:4px; }
+  nav button.active { background:#0a84ff; }
+  section { display:none; padding:10px; }
+  section.active { display:block; }
+  canvas { background:#111; display:block; margin:10px auto; border:1px solid #444; }
+  .mini-window { position:fixed; top:10px; right:10px; width:300px; max-height:400px; overflow:auto; background:#222; border:1px solid #444; border-radius:6px; padding:10px; display:none; z-index:1000; }
+  .mini-window button.close { float:right; cursor:pointer; background:red; border:none; padding:2px 5px; color:#fff; border-radius:3px; }
+  label { display:block; margin:5px 0 2px; }
+  input { width:60px; margin-right:5px; }
 </style>
 </head>
 <body>
 
+<header>
+  <h1>Binary Black Hole & Gravitational Wave Simulator</h1>
+</header>
+
 <nav>
-  <button class="tabBtn active" onclick="showTab('overview')">Overview</button>
-  <button class="tabBtn" onclick="showTab('events')">Events</button>
-  <button class="tabBtn" onclick="showTab('advanced')">Advanced Physics</button>
+  <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="events">Events</button>
+  <button class="tab-btn" data-tab="advanced">Advanced Physics</button>
 </nav>
 
 <!-- Overview Tab -->
-<section id="overview" style="display:block;">
-  <h2>Overview</h2>
-  <p>Single black hole illustration. Explore general black hole properties.</p>
-  <div class="info-panel">
-    <strong>Black Hole:</strong> Static visualization of a Schwarzschild black hole.
-  </div>
-  <canvas id="blackHoleOverview" width="400" height="400"></canvas>
+<section id="overview" class="active">
+  <h2>Overview: Black Hole Simulation</h2>
+  <canvas id="orbit3DOverview" width="400" height="400"></canvas>
+  <canvas id="chirpGraphOverview" width="400" height="200"></canvas>
+  <button id="playChirpOverview">Play Chirp</button>
+  <audio id="chirpAudioOverview" src="chirp_mock_overview.mp3"></audio>
 </section>
 
 <!-- Events Tab -->
 <section id="events">
-  <h2>Binary Black Hole Mergers</h2>
+  <h2>Known GW Events & Custom Simulations</h2>
+  <label for="eventSelect">Select Event:</label>
   <select id="eventSelect" onchange="onEventChange()">
-    <option value="">-- Select Event --</option>
+    <option value="">-- Choose --</option>
     <option value="GW150914">GW150914</option>
     <option value="GW151226">GW151226</option>
     <option value="GW170104">GW170104</option>
@@ -47,83 +53,98 @@ button.btn { margin:5px 5px 5px 0; padding:5px 10px; }
     <option value="Custom">Custom</option>
   </select>
 
-  <div id="customParams">
-    <p>Custom BBH Parameters:</p>
-    <label>Mass 1 (M☉): <input id="customM1" type="number" value="30"></label>
-    <label>Mass 2 (M☉): <input id="customM2" type="number" value="30"></label>
-    <button class="btn" onclick="runCustom()">Run Simulation</button>
-  </div>
-
-  <div class="info-panel">
-    <strong>Binary Black Hole Orbit:</strong> Orange and blue spheres represent merging black holes. Trails indicate motion history.
+  <div id="customParams" style="display:none; margin-top:5px;">
+    <label>Custom Masses (M☉)</label>
+    <input type="number" id="customM1" value="30"> M1
+    <input type="number" id="customM2" value="30"> M2
+    <button onclick="runCustom()">Run Simulation</button>
   </div>
 
   <canvas id="orbit3DEvent" width="400" height="400"></canvas>
-  <canvas id="chirpGraphEvent" width="400" height="150"></canvas>
+  <canvas id="chirpGraphEvent" width="400" height="200"></canvas>
   <canvas id="spectrogramEvent" width="400" height="150"></canvas>
-
-  <button class="btn" onclick="playEventChirp()">Play Chirp</button>
-  <button class="btn" onclick="exportEventData()">Export Data</button>
-  <audio id="chirpAudioEvent" src=""></audio>
+  <button id="playChirpEvent">Play Chirp</button>
+  <audio id="chirpAudioEvent" src="chirp_mock_default.mp3"></audio>
 </section>
 
 <!-- Advanced Physics Tab -->
 <section id="advanced">
-  <h2>Advanced Physics</h2>
-  <p>Open mini-windows to explore formulas and calculations.</p>
-  <button class="btn" onclick="openMiniWindow('formulas')">Formulas</button>
-  <button class="btn" onclick="openMiniWindow('calculators')">Calculators</button>
-  
-  <div id="formulas" class="mini-window">
-    <button class="closeBtn" onclick="closeMiniWindow('formulas')">X</button>
-    <h3>Formulas</h3>
-    <p>Chirp mass, GW strain, neutrino flux, etc.</p>
-  </div>
-  
-  <div id="calculators" class="mini-window">
-    <button class="closeBtn" onclick="closeMiniWindow('calculators')">X</button>
-    <h3>Calculators</h3>
-    <p>Placeholder for future simulations.</p>
+  <h2>Advanced Physics & Calculators</h2>
+  <button onclick="toggleMini('advPhysics')">Show/Hide Formulas & Notes</button>
+  <div id="advPhysics" class="mini-window">
+    <button class="close" onclick="toggleMini('advPhysics')">X</button>
+    <h3>Advanced Formulas</h3>
+    <pre>
+Schwarzschild radius: r_s = 2GM/c²
+Chirp mass: M_c = (M1 M2)^(3/5)/(M1+M2)^(1/5)
+GW strain amplitude: h(f) ~ (4G^(5/3)/(c^4)) * (π^(2/3) * M_c^(5/3) * f^(2/3))/D
+Neutrino flux: F_ν ~ L_ν/(4π D²)
+... and more ...
+    </pre>
   </div>
 </section>
 
 <script>
-// --- Tab Navigation ---
-function showTab(tabId){
-  document.querySelectorAll('section').forEach(s => s.style.display='none');
-  document.getElementById(tabId).style.display='block';
-  document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+// --- Tab switching ---
+const tabs = document.querySelectorAll('.tab-btn');
+const sections = document.querySelectorAll('section');
+tabs.forEach(btn => btn.addEventListener('click', () => {
+  tabs.forEach(b => b.classList.remove('active'));
+  sections.forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.tab).classList.add('active');
+}));
+
+function toggleMini(id){
+  const elem = document.getElementById(id);
+  elem.style.display = (elem.style.display==='block')?'none':'block';
 }
 
-// --- Mini Windows ---
-function openMiniWindow(id){ document.getElementById(id).style.display='block'; }
-function closeMiniWindow(id){ document.getElementById(id).style.display='none'; }
+// --- Event handling ---
+const eventData = {
+  GW150914: {m1:36, m2:29},
+  GW151226: {m1:14, m2:7.5},
+  GW170104: {m1:31, m2:19},
+  GW170817: {m1:1.4, m2:1.4}
+};
 
-// --- Overview Black Hole ---
-function drawBlackHole(canvasId){
-  const c = document.getElementById(canvasId);
-  const ctx = c.getContext('2d');
-  const w = c.width, h = c.height;
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0,0,w,h);
-  ctx.beginPath();
-  ctx.arc(w/2,h/2,80,0,Math.PI*2);
-  const gradient = ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,80);
-  gradient.addColorStop(0,'#fff');
-  gradient.addColorStop(1,'#000');
-  ctx.fillStyle = gradient;
-  ctx.fill();
+function onEventChange() {
+  const sel = document.getElementById('eventSelect').value;
+  const customDiv = document.getElementById('customParams');
+  if(sel === "Custom"){
+    customDiv.style.display='block';
+    updateEventVisuals(30,30);
+  } else if(sel){
+    customDiv.style.display='none';
+    const data = eventData[sel];
+    updateEventVisuals(data.m1, data.m2);
+  } else {
+    customDiv.style.display='none';
+  }
 }
-drawBlackHole('blackHoleOverview');
 
-// --- Events Visuals (Mock) ---
+function runCustom(){
+  const m1 = parseFloat(document.getElementById('customM1').value);
+  const m2 = parseFloat(document.getElementById('customM2').value);
+  updateEventVisuals(m1,m2);
+}
+
+// --- Update visuals ---
+function updateEventVisuals(m1,m2){
+  drawOrbit3D('orbit3DEvent', m1, m2);
+  drawChirp('chirpGraphEvent', m1, m2);
+  drawSpectrogram('spectrogramEvent');
+  document.getElementById('chirpAudioEvent').src = `chirp_mock_${m1}_${m2}.mp3`;
+}
+
+// --- Drawing functions ---
 function drawOrbit3D(canvasId, m1, m2){
   const c = document.getElementById(canvasId);
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,c.width,c.height);
-  ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(100,200,15,0,2*Math.PI); ctx.fill();
-  ctx.fillStyle = 'blue'; ctx.beginPath(); ctx.arc(300,200,15,0,2*Math.PI); ctx.fill();
+  const dist = 200 - Math.min(m1,m2);
+  ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(200-dist/2,200,15,0,2*Math.PI); ctx.fill();
+  ctx.fillStyle = 'blue'; ctx.beginPath(); ctx.arc(200+dist/2,200,15,0,2*Math.PI); ctx.fill();
 }
 
 function drawChirp(canvasId, m1, m2){
@@ -131,8 +152,9 @@ function drawChirp(canvasId, m1, m2){
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,c.width,c.height);
   ctx.strokeStyle = '#0f0'; ctx.beginPath();
+  const amp = Math.sqrt(m1*m2)/10;
   for(let i=0;i<c.width;i++){
-    const y = c.height/2 + Math.sin(i*0.05)*50*Math.exp(-i/400);
+    const y = c.height/2 + Math.sin(i*0.05)*amp*Math.exp(-i/400);
     ctx.lineTo(i,y);
   }
   ctx.stroke();
@@ -149,16 +171,12 @@ function drawSpectrogram(canvasId){
   }
 }
 
-// --- Mock functions ---
-function onEventChange(){ /* update visuals based on selected event */ }
-function runCustom(){ alert('Custom simulation run!'); }
-function playEventChirp(){ alert('Playing chirp (mock)'); }
-function exportEventData(){ alert('Exported event data (mock)'); }
-
-// --- Initialize Events Tab Visuals ---
-drawOrbit3D('orbit3DEvent',30,30);
-drawChirp('chirpGraphEvent',30,30);
-drawSpectrogram('spectrogramEvent');
+// --- Initialize default visuals ---
+drawOrbit3D('orbit3DOverview',30,30);
+drawChirp('chirpGraphOverview',30,30);
+document.getElementById('playChirpOverview').onclick = () => document.getElementById('chirpAudioOverview').play();
+document.getElementById('playChirpEvent').onclick = () => document.getElementById('chirpAudioEvent').play();
+onEventChange();
 </script>
 
 </body>
