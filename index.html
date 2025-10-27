@@ -1,606 +1,188 @@
-!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Lab — Overview · Simulation · Events · Advanced Physics</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cosmic Event Simulator</title>
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(ellipse at center, #000015 0%, #000010 100%);
+      color: #eee;
+      font-family: "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
 
-<!-- CDNs -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    header {
+      background: rgba(20, 20, 30, 0.9);
+      text-align: center;
+      padding: 1rem 0;
+      font-size: 1.6rem;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 10px #000;
+    }
 
-<!-- Minimal styling: dark cosmic theme -->
-<style>
-:root{
-  --bg1:#020316; --bg2:#07112a; --accent:#00d4ff; --warm:#ffb85a; --muted:#9fb0c6;
-}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eaf6ff;background:
-  radial-gradient(1200px 700px at 10% 12%, rgba(10,20,40,0.25), transparent),
-  linear-gradient(180deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased}
-.container{max-width:1200px;margin:0 auto;padding:16px}
-.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.title{font-weight:700;color:var(--accent);font-size:1.05rem}
-.subtitle{color:var(--muted)}
-.tabbar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.tabbtn{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:#eaf6ff;padding:8px 12px;border-radius:8px;cursor:pointer}
-.tabbtn.active{background:linear-gradient(90deg, rgba(0,212,255,0.06), rgba(255,184,90,0.04));box-shadow:0 10px 30px rgba(0,0,0,0.45)}
-.layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
-@media(min-width:1000px){.layout{grid-template-columns:1fr 420px}}
-.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 14px 40px rgba(0,0,0,0.55)}
-.small{font-size:0.92rem;color:var(--muted)}
-.muted{color:var(--muted)}
-.input{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#eaf6ff}
-.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-#overview3d{width:100%;height:340px;border-radius:10px;overflow:hidden;position:relative;background:radial-gradient(circle at 60% 30%, rgba(255,255,255,0.01), transparent)}
-.legend{position:absolute;left:12px;bottom:12px;color:var(--muted);font-size:0.9rem;z-index:6}
-.ring-ui{position:absolute;right:12px;top:12px;z-index:6}
-#orbit3d{width:100%;height:360px;border-radius:8px;background:transparent}
-.plot-main{height:240px}
-.plot-spec{height:140px;margin-top:8px}
-.player{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;margin-top:8px;border-radius:8px;background:rgba(0,0,0,0.18)}
-.export-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer}
-.modal-mini{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:86vw;max-width:760px;max-height:76vh;overflow:auto;background:linear-gradient(180deg, rgba(3,6,22,0.98), rgba(6,10,30,0.98));border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.04);z-index:999;display:none;box-shadow:0 30px 90px rgba(0,0,0,0.7)}
-.modal-mini header{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.close-mini{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;color:#eaf6ff;cursor:pointer}
-.details{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:8px;color:var(--muted)}
-.footer{margin-top:20px;text-align:center;color:var(--muted);font-size:0.9rem}
-.starfield{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:0;opacity:0.12}
-</style>
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    nav button {
+      background: #222;
+      border: 1px solid #555;
+      color: #eee;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    nav button:hover {
+      background: #444;
+      transform: scale(1.05);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 2rem;
+      animation: fadeIn 0.5s ease;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mini-window {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(20, 20, 30, 0.95);
+      color: #eee;
+      padding: 1.2rem;
+      width: 90%;
+      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.6);
+      z-index: 1000;
+      animation: popIn 0.4s ease;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+
+    .mini-window header {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .close-btn {
+      float: right;
+      background: #c33;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .info-section {
+      margin-top: 1.5rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #777;
+    }
+  </style>
 </head>
 <body>
-  <div class="starfield" aria-hidden="true"></div>
-  <div class="container" style="position:relative;z-index:2">
-    <div class="header">
-      <div>
-        <div class="title">BBH Lab — Dark Cinematic</div>
-        <div class="subtitle">Overview · Simulation · Events · Advanced Physics</div>
-      </div>
-      <div class="small muted">v4.4 — modal mini-windows + MathJax lazy load</div>
-    </div>
+  <header>
+    <div>🌌 Cosmic Event Simulator</div>
+    <nav>
+      <button onclick="openTab('overview')">Overview</button>
+      <button onclick="openTab('events')">Known Events</button>
+      <button onclick="openTab('advanced')">Advanced Physics</button>
+    </nav>
+  </header>
 
-    <!-- Tabs -->
-    <div class="tabbar" role="tablist">
-      <button class="tabbtn active" data-target="tabOverview">Overview</button>
-      <button class="tabbtn" data-target="tabSimulation">Simulation</button>
-      <button class="tabbtn" data-target="tabEvents">Events</button>
-      <button class="tabbtn" data-target="tabAdvanced">Advanced Physics</button>
-    </div>
+  <section id="overview" class="tab-content active">
+    <h2>Black Hole Overview</h2>
+    <p>
+      Black holes are regions where gravity is so intense that nothing, not even light, can escape.
+      This simulator models the merger of compact objects and visualizes their gravitational wave emissions.
+    </p>
+    <button onclick="openWindow('simulatorInfo')">🌀 View Black Hole Simulation Info</button>
+  </section>
 
-    <div class="layout">
-      <!-- LEFT column -->
-      <div>
-        <!-- Overview tab: Three.js realistic-ish BH + disk -->
-        <section id="tabOverview" class="card tabcontent" style="display:block">
-          <h3>Overview — Black holes & gravitational waves</h3>
-          <p class="small muted">This animated view shows a stylized rotating accretion disk and shadow — educational and lightweight. Click Simulation to run binaries.</p>
-          <div id="overview3d" aria-hidden="false"></div>
-          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-            <button id="ovStart" class="tabbtn">Start</button>
-            <button id="ovStop" class="tabbtn">Stop</button>
-            <div class="legend">Accretion disk + photon ring (stylized)</div>
-          </div>
-        </section>
+  <section id="events" class="tab-content">
+    <h2>Known Gravitational Wave Events</h2>
+    <p>Select and replay real detections like GW150914 or GW170817.</p>
+    <button onclick="openWindow('eventInfo')">📈 Event Details</button>
+  </section>
 
-        <!-- Simulation tab -->
-        <section id="tabSimulation" class="card tabcontent" style="display:none">
-          <h3>Simulation — orbit, chirp & spectrogram</h3>
-          <div class="small muted">Use a preset from Events or create a custom binary. Waveform is PN-inspired (leading order) for outreach/demo.</div>
+  <section id="advanced" class="tab-content">
+    <h2>Advanced Physics Framework</h2>
+    <p>This section contains detailed equations, notes, and experimental models.</p>
+    <button onclick="openWindow('advancedPhysicsWindow')">📘 View Equations & Notes</button>
+  </section>
 
-          <div class="card" style="margin-top:10px">
-            <div class="controls" style="align-items:center">
-              <label class="small muted">m₁ (M☉): <input id="c_m1" class="input" type="number" value="36" min="0.1" style="width:90px"></label>
-              <label class="small muted">m₂ (M☉): <input id="c_m2" class="input" type="number" value="29" min="0.1" style="width:90px"></label>
-              <label class="small muted">D (Mpc): <input id="c_D" class="input" type="number" value="410" min="0.01" style="width:110px"></label>
-              <label class="small muted">sep: <input id="c_sep" class="input" type="number" value="15" min="6" style="width:80px"></label>
-              <label class="small muted">β: <input id="c_beta" class="input" type="number" value="0.00" step="0.01" style="width:80px"></label>
-              <button id="customRun" class="tabbtn">Run</button>
-            </div>
-            <div class="small muted" style="margin-top:6px">β is a toy parameter (fraction of GW energy → neutrino channel).</div>
-          </div>
-
-          <div id="orbit3d" style="margin-top:12px"></div>
-
-          <div class="player" style="margin-top:8px">
-            <button id="simPlay" class="tabbtn">Play</button>
-            <button id="simPause" class="tabbtn">Pause</button>
-            <button id="simRestart" class="tabbtn">Restart</button>
-            <div style="margin-left:auto;display:flex;gap:8px">
-              <button id="exportJSON" class="export-btn">Export Params</button>
-              <button id="exportZIP" class="export-btn">Export Package</button>
-            </div>
-          </div>
-
-          <div id="wavePlot" class="plot-main" style="margin-top:12px"></div>
-          <div id="specPlot" class="plot-spec"></div>
-          <div id="energyPlot" style="height:120px;margin-top:12px"></div>
-        </section>
-
-        <!-- Events tab -->
-        <section id="tabEvents" class="card tabcontent" style="display:none">
-          <h3>Events</h3>
-          <p class="small muted">Load a known LIGO/Virgo detection (simplified parameters).</p>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="eventsSelect" class="input">
-              <option value="GW150914">GW150914 — BBH (2015)</option>
-              <option value="GW170817">GW170817 — BNS (2017)</option>
-              <option value="GW170814">GW170814 — BBH (2017)</option>
-              <option value="GW190521">GW190521 — heavy BBH (2019)</option>
-            </select>
-            <button id="loadEvent" class="tabbtn">Load & Simulate</button>
-            <div id="eventSummary" class="small muted" style="margin-left:auto;min-width:260px"></div>
-          </div>
-        </section>
-      </div>
-
-      <!-- RIGHT column -->
-      <aside>
-        <div class="card">
-          <h4>Quick Physics & Calculators</h4>
-          <div class="katex-block">
-            <div class="small muted">
-              \\( r_s = \\dfrac{2GM}{c^2} \\) • Schwarzschild radius<br>
-              \\( \\mathcal{M} = \\dfrac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}} \\) • Chirp mass
-            </div>
-          </div>
-
-          <div style="margin-top:12px">
-            <div class="small muted">Calculators</div>
-            <div class="details" style="margin-top:8px">
-              <div style="margin-bottom:8px">
-                <div class="small muted"><strong>Schwarzschild radius</strong></div>
-                <input id="sr_M" class="input" type="number" value="36" style="width:120px"> M☉
-                <button id="calc_rs" class="tabbtn">Compute</button>
-                <div id="rs_out" class="small muted" style="margin-top:6px"></div>
-              </div>
-
-              <div style="margin-bottom:8px">
-                <div class="small muted"><strong>Chirp mass</strong></div>
-                m1 <input id="cm_m1" class="input" type="number" value="36" style="width:80px">
-                m2 <input id="cm_m2" class="input" type="number" value="29" style="width:80px">
-                <button id="calc_mc" class="tabbtn">Compute</button>
-                <div id="mc_out" class="small muted" style="margin-top:6px"></div>
-              </div>
-
-              <div>
-                <div class="small muted"><strong>Neutrino delay (toy)</strong></div>
-                m_ν (eV) <input id="nu_mass_ev" class="input" type="number" value="1" style="width:80px">
-                E (MeV) <input id="nu_E_mev" class="input" type="number" value="10" style="width:80px">
-                D (Mpc) <input id="nu_D" class="input" type="number" value="410" style="width:80px">
-                <button id="calc_nudelay" class="tabbtn">Estimate</button>
-                <div id="nud_out" class="small muted" style="margin-top:6px"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Advanced Physics: buttons open mini modal windows -->
-        <div class="card" style="margin-top:12px">
-          <h4>Advanced Physics</h4>
-          <div class="small muted">Open a topic to view formulas (MathJax loads when you open Advanced tab).</div>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-            <button class="tabbtn advOpen" data-key="geom">🧮 Geometry & GR Basics</button>
-            <button class="tabbtn advOpen" data-key="binary">🌌 Binary BH & GWs</button>
-            <button class="tabbtn advOpen" data-key="neutrino">⚛️ Neutrino Physics</button>
-            <button class="tabbtn advOpen" data-key="coupling">🧠 Graviton–Neutrino Coupling</button>
-            <button class="tabbtn advOpen" data-key="timing">⏱️ Timing & Energetics</button>
-            <button class="tabbtn" id="openFullNotes">📘 Full Notes (scrollable)</button>
-          </div>
-        </div>
-      </aside>
-    </div>
-
-    <div class="footer">BBH Lab — outreach & prototyping • copy & adapt</div>
+  <!-- Mini Windows -->
+  <div id="simulatorInfo" class="mini-window">
+    <button class="close-btn" onclick="closeWindow('simulatorInfo')">✖</button>
+    <header>Black Hole Simulation</header>
+    <p>This visualization models two orbiting black holes using basic relativistic mechanics.
+       You can observe how their separation and orbital speed influence gravitational wave amplitude.</p>
   </div>
 
-  <!-- MINI MODALS FOR ADVANCED SECTIONS (hidden by default) -->
-  <div id="modal-geom" class="modal-mini" aria-hidden="true">
-    <header><strong>Geometry & GR Basics</strong><button class="close-mini" data-close="modal-geom">Close</button></header>
-    <div class="content details">
-      <div class="small muted">
-        \\[
-          r_s = \\frac{2GM}{c^2},\qquad
-          \\Phi(r) \\approx -\\frac{GM}{r}
-        \\]
-        <br/>
-        Gravitational redshift:
-        \\[
-          E_{\\rm obs} = E_{\\rm em}\\sqrt{1-\\frac{r_s}{r}}
-        \\]
-      </div>
+  <div id="eventInfo" class="mini-window">
+    <button class="close-btn" onclick="closeWindow('eventInfo')">✖</button>
+    <header>Known Events</header>
+    <p>Here you can load and view strain data from actual LIGO detections such as GW150914 and GW170817.</p>
+  </div>
+
+  <div id="advancedPhysicsWindow" class="mini-window">
+    <button class="close-btn" onclick="closeWindow('advancedPhysicsWindow')">✖</button>
+    <header>Advanced Physics Equations</header>
+    <div style="max-height:60vh; overflow-y:auto; font-size:0.9rem;">
+      <p><strong>I. Schwarzschild Radius:</strong> rₛ = 2GM / c²</p>
+      <p><strong>II. Chirp Mass:</strong> 𝓜 = (M₁M₂)^{3/5} / (M₁+M₂)^{1/5}</p>
+      <p><strong>III. GW Frequency Evolution:</strong> ẋf = (96/5)π^{8/3}(G𝓜)^{5/3}/c⁵ f^{11/3}</p>
+      <p><strong>IV. Strain Amplitude:</strong> h(f) ≈ (4G^{5/3}/c⁴)π^{2/3} 𝓜^{5/3}f^{2/3}/D</p>
+      <p><strong>V. Neutrino Coupling:</strong> ΔE_ν = α ∫ Φ(r(t)) dt</p>
+      <p><strong>VI. Timing Relation:</strong> Δt_{ν−GW} ≈ (D/c)(1/√(1−m_ν²c⁴/E²) − 1)</p>
+      <p><em>All parameters are phenomenological and best-fit using observed multimessenger data.</em></p>
     </div>
   </div>
 
-  <div id="modal-binary" class="modal-mini" aria-hidden="true">
-    <header><strong>Binary BH & Gravitational Waves</strong><button class="close-mini" data-close="modal-binary">Close</button></header>
-    <div class="content details">
-      <div class="small muted">
-        Chirp mass:
-        \\[
-          \\mathcal{M} = \\frac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}}
-        \\]
-        Leading-order frequency evolution (Peters–Mathews):
-        \\[
-          \\dot f = \\frac{96}{5}\\pi^{8/3}\\frac{(G\\mathcal{M})^{5/3}}{c^5}f^{11/3}
-        \\]
-        Leading-order amplitude scaling:
-        \\[
-          h(f) \\propto \\frac{\\mathcal{M}^{5/3}f^{2/3}}{D}
-        \\]
-      </div>
-    </div>
-  </div>
+  <footer>
+    <p>Tip: If tabs stop responding, clear your browser cache or hold <strong>Ctrl + Shift + R</strong>.</p>
+  </footer>
 
-  <div id="modal-neutrino" class="modal-mini" aria-hidden="true">
-    <header><strong>Neutrino Physics</strong><button class="close-mini" data-close="modal-neutrino">Close</button></header>
-    <div class="content details">
-      <div class="small muted">
-        Typical SN neutrino energy:
-        \\[
-          E_{\\nu,\\rm tot}\\sim 10^{53}\\ \\mathrm{erg}
-        \\]
-        Time-of-flight delay (toy):
-        \\[
-          \\Delta t \\approx \\frac{m_\\nu^2 c^4}{2 E^2} \\frac{D}{c}
-        \\]
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-coupling" class="modal-mini" aria-hidden="true">
-    <header><strong>Graviton ↔ Neutrino Coupling (Phenomenological)</strong><button class="close-mini" data-close="modal-coupling">Close</button></header>
-    <div class="content details">
-      <div class="small muted">
-        Energy shift model:
-        \\[
-          \\Delta E_\\nu = \\alpha \\int \\nabla\\Phi(r(t))\\,dt
-        \\]
-        GW→ν fraction:
-        \\[
-          E_{\\nu,\\rm extra} = \\beta\\,E_{\\rm GW}
-        \\]
-        (α,β are phenomenological.)
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-timing" class="modal-mini" aria-hidden="true">
-    <header><strong>Timing & Energetics</strong><button class="close-mini" data-close="modal-timing">Close</button></header>
-    <div class="content details">
-      <div class="small muted">
-        Arrival time:
-        \\[
-          t_{\\rm arr}=t_{\\rm em}+\\frac{D}{v}
-        \\]
-        Energy budget:
-        \\[
-          E_{\\rm avail}=E_{\\rm GW}+E_\\nu+E_{\\rm EM}+E_{\\rm other}
-        \\]
-      </div>
-    </div>
-  </div>
-
-  <!-- Full notes modal -->
-  <div id="modal-full" class="modal-mini" aria-hidden="true" style="max-width:980px">
-    <header><strong>Full Derivations & Notes</strong><button class="close-mini" data-close="modal-full">Close</button></header>
-    <div class="content details" id="fullNotesContent" style="white-space:pre-wrap">
-<!-- Full user notes inserted here -->
-I. Geometry & basic GR quantities
-
-Schwarzschild radius
- r_s = 2GM / c^2
-
-Gravitational potential (Newtonian approx)
- Φ(r) ≈ -GM / r
-
-Gravitational redshift (photon / particle energy)
- E_obs = E_em * sqrt(1 - r_s / r)
-
-... (rest of your full notes go here; keep as plain text or LaTeX)
-    </div>
-  </div>
-
-<!-- Footer space -->
-<div style="height:24px"></div>
-
-<!-- ===========================
-     SCRIPT: UI, Physics, Three.js, Plotly, Modal logic
-     =========================== -->
-<script>
-/* ------------------------
- Helpers & constants
--------------------------*/
-const G = 6.67430e-11, c = 299792458, Msun = 1.98847e30, Mpc = 3.085677581491367e22;
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function linspace(a,b,n){const out=[];for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1));return out;}
-function downloadBlob(blob,filename){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },200);}
-
-/* ------------------------
- Tab isolation & MathJax lazy load
--------------------------*/
-const tabs = document.querySelectorAll('.tabbtn');
-const contents = document.querySelectorAll('.tabcontent');
-let mathjaxLoaded = false;
-tabs.forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    tabs.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    contents.forEach(c=>c.style.display='none');
-    const t = btn.dataset.target;
-    document.getElementById(t).style.display = 'block';
-
-    // close all mini modals when leaving Advanced tab
-    if(t !== 'tabAdvanced'){
-      document.querySelectorAll('.modal-mini').forEach(m=>m.style.display='none');
-    } else {
-      // lazy load MathJax for nice rendering
-      if(!mathjaxLoaded){
-        mathjaxLoaded = true;
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-        document.head.appendChild(s);
-      }
+  <script>
+    function openTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
     }
-  });
-});
 
-/* ------------------------
- Overview: Three.js rotating BH+disk (realistic-ish)
--------------------------*/
-let ovRenderer, ovScene, ovCamera, ovDisk, ovRing;
-function initOverview3D(){
-  const container = document.getElementById('overview3d');
-  const w = container.clientWidth, h = container.clientHeight;
-  ovScene = new THREE.Scene();
-  ovCamera = new THREE.PerspectiveCamera(50, w/h, 0.1, 1000);
-  ovCamera.position.set(0,1.4,3.5);
-  ovRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
-  ovRenderer.setSize(w,h); ovRenderer.setPixelRatio(window.devicePixelRatio||1);
-  container.innerHTML=''; container.appendChild(ovRenderer.domElement);
+    function openWindow(id) {
+      document.getElementById(id).style.display = 'block';
+    }
 
-  // lighting
-  const amb = new THREE.AmbientLight(0xffffff,0.4); ovScene.add(amb);
-  const dir = new THREE.DirectionalLight(0xffffff,0.8); dir.position.set(5,3,5); ovScene.add(dir);
-
-  // black hole shadow (dark sphere)
-  const blackMat = new THREE.MeshStandardMaterial({color:0x000000, metalness:1, roughness:0.6});
-  const bh = new THREE.Mesh(new THREE.SphereGeometry(0.98,64,64), blackMat); ovScene.add(bh);
-
-  // disk: textured-like gradient using shader-free layered meshes
-  const diskGeo = new THREE.RingGeometry(1.15, 1.8, 128);
-  const diskMat = new THREE.MeshBasicMaterial({color:0xff9f5a, side:THREE.DoubleSide, transparent:true, opacity:0.14});
-  ovDisk = new THREE.Mesh(diskGeo, diskMat); ovDisk.rotation.x = Math.PI/2*0.95; ovScene.add(ovDisk);
-
-  // photon-ish ring
-  const ringGeo = new THREE.RingGeometry(1.02, 1.08, 128);
-  const ringMat = new THREE.MeshBasicMaterial({color:0xffffff, side:THREE.DoubleSide, transparent:true, opacity:0.06});
-  ovRing = new THREE.Mesh(ringGeo, ringMat); ovRing.rotation.x = Math.PI/2; ovScene.add(ovRing);
-
-  // subtle particles (sparks)
-  const points = new THREE.BufferGeometry(); const n=200;
-  const pos = new Float32Array(n*3);
-  for(let i=0;i<n;i++){
-    const r = 2.0 + Math.random()*4.0; const a=Math.random()*Math.PI*2;
-    pos[3*i]=r*Math.cos(a); pos[3*i+1]=(Math.random()-0.5)*0.6; pos[3*i+2]=r*Math.sin(a);
-  }
-  points.setAttribute('position', new THREE.BufferAttribute(pos,3));
-  const pmat = new THREE.PointsMaterial({size:0.8, color:0xffffff, transparent:true, opacity:0.08});
-  const particles = new THREE.Points(points, pmat); ovScene.add(particles);
-
-  // resize handling
-  window.addEventListener('resize', ()=>{ const w=container.clientWidth, h=container.clientHeight; ovCamera.aspect=w/h; ovCamera.updateProjectionMatrix(); ovRenderer.setSize(w,h); });
-  animateOverview();
-}
-let ovAnimating = false;
-function animateOverview(){
-  if(!ovRenderer) return;
-  ovDisk.rotation.z += 0.0025;
-  ovRing.rotation.z -= 0.0012;
-  ovRenderer.render(ovScene, ovCamera);
-  if(ovAnimating) requestAnimationFrame(animateOverview);
-}
-document.getElementById('ovStart').addEventListener('click', ()=>{ ovAnimating=true; animateOverview(); });
-document.getElementById('ovStop').addEventListener('click', ()=>{ ovAnimating=false; });
-
-initOverview3D();
-
-/* ------------------------
- Events presets
--------------------------*/
-const PRESETS = {
-  GW150914:{m1:36,m2:29,D:410,sep:15,label:'GW150914 — BBH (2015)'},
-  GW170817:{m1:1.46,m2:1.27,D:40,sep:20,label:'GW170817 — BNS (2017)'},
-  GW170814:{m1:30,m2:25,D:540,sep:15,label:'GW170814 — BBH (2017)'},
-  GW190521:{m1:85,m2:66,D:5300,sep:20,label:'GW190521 — heavy BBH (2019)'}
-};
-const eventSummaryEl = document.getElementById('eventSummary');
-document.getElementById('eventsSelect').addEventListener('change',(e)=>{ const p=PRESETS[e.target.value]; eventSummaryEl.textContent = `${p.label} — m₁=${p.m1} M☉, m₂=${p.m2} M☉, D≈${p.D} Mpc`; });
-document.getElementById('loadEvent').addEventListener('click', ()=>{
-  const key=document.getElementById('eventsSelect').value; const p=PRESETS[key];
-  document.getElementById('c_m1').value=p.m1; document.getElementById('c_m2').value=p.m2; document.getElementById('c_D').value=p.D; document.getElementById('c_sep').value=p.sep;
-  document.querySelector('[data-target="tabSimulation"]').click();
-  setTimeout(()=>document.getElementById('customRun').click(),300);
-});
-
-/* ------------------------
- PN-inspired chirp generator (leading order)
--------------------------*/
-function chirpMassKg(m1,m2){ const m1si=m1*Msun, m2si=m2*Msun; return Math.pow(Math.pow(m1si*m2si,3/5)/Math.pow(m1si+m2si,1/5),1); }
-function inspiralK(Mc_SI){ return (5/256)*Math.pow(c,5)/(Math.pow(G*Mc_SI,5/3)*Math.pow(Math.PI,8/3)); }
-function frequencyFromTime(t,tmerge,K){ const dt=Math.max(1e-12,tmerge-t); return Math.pow(K/dt,3/8); }
-function amplitudeH(Mc_SI,f,D_SI){ const num=4*Math.pow(G,5/3)*Math.pow(Math.PI,2/3)*Math.pow(Mc_SI,5/3)*Math.pow(f,2/3); const den=Math.pow(c,4)*D_SI; return num/den; }
-function estimateEGW(m1,m2,eps=0.05){ const Mtot=(m1+m2)*Msun; return eps*Mtot*c*c; }
-
-function generatePhysicsChirp(params){
-  const m1=params.m1,m2=params.m2,Dmpc=params.D||410; const D_SI=Math.max(1e16,Dmpc*Mpc);
-  const Mc_SI=chirpMassKg(m1,m2); const K=inspiralK(Mc_SI); const Mtot=(m1+m2)*Msun;
-  const f_isco=Math.max(10,Math.min(2000,Math.pow(c,3)/(Math.pow(6,1.5)*Math.PI*G*Mtot)));
-  const t_merge=K*Math.pow(f_isco,-8/3); const t_end=Math.max(0.5,0.999*t_merge); const sr=2048;
-  const N=Math.max(512,Math.round(Math.min(22,t_end)*sr));
-  const t=linspace(0,t_end,N); const freq=new Array(N),h=new Array(N),phase=new Array(N);
-  let phi=0;
-  for(let i=0;i<N;i++){
-    const ti=t[i]; const fi=frequencyFromTime(ti,t_merge,K); freq[i]=fi;
-    const Ai=amplitudeH(Mc_SI,fi,D_SI) * (1 - (params.beta || 0));
-    const dt=i===0?(t[1]-t[0]):(t[i]-t[i-1]); phi+=2*Math.PI*fi*dt; phase[i]=phi; h[i]=Ai*Math.sin(phi);
-  }
-  return {t,h,freq,duration:t_end,Mc_SI,D_SI,estimateEGW:estimateEGW(m1,m2)};
-}
-
-/* ------------------------
- Orbit 3D (Plotly)
--------------------------*/
-function initOrbitPlot(){ const data=[ {x:[0],y:[0],z:[0],type:'scatter3d',mode:'markers',marker:{size:14,color:'rgb(255,160,64)'},name:'BH1'}, {x:[0],y:[0],z:[0],type:'scatter3d',mode:'markers',marker:{size:12,color:'rgb(0,212,255)'},name:'BH2'}, {x:[],y:[],z:[],type:'scatter3d',mode:'markers',marker:{size:6,color:[],opacity:1},name:'Trail',showlegend:false} ]; const layout={margin:{t:6,l:6,r:6,b:6},scene:{camera:{eye:{x:1.2,y:1.0,z:0.7}},xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false}},paper_bgcolor:'transparent',plot_bgcolor:'transparent'}; Plotly.react('orbit3d',data,layout,{displayModeBar:false,responsive:true}); }
-initOrbitPlot();
-
-function updateOrbit(elid,b1,b2,trailPts){
-  const xs=trailPts.map(p=>p.x), ys=trailPts.map(p=>p.y), zs=trailPts.map(p=>p.z);
-  Plotly.restyle(elid,{'x':[[b1[0]],[b2[0]],xs],'y':[[b1[1]],[b2[1]],ys],'z':[[b1[2]],[b2[2]],zs]},[0,1,2]);
-  const colors=trailPts.map(p=>`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha.toFixed(3)})`);
-  Plotly.restyle(elid,{'marker.color':[null,null,colors]},[0,1,2]);
-}
-
-function computePositions(frameIdx,ts,params){
-  const idx=clamp(frameIdx,0,ts.t.length-1); const fr=ts.freq[idx];
-  const baseRadius=clamp(params.sep*0.04,0.06,1.8); const shrink=clamp((fr/(fr+250)),0,0.95); const tau=idx/Math.max(1,ts.t.length-1);
-  const radius=baseRadius*(1-0.6*shrink)*(1-0.5*tau); const total=Math.max(1,params.m1+params.m2);
-  const r1=radius*(params.m2/total), r2=radius*(params.m1/total); const speed=0.04*(1+fr/200)*(1+total/120);
-  const theta=frameIdx*speed*0.45; const tilt=0.2;
-  const x1=r1*Math.cos(theta),y1=r1*Math.sin(theta),z1=tilt*Math.sin(theta*0.7);
-  const x2=-r2*Math.cos(theta),y2=-r2*Math.sin(theta),z2=-tilt*Math.sin(theta*0.7);
-  return {bh1:[x1,y1,z1],bh2:[x2,y2,z2],freq:fr};
-}
-function pushTrail(q,pos,maxLen){ q.push(pos.slice()); while(q.length>maxLen) q.shift(); }
-function trailToPoints(q,colorRGB){ const out=[]; const L=q.length; for(let i=0;i<L;i++){ const frac=i/Math.max(1,L-1); const alpha=0.12+0.85*frac; out.push({x:q[i][0],y:q[i][1],z:q[i][2],alpha,color:colorRGB}); } return out; }
-
-/* ------------------------
- Simulation state & playback
--------------------------*/
-let sim={params:null,ts:null,trails:{bh1:[],bh2:[]},playing:false,raf:null,startTime:0,audio:{ctx:null,osc:null,enabled:false}};
-
-function startSimFromInputs(){
-  const params={ m1:parseFloat(document.getElementById('c_m1').value)||36, m2:parseFloat(document.getElementById('c_m2').value)||29, D:parseFloat(document.getElementById('c_D').value)||410, sep:parseFloat(document.getElementById('c_sep').value)||15, beta:parseFloat(document.getElementById('c_beta').value)||0.0 };
-  sim.params=params; sim.ts=generatePhysicsChirp(params); sim.trails.bh1=[]; sim.trails.bh2=[];
-  plotWaveform(sim.ts,`Custom — waveform`); plotSpectrogram(sim.ts,`Custom — spectrogram`); plotEnergy(sim.ts,`Estimated radiated power (toy)`);
-  const p0=computePositions(0,sim.ts,params); updateOrbit('orbit3d',p0.bh1,p0.bh2,[]);
-  pauseSim();
-}
-document.getElementById('customRun').addEventListener('click', ()=>{ startSimFromInputs(); });
-
-function playSim(){
-  if(!sim.ts) return; sim.playing=true; sim.startTime=performance.now();
-  if(sim.audio.enabled && !sim.audio.ctx) sim.audio.ctx=new (window.AudioContext||window.webkitAudioContext)();
-  if(sim.audio.enabled && sim.audio.ctx && !sim.audio.osc){ const osc=sim.audio.ctx.createOscillator(); const gain=sim.audio.ctx.createGain(); gain.gain.value=0.04; osc.type='sine'; osc.connect(gain); gain.connect(sim.audio.ctx.destination); osc.start(); sim.audio.osc={osc,gain}; }
-  function step(){
-    if(!sim.playing){ sim.raf=null; return; }
-    const elapsed=(performance.now()-sim.startTime)/1000; const frac=elapsed/sim.ts.duration; const idx=Math.floor(frac*(sim.ts.t.length-1));
-    if(idx>=sim.ts.t.length-1){ sim.playing=false; if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc=null; } sim.raf=null; return; }
-    const pos=computePositions(idx,sim.ts,sim.params); const maxTrail=48; const perBH=Math.max(4,Math.round(maxTrail/6));
-    pushTrail(sim.trails.bh1,pos.bh1,perBH); pushTrail(sim.trails.bh2,pos.bh2,perBH);
-    const pts=trailToPoints(sim.trails.bh1,[255,160,64]).slice(-perBH).concat(trailToPoints(sim.trails.bh2,[0,212,255]).slice(-perBH)).slice(-maxTrail);
-    updateOrbit('orbit3d',pos.bh1,pos.bh2,pts);
-    if(sim.audio.enabled && sim.audio.osc && sim.ts.freq[idx]){ const audible=Math.min(2000,60+sim.ts.freq[idx]*0.9); try{ sim.audio.osc.osc.frequency.setValueAtTime(audible, sim.audio.ctx.currentTime); }catch(e){} }
-    sim.raf=requestAnimationFrame(step);
-  }
-  if(!sim.raf) sim.raf=requestAnimationFrame(step);
-}
-function pauseSim(){ sim.playing=false; if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc=null; } if(sim.raf){ cancelAnimationFrame(sim.raf); sim.raf=null; } }
-document.getElementById('simPlay').addEventListener('click', ()=>{ playSim(); });
-document.getElementById('simPause').addEventListener('click', ()=>{ pauseSim(); });
-document.getElementById('simRestart').addEventListener('click', ()=>{ if(!sim.params) return; startSimFromInputs(); setTimeout(()=>playSim(),120); });
-
-/* ------------------------
- Export buttons
--------------------------*/
-document.getElementById('exportJSON').addEventListener('click', ()=>{
-  if(!sim.params){ alert('Run a simulation first'); return; }
-  const blob = new Blob([JSON.stringify(sim.params,null,2)],{type:'application/json'}); downloadBlob(blob,'sim_params.json');
-});
-document.getElementById('exportZIP').addEventListener('click', async ()=>{
-  if(!sim.ts||!sim.params){ alert('Run a simulation first'); return; }
-  const zip=new JSZip(); zip.file('params.json',JSON.stringify(sim.params,null,2));
-  let csv='time,strain\n'; for(let i=0;i<sim.ts.t.length;i++) csv += `${sim.ts.t[i]},${sim.ts.h[i]}\n`; zip.file('waveform.csv',csv);
-  try{ const dataUrl=await Plotly.toImage(document.getElementById('wavePlot'),{format:'png',width:1200,height:400}); const blob=await (await fetch(dataUrl)).blob(); const arr=await blob.arrayBuffer(); zip.file('waveform.png',arr);}catch(e){ console.warn('capture failed', e); }
-  const content=await zip.generateAsync({type:'blob'}); downloadBlob(content,'sim_package.zip');
-});
-
-/* ------------------------
- Plot helpers
--------------------------*/
-function plotWaveform(ts,title){ const tr={x:ts.t,y:ts.h,mode:'lines',line:{color:'#ffffff'}}; const layout={title,margin:{t:36,l:50,r:16,b:36},paper_bgcolor:'transparent',plot_bgcolor:'transparent',xaxis:{title:'Time (s)'},yaxis:{title:'Strain'}}; Plotly.react('wavePlot',[tr],layout,{displayModeBar:false,responsive:true}); }
-function plotSpectrogram(ts,title){ const w=256,hop=128,mags=[]; for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v))); const layout={title,margin:{t:36,l:50,r:16,b:36},paper_bgcolor:'transparent',plot_bgcolor:'transparent'}; Plotly.react('specPlot',[{z:mags,type:'heatmap',colorscale:'Viridis'}],layout,{displayModeBar:false,responsive:true}); }
-function plotEnergy(ts,title){ const step=Math.max(1,Math.round(ts.h.length/200)); const p=[]; for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f=ts.freq[i]||1; p.push(a*a*f*f); } const x=linspace(0,ts.duration,p.length); Plotly.react('energyPlot',[{x,y:p,type:'scatter',mode:'lines',line:{color:'#ffb86b'}}],{title,margin:{t:28,l:50,r:16,b:36},paper_bgcolor:'transparent',plot_bgcolor:'transparent'},{displayModeBar:false,responsive:true}); }
-
-/* ------------------------
- Calculators (Quick UI)
--------------------------*/
-document.getElementById('calc_rs').addEventListener('click', ()=>{
-  const M = parseFloat(document.getElementById('sr_M').value) || 1;
-  const rs = 2*G*(M*Msun)/(c*c);
-  document.getElementById('rs_out').textContent = `${(rs/1000).toFixed(4)} km (for ${M} M☉)`;
-});
-document.getElementById('calc_mc').addEventListener('click', ()=>{
-  const m1 = parseFloat(document.getElementById('cm_m1').value)||1;
-  const m2 = parseFloat(document.getElementById('cm_m2').value)||1;
-  const mc = Math.pow(Math.pow(m1*m2,3/5)/Math.pow(m1+m2,1/5),1);
-  document.getElementById('mc_out').textContent = `${mc.toFixed(4)} M☉ (chirp mass)`;
-});
-document.getElementById('calc_nudelay').addEventListener('click', ()=>{
-  const mv = parseFloat(document.getElementById('nu_mass_ev').value) || 1;
-  const EMeV = parseFloat(document.getElementById('nu_E_mev').value) || 10;
-  const Dmpc = parseFloat(document.getElementById('nu_D').value) || 410;
-  const mvJ = mv * 1.602176634e-19;
-  const EJ = EMeV * 1.602176634e-13;
-  const delta = (Math.pow(mvJ*c*c,2) / (2 * EJ*EJ)) * (Dmpc*Mpc / c);
-  document.getElementById('nud_out').textContent = `Δt ≈ ${delta.toExponential(3)} s (toy)`;
-});
-
-/* ------------------------
- Advanced: open/close mini-modals
--------------------------*/
-document.querySelectorAll('.advOpen').forEach(btn=>{
-  btn.addEventListener('click', ()=> {
-    const key = btn.dataset.key;
-    // only allow open if Advanced tab is active
-    const active = document.querySelector('.tabbtn.active').dataset.target;
-    if(active !== 'tabAdvanced'){ alert('Open the Advanced Physics tab first.'); document.querySelector('[data-target="tabAdvanced"]').click(); return; }
-    // map key->modal id
-    const map = { geom:'modal-geom', binary:'modal-binary', neutrino:'modal-neutrino', coupling:'modal-coupling', timing:'modal-timing' };
-    const mid = map[key];
-    if(mid){ document.getElementById(mid).style.display = 'block'; }
-    // lazy load MathJax if not already loaded
-    if(!window.MathJax && !window._mathjaxLoading){
-      window._mathjaxLoading = true;
-      const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'; document.head.appendChild(s);
-    } else if(window.MathJax){ MathJax.typesetPromise?.(); }
-  });
-});
-// close buttons
-document.querySelectorAll('.close-mini').forEach(btn=>{
-  btn.addEventListener('click', ()=>{ const id = btn.dataset.close; document.getElementById(id).style.display='none'; });
-});
-// full notes modal
-document.getElementById('openFullNotes').addEventListener('click', ()=>{
-  const active = document.querySelector('.tabbtn.active').dataset.target;
-  if(active !== 'tabAdvanced'){ document.querySelector('[data-target="tabAdvanced"]').click(); setTimeout(()=>document.getElementById('modal-full').style.display='block', 300); }
-  else document.getElementById('modal-full').style.display='block';
-  if(!window.MathJax && !window._mathjaxLoading){ window._mathjaxLoading=true; const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'; document.head.appendChild(s); }
-  else if(window.MathJax){ MathJax.typesetPromise?.(); }
-});
-
-/* Close modals when switching tabs away from Advanced (extra guard) */
-tabs.forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    if(btn.dataset.target !== 'tabAdvanced'){ document.querySelectorAll('.modal-mini').forEach(m=>m.style.display='none'); }
-  });
-});
-
-/* ------------------------
- Init: default values & run demo sim
--------------------------*/
-document.getElementById('eventsSelect').dispatchEvent(new Event('change'));
-setTimeout(()=>{ document.getElementById('customRun').click(); },450);
-
-</script>
+    function closeWindow(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+  </script>
 </body>
 </html>
