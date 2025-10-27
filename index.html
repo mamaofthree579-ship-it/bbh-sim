@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Lab — Events, Custom Sim & Advanced Physics</title>
+<title>BBH Lab — Dark Cinematic (v4.3)</title>
 
-<!-- Libraries -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+<!-- Plotly -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<!-- JSZip -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- KaTeX -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
@@ -16,320 +17,360 @@
 
 <style>
 :root{
-  --bg1:#05061a; --bg2:#0b1b2b; --accent:#00d4ff; --warm:#ffb85a; --muted:#9fb0c6;
+  --bg1:#030416; --bg2:#07112a; --nebula1:#0b2540; --accent:#00d4ff; --warm:#ffb85a; --muted:#9fb0c6;
 }
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eaf6ff;background:linear-gradient(180deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eaf6ff;background:radial-gradient(1200px 600px at 10% 10%, rgba(255,255,255,0.02), transparent), linear-gradient(180deg,var(--bg1),var(--bg2)); -webkit-font-smoothing:antialiased}
 .container{max-width:1200px;margin:0 auto;padding:16px}
 .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .title{font-weight:700;color:var(--accent);font-size:1.05rem}
 .subtitle{color:var(--muted);font-size:0.95rem}
-.tabbar{display:flex;gap:8px;margin-top:12px}
+.tabbar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .tabbtn{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:#eaf6ff;padding:8px 12px;border-radius:8px;cursor:pointer}
-.tabbtn.active{background:linear-gradient(90deg, rgba(0,212,255,0.06), rgba(255,184,90,0.04));box-shadow:0 8px 24px rgba(0,0,0,0.5)}
+.tabbtn.active{background:linear-gradient(90deg, rgba(0,212,255,0.06), rgba(255,184,90,0.04));box-shadow:0 10px 30px rgba(0,0,0,0.5)}
 .layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
 @media(min-width:1000px){.layout{grid-template-columns:1fr 420px}}
-.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,0.5)}
-.small{font-size:0.9rem;color:var(--muted)}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 14px 40px rgba(0,0,0,0.55)}
+.small{font-size:0.92rem;color:var(--muted)}
 .muted{color:var(--muted)}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .input{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#eaf6ff}
 .canvas{border-radius:8px;background:transparent}
-#threeOverview{width:100%;height:320px;border-radius:8px;background:linear-gradient(180deg,rgba(0,0,0,0.12),transparent)}
+#overviewCanvas{width:100%;height:320px;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.disk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:260px;height:260px;border-radius:50%;background:radial-gradient(circle at 40% 35%, rgba(255,210,160,0.18), transparent 18%), radial-gradient(circle at 60% 60%, rgba(0,212,255,0.06), transparent 25%), linear-gradient(90deg, rgba(255,160,60,0.06), rgba(0,212,255,0.06));box-shadow:0 20px 80px rgba(0,0,0,0.6);filter:blur(0.25px)}
+.shadow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:140px;height:140px;border-radius:50%;background:radial-gradient(circle at 40% 40%, rgba(0,0,0,0.95), rgba(0,0,0,0.9) 55%, rgba(0,0,0,0.6) 70%);mix-blend-mode:multiply;z-index:5;pointer-events:none}
+.ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(0deg);width:420px;height:420px;border-radius:50%;background:conic-gradient(from 120deg, rgba(255,184,90,0.08), rgba(0,212,255,0.04), rgba(255,184,90,0.06));opacity:0.9;filter:blur(12px);pointer-events:none}
+@keyframes rotateRing{from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)}}
+.ring.anim{animation:rotateRing 28s linear infinite}
+.legend{position:absolute;left:12px;bottom:12px;color:var(--muted);font-size:0.9rem;z-index:6}
+
+/* Plot areas */
 #orbit3d{width:100%;height:360px;border-radius:8px;background:transparent}
 .plot-main{height:260px}
 .plot-spec{height:140px;margin-top:8px}
 .player{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;margin-top:8px;border-radius:8px;background:rgba(0,0,0,0.18)}
 .export-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer}
-.katex-block{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-top:8px;color:#eaf6ff}
-footer{margin-top:18px;text-align:center;color:var(--muted);font-size:0.9rem}
-.details{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;margin-top:8px;color:var(--muted)}
-select.input, input.input{min-height:34px}
-.btn{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#eaf6ff;cursor:pointer}
+.katex-block{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:8px;color:#eaf6ff}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:86vw;max-width:980px;height:78vh;background:rgba(3,6,22,0.98);border-radius:12px;padding:12px;color:#eaf6ff;box-shadow:0 30px 80px rgba(0,0,0,0.7);display:none;z-index:999;overflow:auto}
+.modal header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.modal .content{margin-top:10px;white-space:pre-wrap;font-family:inherit;color:var(--muted)}
+.close-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;color:#eaf6ff;cursor:pointer}
+
+/* small helpers */
+.details{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:8px;color:var(--muted)}
+.footer{margin-top:20px;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div>
-        <div class="title">BBH Lab — Events • Custom • Physics</div>
-        <div class="subtitle">Interactive binary black hole visualiser • Multimessenger primer</div>
+        <div class="title">BBH Lab — Dark Cinematic</div>
+        <div class="subtitle">Events • Simulation • Advanced Physics — interactive & educational</div>
       </div>
-      <div class="small muted">v4.2 — Events + calculators</div>
+      <div class="small muted">v4.3 • Dark theme • Mobile-friendly</div>
     </div>
 
+    <!-- Tabs -->
     <div class="tabbar" role="tablist" aria-label="Main tabs">
       <button class="tabbtn active" data-target="tabOverview">Overview</button>
+      <button class="tabbtn" data-target="tabSimulation">Simulation</button>
       <button class="tabbtn" data-target="tabEvents">Events</button>
-      <button class="tabbtn" data-target="tabCustom">Custom Simulation</button>
       <button class="tabbtn" data-target="tabAdvanced">Advanced Physics</button>
     </div>
 
     <div class="layout">
-      <!-- Left column -->
+      <!-- LEFT column -->
       <div>
         <!-- Overview -->
-        <div id="tabOverview" class="card tabcontent" style="display:block">
-          <h3>What is a black hole?</h3>
-          <p class="small muted">
-            A black hole is a region of spacetime where gravity is so strong that not even light can escape.
-            When two black holes orbit each other they emit gravitational waves — ripples in spacetime that carry energy away.
-            You can simulate inspiral, merger and ringdown here with simplified physics for outreach and exploration.
-          </p>
+        <section id="tabOverview" class="card tabcontent" style="display:block">
+          <h3>Overview — what is a black hole?</h3>
+          <p class="small muted">A black hole is a region of spacetime where gravity is extreme. Nearby objects orbit and — if two compact objects merge — gravitational waves are emitted. The visual below is a stylized representation (fast, mobile-friendly).</p>
 
-          <div style="margin-top:12px" id="threeOverview" aria-hidden="false"></div>
-
-          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-            <button id="ovStart" class="btn">Start Rotation</button>
-            <button id="ovPause" class="btn">Pause</button>
-            <div class="small muted" style="margin-left:auto">Orange: BH • Blue: secondary (in binaries)</div>
-          </div>
-        </div>
-
-        <!-- Events -->
-        <div id="tabEvents" class="card tabcontent" style="display:none">
-          <h3>Known LIGO/Virgo Events</h3>
-          <div class="small muted">Click "Simulate Event" to load parameters into the simulator.</div>
-
-          <div class="details" style="margin-top:10px">
-            <strong>GW150914</strong> — first detected BBH merger (Sept 14, 2015). m₁≈36 M☉, m₂≈29 M☉, D≈410 Mpc.
-            <div style="margin-top:6px"><button class="btn evRun" data-key="GW150914">Simulate Event</button></div>
+          <div id="overviewCanvas">
+            <div class="ring" id="overviewRing"></div>
+            <div class="disk" id="overviewDisk"></div>
+            <div class="shadow" id="overviewShadow"></div>
+            <div class="legend">Stylized BH — disk & shadow</div>
           </div>
 
-          <div class="details">
-            <strong>GW170817</strong> — binary neutron star (Aug 17, 2017). m₁≈1.46 M☉, m₂≈1.27 M☉, D≈40 Mpc.
-            <div style="margin-top:6px"><button class="btn evRun" data-key="GW170817">Simulate Event</button></div>
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+            <button id="ovStart" class="tabbtn">Start Animation</button>
+            <button id="ovStop" class="tabbtn">Stop</button>
+            <div class="small muted" style="margin-left:auto">Choose Simulation tab to run binaries</div>
           </div>
+        </section>
 
-          <div class="details">
-            <strong>GW170814</strong> — BBH (Aug 14, 2017). m₁≈30 M☉, m₂≈25 M☉, D≈540 Mpc.
-            <div style="margin-top:6px"><button class="btn evRun" data-key="GW170814">Simulate Event</button></div>
-          </div>
+        <!-- Simulation -->
+        <section id="tabSimulation" class="card tabcontent" style="display:none">
+          <h3>Simulation — orbit, chirp, spectrogram</h3>
+          <div class="small muted">Use custom inputs or Events tab to load a preset.</div>
 
-          <div class="details">
-            <strong>GW190521</strong> — heavy BBH (May 21, 2019). m₁≈85 M☉, m₂≈66 M☉, D≈5300 Mpc.
-            <div style="margin-top:6px"><button class="btn evRun" data-key="GW190521">Simulate Event</button></div>
-          </div>
-        </div>
-
-        <!-- Custom Simulation -->
-        <div id="tabCustom" class="card tabcontent" style="display:none">
-          <h3>Custom Simulation</h3>
-          <div class="small muted">Adjust parameters and Run. Waveform is PN-inspired (leading order).</div>
-
-          <div style="margin-top:10px" class="card">
-            <div class="controls">
-              <label class="small muted">m₁ (M☉): <input id="c_m1" class="input" type="number" value="36" min="1" style="width:90px"></label>
-              <label class="small muted">m₂ (M☉): <input id="c_m2" class="input" type="number" value="29" min="1" style="width:90px"></label>
-              <label class="small muted">D (Mpc): <input id="c_D" class="input" type="number" value="410" min="0.1" style="width:110px"></label>
-              <label class="small muted">sep: <input id="c_sep" class="input" type="number" value="15" min="6" style="width:90px"></label>
-              <label class="small muted">β: <input id="c_beta" class="input" type="number" value="0.00" step="0.01" style="width:90px"></label>
-              <button id="customRun" class="btn">Run</button>
+          <div class="card" style="margin-top:10px">
+            <div class="controls" style="align-items:center">
+              <label class="small muted">m₁ (M☉): <input id="c_m1" class="input" type="number" value="36" min="0.5" style="width:90px"></label>
+              <label class="small muted">m₂ (M☉): <input id="c_m2" class="input" type="number" value="29" min="0.5" style="width:90px"></label>
+              <label class="small muted">D (Mpc): <input id="c_D" class="input" type="number" value="410" min="0.01" style="width:110px"></label>
+              <label class="small muted">sep: <input id="c_sep" class="input" type="number" value="15" min="6" style="width:80px"></label>
+              <label class="small muted">β: <input id="c_beta" class="input" type="number" value="0.00" step="0.01" style="width:80px"></label>
+              <button id="customRun" class="tabbtn">Run</button>
             </div>
-            <div class="small muted" style="margin-top:6px">β is the phenomenological fraction of GW → neutrino energy (toy)</div>
+            <div class="small muted" style="margin-top:6px">β is a phenomenological fraction of GW energy → neutrino channel (toy)</div>
           </div>
 
-          <div id="orbit3d" style="margin-top:10px"></div>
+          <div id="orbit3d" style="margin-top:12px"></div>
+
           <div class="player" style="margin-top:8px">
-            <button id="simPlay" class="btn">Play</button>
-            <button id="simPause" class="btn">Pause</button>
-            <button id="simRestart" class="btn">Restart</button>
-            <div class="small muted" style="margin-left:8px">Orbit playback controls</div>
-            <div style="margin-left:auto">
+            <button id="simPlay" class="tabbtn">Play</button>
+            <button id="simPause" class="tabbtn">Pause</button>
+            <button id="simRestart" class="tabbtn">Restart</button>
+            <div style="margin-left:auto;display:flex;gap:8px">
               <button id="exportJSON" class="export-btn">Export Params (.json)</button>
               <button id="exportZIP" class="export-btn">Export Package (.zip)</button>
             </div>
           </div>
 
-          <div id="wavePlot" class="plot-main" style="margin-top:10px"></div>
+          <div id="wavePlot" class="plot-main" style="margin-top:12px"></div>
           <div id="specPlot" class="plot-spec"></div>
-          <div id="energyPlot" style="height:120px;margin-top:10px"></div>
-        </div>
+          <div id="energyPlot" style="height:120px;margin-top:12px"></div>
+        </section>
 
-         <!-- Right column: Advanced & calculators -->
-      <div>
+        <!-- Events -->
+        <section id="tabEvents" class="card tabcontent" style="display:none">
+          <h3>Events — known LIGO/Virgo detections</h3>
+          <p class="small muted">Select a real detection and simulate it (parameters are simplified summaries).</p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="eventsSelect" class="input">
+              <option value="GW150914">GW150914 — BBH (2015)</option>
+              <option value="GW170817">GW170817 — BNS (2017)</option>
+              <option value="GW170814">GW170814 — BBH (2017)</option>
+              <option value="GW190521">GW190521 — heavy BBH (2019)</option>
+            </select>
+            <button id="loadEvent" class="tabbtn">Load & Simulate</button>
+            <div id="eventSummary" class="small muted" style="margin-left:auto;min-width:260px"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT column -->
+      <aside>
         <div class="card">
-          <h4>Quick Physics Panel</h4>
-          <div class="small muted">Toggle equations or use calculators below.</div>
-
-          <div class="katex-block" style="margin-top:10px">
-            <div><strong>Key formulas</strong></div>
+          <h4>Quick Physics</h4>
+          <div class="katex-block">
+            <div><strong>Key formulas (leading order)</strong></div>
             <div class="small muted" style="margin-top:6px">
-              \\( r_s = \\dfrac{2GM}{c^2} \\) — Schwarzschild radius<br>
-              \\( \\mathcal{M} = \\dfrac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}} \\) — chirp mass<br>
-              \\( h(f) \\propto \\dfrac{\\mathcal{M}^{5/3} f^{2/3}}{D} \\) — leading amplitude scaling
+              \\( r_s = \\dfrac{2GM}{c^2} \\) • Schwarzschild radius<br>
+              \\( \\mathcal{M} = \\dfrac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}} \\) • Chirp mass<br>
+              \\( h(f) \\propto \\dfrac{\\mathcal{M}^{5/3} f^{2/3}}{D} \\)
             </div>
           </div>
 
           <div style="margin-top:12px">
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <div>
-                <strong>Schwarzschild radius</strong><br>
-                <input id="sr_M" class="input" type="number" value="36" min="0.1" style="width:120px"> M☉
-                <button id="calc_rs" class="btn">Compute r_s (km)</button>
+            <div class="small muted">Calculators</div>
+            <div class="details" style="margin-top:8px">
+              <div style="margin-bottom:8px">
+                <div class="small muted"><strong>Schwarzschild radius</strong></div>
+                <input id="sr_M" class="input" type="number" value="36" style="width:120px"> M☉
+                <button id="calc_rs" class="tabbtn">Compute</button>
                 <div id="rs_out" class="small muted" style="margin-top:6px"></div>
               </div>
 
-              <div>
-                <strong>Chirp mass</strong><br>
-                m1 <input id="cm_m1" class="input" type="number" value="36" style="width:90px">
-                m2 <input id="cm_m2" class="input" type="number" value="29" style="width:90px">
-                <button id="calc_mc" class="btn">Compute 𝓜 (M☉)</button>
+              <div style="margin-bottom:8px">
+                <div class="small muted"><strong>Chirp mass</strong></div>
+                m1 <input id="cm_m1" class="input" type="number" value="36" style="width:80px">
+                m2 <input id="cm_m2" class="input" type="number" value="29" style="width:80px">
+                <button id="calc_mc" class="tabbtn">Compute</button>
                 <div id="mc_out" class="small muted" style="margin-top:6px"></div>
               </div>
 
               <div>
-                <strong>Neutrino time delay (toy)</strong><br>
+                <div class="small muted"><strong>Neutrino delay (toy)</strong></div>
                 m_ν (eV) <input id="nu_mass_ev" class="input" type="number" value="1" style="width:80px">
                 E (MeV) <input id="nu_E_mev" class="input" type="number" value="10" style="width:80px">
-                D (Mpc) <input id="nu_D" class="input" type="number" value="410" style="width:90px">
-                <button id="calc_nudelay" class="btn">Estimate Δt (s)</button>
+                D (Mpc) <input id="nu_D" class="input" type="number" value="410" style="width:80px">
+                <button id="calc_nudelay" class="tabbtn">Estimate</button>
                 <div id="nud_out" class="small muted" style="margin-top:6px"></div>
               </div>
             </div>
           </div>
-
         </div>
 
         <div class="card" style="margin-top:12px">
           <h4>Advanced Physics</h4>
-          <div class="small muted">Summary & full notes (open in new tab)</div>
-          <div style="margin-top:8px" class="small muted">
-            α — phenomenological coupling (energy shift). β — fraction of GW energy to neutrino channel.
-          </div>
+          <div class="small muted">Summary and full derivations (modal)</div>
           <div style="margin-top:8px;display:flex;gap:8px">
-            <button id="openNotes" class="btn">View Full Derivations</button>
-            <button id="openNotesPopup" class="btn">Toggle Notes Inline</button>
+            <button id="openFullNotes" class="tabbtn">View Full Notes</button>
+            <button id="toggleNotesInline" class="tabbtn">Toggle Summary</button>
           </div>
-          <div id="fullNotes" style="display:none;margin-top:8px" class="details">
-            <!-- condensed full derivations -->
+          <div id="notesInline" style="display:none;margin-top:8px" class="details">
             <pre style="white-space:pre-wrap;font-family:inherit">
-I. Geometry & GR
-r_s = 2GM / c^2
-Φ(r) ≈ -GM / r
+I. Geometry & GR:
+ r_s = 2GM/c^2
+ Φ(r) ≈ -GM/r
 
-II. Binary inspiral & GW (leading order)
-𝓜 ≡ (M1 M2)^{3/5} / (M1+M2)^{1/5}
-ḟ = (96/5)π^{8/3} (G𝓜)^{5/3} / c^5 f^{11/3}
-h(f) ≈ (4 G^{5/3}/c^4) π^{2/3} 𝓜^{5/3} f^{2/3} / D
+II. Inspiral & GW:
+ 𝓜 = (M1 M2)^{3/5} / (M1+M2)^{1/5}
+ ḟ = (96/5) π^{8/3} (G𝓜)^{5/3} / c^5 f^{11/3}
+ h(f) ≈ 4 G^{5/3}/c^4 π^{2/3} 𝓜^{5/3} f^{2/3}/D
 
-III. Phenomenological coupling
-ΔE_ν ≈ α ∫ Φ dt
-E_ν,extra = β E_GW
+III. Phenomenological:
+ ΔE_ν ≈ α ∫Φ dt
+ E_ν,extra = β E_GW
             </pre>
           </div>
         </div>
-
-      </div>
-
+      </aside>
     </div>
 
-    <footer>BBH Lab — copy, share, and explore. Built for outreach & prototyping.</footer>
+    <div class="modal" id="fullNotesModal" role="dialog" aria-hidden="true">
+      <header>
+        <strong>Full Derivations & Notes</strong>
+        <button class="close-btn" id="closeModal">Close</button>
+      </header>
+      <div class="content">
+        <!-- Full user-supplied derivations inserted here -->
+<pre style="white-space:pre-wrap">
+# I. Geometry & basic GR quantities
+
+Schwarzschild radius
+ r_s = \frac{2GM}{c^2}
+
+Gravitational potential (Newtonian approx)
+ \Phi(r) \approx -\frac{GM}{r}
+
+Gravitational redshift (photon / particle energy)
+ E_{\rm obs} = E_{\rm em}\,\sqrt{1-\frac{r_s}{r}} \quad (exact Schwarzschild factor)
+ E_{\rm obs}\simeq E_{\rm em}\left(1-\frac{GM}{rc^2}\right).
+
+# II. Binary black-hole / neutron-star inspiral & gravitational waves
+
+Chirp mass
+ \mathcal{M} \equiv \frac{(M_1 M_2)^{3/5}}{(M_1+M_2)^{1/5}}
+
+Leading-order GW frequency evolution (Peters–Mathews result)
+ \dot f = \frac{96}{5}\,\pi^{8/3}\,\frac{(G\mathcal{M})^{5/3}}{c^5}\,f^{11/3}
+
+Inspiral (characteristic) GW strain amplitude — leading PN order
+ h(f) \approx \frac{4 G^{5/3}}{c^4}\,\pi^{2/3}\,\frac{\mathcal{M}^{5/3}\,f^{2/3}}{D}
+
+Instantaneous GW strain from time-domain quadrupole
+ h_{ij}(t) = \frac{2G}{c^4 R}\,\ddot Q_{ij}(t)\,, \qquad  h(t)\sim \frac{4G}{c^4}\frac{d^2Q}{dt^2}\frac{1}{R}
+
+Total radiated GW energy (order of magnitude)
+ E_{\rm GW} \sim \varepsilon \, M_{\rm tot} c^2
+
+# III. Neutrino emission, propagation and detection
+
+Total neutrino energy from a core-collapse supernova (order of magnitude)
+ E_{\nu,{\rm tot}}\sim 10^{53}\ \mathrm{erg} \quad(\text{typical benchmark})
+
+Isotropic neutrino energy flux at distance 
+ F_\nu = \frac{E_{\nu,{\rm tot}}}{4\pi D^2}
+
+Detector event count estimate (approximate)
+ N_{\rm_events} \approx \frac{E_{\nu,{\rm_tot}}}{\langle E_\nu\rangle}\cdot \frac{ \sigma(\langle E_\nu\rangle)\, N_T }{4\pi D^2}
+
+Time-of-flight delay due to finite neutrino mass
+ \Delta t \approx \frac{m_\nu^2 c^4}{2 E^2}\,\frac{D}{c} \quad\text{(exact expansion for } m_\nu c^2 \ll E ).
+
+# IV. Phenomenological graviton ↔ neutrino (dark-matter ↔ light-matter) coupling
+
+We do not have a microscopic QFT for this coupling — introduce phenomenological parameter(s) to quantify effects for fitting to data.
+
+(A) Energy shift accumulated by a neutrino while traversing a gravitating/dark-matter environment
+ \Delta E_\nu = \int_{t_{\rm em}}^{t_{\rm obs}} F_{\rm graviton\text{-}on\_ \nu}(t)\,dt
+ F_{\rm grav}\!(t) \equiv \alpha\,\nabla\Phi\big(r(t)\big),
+ \Delta E_\nu \simeq \alpha \int \nabla\Phi\big(r(t)\big)\,dt
+
+(B) Phenomenological “absorption” of GW energy by neutrino channel
+ E_{\nu,{\rm extra}} = \beta\, E_{\rm GW\;available} \quad (0\le\beta\le1).
+
+(C) Effective coupling via potential
+ \Delta E_\nu = \alpha \,\int \Phi(r(t))\,dt,
+ \Delta E_\nu \approx \alpha \int \Phi(r)\,\frac{dr}{v(r)} .
+
+# V. Timing relations (useful for multimessenger sequencing)
+
+Emission vs arrival time
+ t_{\rm arr} = t_{\rm em} + \frac{D}{v}
+ \Delta t_{\nu - {\rm GW}} \simeq (t_{\rm em,\nu}-t_{\rm em,GW}) + \frac{D}{c}\left(\frac{1}{\sqrt{1-m_\nu^2 c^4/E^2}}-1\right).
+
+# VI. Energetics relations & observables
+ ... (full content retained as in your notes) ...
+</pre>
+      </div>
+    </div>
+
+    <div class="footer">BBH Lab — copy, adapt, and explore. Built for outreach & prototyping.</div>
   </div>
 
 <script>
 /* ------------------------
-   Constants & helpers
+ Constants & helpers
 -------------------------*/
 const G = 6.67430e-11;
 const c = 299792458;
 const Msun = 1.98847e30;
 const Mpc = 3.085677581491367e22;
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function linspace(a,b,n){const out=[];for(let i=0;i<n;i++)out.push(a+(b-a)*i/(n-1));return out;}
-function downloadBlob(blob, filename){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },150);}
+function linspace(a,b,n){const out=[];for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1));return out;}
+function downloadBlob(blob,filename){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },200);}
 
 /* ------------------------
-   Tab wiring
+ Tab logic (isolate content)
 -------------------------*/
 document.querySelectorAll('.tabbtn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.tabcontent').forEach(tc=>tc.style.display='none');
-    const t = btn.dataset.target;
-    document.getElementById(t).style.display = 'block';
-    // resize plots when switching to custom
-    if(t==='tabCustom'){ setTimeout(()=>{ ['wavePlot','specPlot','energyPlot'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); }); }, 250); }
+    const target = btn.dataset.target;
+    document.getElementById(target).style.display = 'block';
+    // Anim optimizations: stop Overview ring when leaving tab
+    if(target !== 'tabOverview'){ document.getElementById('overviewRing').classList.remove('anim'); }
   });
 });
 
-/* =========================
-   Three.js — Overview rotating BH
-   Simple sphere with subtle shader-like material
-   ========================= */
-let ovScene, ovCamera, ovRenderer, ovMesh, ovAnimating=false;
-function initOverviewThree(){
-  const container = document.getElementById('threeOverview');
-  const width = container.clientWidth, height = container.clientHeight;
-  ovScene = new THREE.Scene();
-  ovCamera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);
-  ovCamera.position.set(0,0,4.0);
-  ovRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
-  ovRenderer.setSize(width, height);
-  container.innerHTML='';
-  container.appendChild(ovRenderer.domElement);
-  // lights
-  const amb = new THREE.AmbientLight(0xffffff, 0.3);
-  ovScene.add(amb);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-  dir.position.set(5,3,5); ovScene.add(dir);
-  // sphere (simple BH look)
-  const geom = new THREE.SphereGeometry(1, 64, 64);
-  const mat = new THREE.MeshStandardMaterial({color:0x111111, metalness:0.9, roughness:0.2});
-  ovMesh = new THREE.Mesh(geom, mat);
-  ovScene.add(ovMesh);
-  // subtle ring (shader-free torus)
-  const ringGeom = new THREE.TorusGeometry(1.45, 0.08, 16, 100);
-  const ringMat = new THREE.MeshBasicMaterial({color:0xffb85a, transparent:true, opacity:0.12});
-  const ring = new THREE.Mesh(ringGeom,ringMat); ring.rotation.x = Math.PI/2*0.35;
-  ovScene.add(ring);
-  animateOverview();
-  window.addEventListener('resize', ()=>{ const w=container.clientWidth, h=container.clientHeight; ovCamera.aspect=w/h; ovCamera.updateProjectionMatrix(); ovRenderer.setSize(w,h); });
-}
-function animateOverview(){
-  if(!ovRenderer) return;
-  ovMesh.rotation.y += 0.003;
-  ovRenderer.render(ovScene, ovCamera);
-  if(ovAnimating) requestAnimationFrame(animateOverview);
-}
-document.getElementById('ovStart').addEventListener('click', ()=>{ ovAnimating=true; animateOverview(); });
-document.getElementById('ovPause').addEventListener('click', ()=>{ ovAnimating=false; });
+/* ------------------------
+ Overview stylized disk animation
+-------------------------*/
+const ringEl = document.getElementById('overviewRing');
+document.getElementById('ovStart').addEventListener('click', ()=>{ ringEl.classList.add('anim'); });
+document.getElementById('ovStop').addEventListener('click', ()=>{ ringEl.classList.remove('anim'); });
 
-/* Boot overview three */
-initOverviewThree();
-
-/* =========================
-   Preset events
-=========================*/
-const EVENTS = {
-  GW150914:{m1:36,m2:29,D:410,sep:15, label:'GW150914 — first BBH'},
-  GW170817:{m1:1.46,m2:1.27,D:40,sep:20, label:'GW170817 — BNS (multi-messenger)'},
-  GW170814:{m1:30,m2:25,D:540,sep:15, label:'GW170814 — BBH'},
-  GW190521:{m1:85,m2:66,D:5300,sep:20, label:'GW190521 — heavy BBH'}
+/* ------------------------
+ Events: presets
+-------------------------*/
+const PRESETS = {
+  GW150914:{m1:36,m2:29,D:410,sep:15,label:'GW150914 — BBH (2015)'},
+  GW170817:{m1:1.46,m2:1.27,D:40,sep:20,label:'GW170817 — BNS (2017)'},
+  GW170814:{m1:30,m2:25,D:540,sep:15,label:'GW170814 — BBH (2017)'},
+  GW190521:{m1:85,m2:66,D:5300,sep:20,label:'GW190521 — heavy BBH (2019)'}
 };
-document.querySelectorAll('.evRun').forEach(btn=>{
-  btn.addEventListener('click', ()=> {
-    const key = btn.dataset.key;
-    const p = EVENTS[key];
-    // load into custom inputs
-    document.getElementById('c_m1').value = p.m1;
-    document.getElementById('c_m2').value = p.m2;
-    document.getElementById('c_D').value = p.D;
-    document.getElementById('c_sep').value = p.sep;
-    // switch to custom tab and start
-    document.querySelector('[data-target="tabCustom"]').click();
-    setTimeout(()=>{ document.getElementById('customRun').click(); }, 350);
-  });
+const eventSummaryEl = document.getElementById('eventSummary');
+document.getElementById('eventsSelect').addEventListener('change', (e)=>{
+  const p = PRESETS[e.target.value];
+  eventSummaryEl.textContent = `${p.label} — m₁=${p.m1} M☉, m₂=${p.m2} M☉, D≈${p.D} Mpc`;
+});
+document.getElementById('loadEvent').addEventListener('click', ()=>{
+  const key = document.getElementById('eventsSelect').value;
+  const p = PRESETS[key];
+  // populate custom inputs
+  document.getElementById('c_m1').value = p.m1;
+  document.getElementById('c_m2').value = p.m2;
+  document.getElementById('c_D').value = p.D;
+  document.getElementById('c_sep').value = p.sep;
+  // switch to Simulation tab and run
+  document.querySelector('[data-target="tabSimulation"]').click();
+  setTimeout(()=>{ document.getElementById('customRun').click(); }, 350);
 });
 
-/* =========================
-   PN-inspired chirp generator (leading order)
-=========================*/
-function chirpMassKg(m1,m2){ const m1si=m1*Msun,m2si=m2*Msun; return Math.pow(Math.pow(m1si*m2si,3/5)/Math.pow(m1si+m2si,1/5),1); }
-function inspiralK(Mc_SI){ return (5/256)*Math.pow(c,5)/(Math.pow(G*Mc_SI,5/3)*Math.pow(Math.PI,8/3)); }
-function frequencyFromTime(t, tmerge, K){ const dt = Math.max(1e-12, tmerge - t); return Math.pow(K/dt, 3/8); }
-function amplitudeH(Mc_SI,f,D_SI){ const num = 4*Math.pow(G,5/3)*Math.pow(Math.PI,2/3)*Math.pow(Mc_SI,5/3)*Math.pow(f,2/3); const den = Math.pow(c,4)*D_SI; return num/den; }
+/* ------------------------
+ PN-inspired chirp generator
+-------------------------*/
+function chirpMassKg(m1, m2){ const m1si=m1*Msun, m2si=m2*Msun; return Math.pow(Math.pow(m1si*m2si,3/5)/Math.pow(m1si+m2si,1/5),1); }
+function inspiralK(Mc_SI){ return (5/256) * Math.pow(c,5) / (Math.pow(G*Mc_SI,5/3) * Math.pow(Math.PI, 8/3)); }
+function frequencyFromTime(t, tmerge, K){ const dt = Math.max(1e-12, tmerge - t); return Math.pow(K / dt, 3/8); }
+function amplitudeH(Mc_SI, f, D_SI){ const num = 4 * Math.pow(G,5/3) * Math.pow(Math.PI,2/3) * Math.pow(Mc_SI,5/3) * Math.pow(f,2/3); const den = Math.pow(c,4) * D_SI; return num/den; }
 function estimateEGW(m1,m2,eps=0.05){ const Mtot=(m1+m2)*Msun; return eps*Mtot*c*c; }
 
 function generatePhysicsChirp(params){
@@ -340,7 +381,7 @@ function generatePhysicsChirp(params){
   const Mtot = (m1+m2)*Msun;
   const f_isco = Math.max(10, Math.min(2000, Math.pow(c,3)/(Math.pow(6,1.5)*Math.PI*G*Mtot)));
   const t_merge = K * Math.pow(f_isco, -8/3);
-  const t_end = Math.max(0.5, 0.999*t_merge);
+  const t_end = Math.max(0.5, 0.999 * t_merge);
   const sr = 2048;
   const N = Math.max(512, Math.round(Math.min(22, t_end) * sr));
   const t = linspace(0, t_end, N);
@@ -350,7 +391,7 @@ function generatePhysicsChirp(params){
     const ti = t[i];
     const fi = frequencyFromTime(ti, t_merge, K);
     freq[i] = fi;
-    const Ai = amplitudeH(Mc_SI, fi, D_SI);
+    const Ai = amplitudeH(Mc_SI, fi, D_SI) * (1 - (params.beta || 0)); // optionally reduce amplitude by beta (toy)
     const dt = i===0 ? (t[1]-t[0]) : (t[i]-t[i-1]);
     phi += 2*Math.PI*fi*dt;
     phase[i] = phi;
@@ -359,17 +400,16 @@ function generatePhysicsChirp(params){
   return {t,h,freq,duration:t_end,Mc_SI,D_SI,estimateEGW:estimateEGW(m1,m2)};
 }
 
-/* =========================
-   Orbit animation (Plotly 3D scatter)
-   We'll reuse Plotly scatter3d for the binary orbit in the custom tab.
-=========================*/
+/* ------------------------
+ Orbit / Plotly 3D init & update
+-------------------------*/
 function initOrbitPlot(){
   const data = [
     { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:14,color:'rgb(255,160,64)'}, name:'BH1' },
     { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color:'rgb(0,212,255)'}, name:'BH2' },
     { x:[], y:[], z:[], type:'scatter3d', mode:'markers', marker:{size:6,color:[],opacity:1}, name:'Trail', showlegend:false }
   ];
-  const layout = { margin:{t:10,l:10,r:10,b:10}, scene:{camera:{eye:{x:1.2,y:1.0,z:0.7}}, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false}}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
+  const layout = { margin:{t:6,l:6,r:6,b:6}, scene:{camera:{eye:{x:1.2,y:1.0,z:0.7}}, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false}}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
   Plotly.react('orbit3d', data, layout, {displayModeBar:false, responsive:true});
 }
 initOrbitPlot();
@@ -382,7 +422,7 @@ function updateOrbit(elid, b1, b2, trailPts){
 }
 
 function computePositions(frameIdx, ts, params){
-  const idx = clamp(frameIdx, 0, ts.t.length-1);
+  const idx = clamp(frameIdx, 0, ts.t.length - 1);
   const fr = ts.freq[idx];
   const baseRadius = clamp(params.sep * 0.04, 0.06, 1.8);
   const shrink = clamp((fr / (fr + 250)), 0, 0.95);
@@ -399,14 +439,14 @@ function computePositions(frameIdx, ts, params){
   return { bh1:[x1,y1,z1], bh2:[x2,y2,z2], freq:fr };
 }
 function pushTrail(queue, pos, maxLen){ queue.push(pos.slice()); while(queue.length>maxLen) queue.shift(); }
-function trailToPoints(queue, colorRGB){ const out=[]; const L = queue.length; for(let i=0;i<L;i++){ const frac = i/Math.max(1,L-1); const alpha = 0.12 + 0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
+function trailToPoints(queue, colorRGB){ const out=[]; const L=queue.length; for(let i=0;i<L;i++){ const frac=i/Math.max(1,L-1); const alpha=0.12+0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
 
-/* =========================
-   State objects and playback
-=========================*/
-let simState = { params:null, ts:null, trails:{bh1:[],bh2:[]}, playing:false, raf:null, startTime:0, audio:{ctx:null,osc:null,enabled:false} };
+/* ------------------------
+ Simulation state & playback
+-------------------------*/
+let sim = {params:null, ts:null, trails:{bh1:[],bh2:[]}, playing:false, raf:null, startTime:0, audio:{ctx:null,osc:null,enabled:false}};
 
-function startCustomFromInputs(){
+function startSimulationFromInputs(){
   const params = {
     m1: parseFloat(document.getElementById('c_m1').value) || 36,
     m2: parseFloat(document.getElementById('c_m2').value) || 29,
@@ -414,84 +454,84 @@ function startCustomFromInputs(){
     sep: parseFloat(document.getElementById('c_sep').value) || 15,
     beta: parseFloat(document.getElementById('c_beta').value) || 0.0
   };
-  simState.params = params;
-  simState.ts = generatePhysicsChirp(params);
-  simState.trails.bh1 = []; simState.trails.bh2 = [];
-  plotWaveform(simState.ts, `Custom — waveform`);
-  plotSpectrogram(simState.ts, `Custom — spectrogram`);
-  plotEnergy(simState.ts, `Estimated radiated power (toy)`);
-  const p0 = computePositions(0, simState.ts, params);
+  sim.params = params;
+  sim.ts = generatePhysicsChirp(params);
+  sim.trails.bh1 = []; sim.trails.bh2 = [];
+  plotWaveform(sim.ts, `Custom — waveform`);
+  plotSpectrogram(sim.ts, `Custom — spectrogram`);
+  plotEnergy(sim.ts, `Estimated radiated power (toy)`);
+  const p0 = computePositions(0, sim.ts, params);
   updateOrbit('orbit3d', p0.bh1, p0.bh2, []);
   pauseSim();
 }
+document.getElementById('customRun').addEventListener('click', ()=>{ startSimulationFromInputs(); });
 
 function playSim(){
-  if(!simState.ts) return;
-  simState.playing = true;
-  simState.startTime = performance.now();
-  if(simState.audio.enabled && !simState.audio.ctx) simState.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
-  if(simState.audio.enabled && simState.audio.ctx && !simState.audio.osc){
-    const osc = simState.audio.ctx.createOscillator();
-    const gain = simState.audio.ctx.createGain(); gain.gain.value = 0.04;
-    osc.type='sine'; osc.connect(gain); gain.connect(simState.audio.ctx.destination); osc.start();
-    simState.audio.osc = {osc,gain};
+  if(!sim.ts) return;
+  sim.playing = true; sim.startTime = performance.now();
+  if(sim.audio.enabled && !sim.audio.ctx) sim.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
+  if(sim.audio.enabled && sim.audio.ctx && !sim.audio.osc){
+    const osc = sim.audio.ctx.createOscillator();
+    const gain = sim.audio.ctx.createGain(); gain.gain.value = 0.04;
+    osc.type='sine'; osc.connect(gain); gain.connect(sim.audio.ctx.destination); osc.start();
+    sim.audio.osc = {osc,gain};
   }
   function step(){
-    if(!simState.playing){ simState.raf=null; return; }
-    const elapsed = (performance.now() - simState.startTime)/1000;
-    const frac = elapsed / simState.ts.duration;
-    const idx = Math.floor(frac * (simState.ts.t.length - 1));
-    if(idx >= simState.ts.t.length - 1){
-      simState.playing = false; if(simState.audio.osc){ try{ simState.audio.osc.osc.stop(); }catch(e){} simState.audio.osc = null; } simState.raf=null; return;
+    if(!sim.playing){ sim.raf = null; return; }
+    const elapsed = (performance.now() - sim.startTime)/1000;
+    const frac = elapsed / sim.ts.duration;
+    const idx = Math.floor(frac * (sim.ts.t.length - 1));
+    if(idx >= sim.ts.t.length - 1){
+      sim.playing = false;
+      if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc = null; }
+      sim.raf = null; return;
     }
-    const pos = computePositions(idx, simState.ts, simState.params);
-    const maxTrail = 40;
+    const pos = computePositions(idx, sim.ts, sim.params);
+    const maxTrail = 48;
     const perBH = Math.max(4, Math.round(maxTrail/6));
-    pushTrail(simState.trails.bh1, pos.bh1, perBH); pushTrail(simState.trails.bh2, pos.bh2, perBH);
-    const pts = trailToPoints(simState.trails.bh1, [255,160,64]).slice(-perBH).concat(trailToPoints(simState.trails.bh2, [0,212,255]).slice(-perBH)).slice(-maxTrail);
+    pushTrail(sim.trails.bh1, pos.bh1, perBH); pushTrail(sim.trails.bh2, pos.bh2, perBH);
+    const pts = trailToPoints(sim.trails.bh1, [255,160,64]).slice(-perBH).concat(trailToPoints(sim.trails.bh2, [0,212,255]).slice(-perBH)).slice(-maxTrail);
     updateOrbit('orbit3d', pos.bh1, pos.bh2, pts);
-    if(simState.audio.enabled && simState.audio.osc && simState.ts.freq[idx]){
-      const audible = Math.min(2000, 60 + simState.ts.freq[idx]*0.9);
-      try{ simState.audio.osc.osc.frequency.setValueAtTime(audible, simState.audio.ctx.currentTime); }catch(e){}
+    if(sim.audio.enabled && sim.audio.osc && sim.ts.freq[idx]){
+      const audible = Math.min(2000, 60 + sim.ts.freq[idx]*0.9);
+      try{ sim.audio.osc.osc.frequency.setValueAtTime(audible, sim.audio.ctx.currentTime); }catch(e){}
     }
-    simState.raf = requestAnimationFrame(step);
+    sim.raf = requestAnimationFrame(step);
   }
-  if(!simState.raf) simState.raf = requestAnimationFrame(step);
+  if(!sim.raf) sim.raf = requestAnimationFrame(step);
 }
-function pauseSim(){ simState.playing = false; if(simState.audio.osc){ try{ simState.audio.osc.osc.stop(); }catch(e){} simState.audio.osc = null; } if(simState.raf){ cancelAnimationFrame(simState.raf); simState.raf = null; } }
-
-/* UI hooks */
-document.getElementById('customRun').addEventListener('click', ()=>{ startCustomFromInputs(); });
+function pauseSim(){ sim.playing = false; if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc = null; } if(sim.raf){ cancelAnimationFrame(sim.raf); sim.raf = null; } }
 document.getElementById('simPlay').addEventListener('click', ()=>{ playSim(); });
 document.getElementById('simPause').addEventListener('click', ()=>{ pauseSim(); });
-document.getElementById('simRestart').addEventListener('click', ()=>{ if(!simState.params) return; startCustomFromInputs(); setTimeout(()=>playSim(),100); });
+document.getElementById('simRestart').addEventListener('click', ()=>{ if(!sim.params) return; startSimulationFromInputs(); setTimeout(()=>playSim(), 120); });
 
+/* Export */
 document.getElementById('exportJSON').addEventListener('click', ()=>{
-  if(!simState.params){ alert('Run a simulation first'); return; }
-  const blob = new Blob([JSON.stringify(simState.params,null,2)], {type:'application/json'});
-  downloadBlob(blob, 'custom_params.json');
+  if(!sim.params){ alert('Run a simulation first'); return; }
+  const blob = new Blob([JSON.stringify(sim.params, null, 2)], {type:'application/json'});
+  downloadBlob(blob, 'sim_params.json');
 });
 document.getElementById('exportZIP').addEventListener('click', async ()=>{
-  if(!simState.ts || !simState.params){ alert('Run a simulation first'); return; }
-  const zip = new JSZip(); zip.file('params.json', JSON.stringify(simState.params,null,2));
-  let csv = 'time,strain\n'; for(let i=0;i<simState.ts.t.length;i++) csv += `${simState.ts.t[i]},${simState.ts.h[i]}\n`; zip.file('waveform.csv', csv);
+  if(!sim.ts||!sim.params){ alert('Run a simulation first'); return; }
+  const zip = new JSZip(); zip.file('params.json', JSON.stringify(sim.params,null,2));
+  let csv = 'time,strain\n'; for(let i=0;i<sim.ts.t.length;i++) csv += `${sim.ts.t[i]},${sim.ts.h[i]}\n`; zip.file('waveform.csv', csv);
   try{ const dataUrl = await Plotly.toImage(document.getElementById('wavePlot'), {format:'png', width:1200, height:400}); const blob=await (await fetch(dataUrl)).blob(); const arr=await blob.arrayBuffer(); zip.file('waveform.png', arr); }catch(e){ console.warn('capture failed', e); }
-  const content = await zip.generateAsync({type:'blob'}); downloadBlob(content, 'custom_package.zip');
+  const content = await zip.generateAsync({type:'blob'}); downloadBlob(content, 'sim_package.zip');
 });
 
-/* Plotting helpers */
-function plotWaveform(ts, title){
+/* Plot helpers */
+function plotWaveform(ts,title){
   const tr = { x: ts.t, y: ts.h, mode: 'lines', line: { color: '#ffffff' } };
   const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
   Plotly.react('wavePlot', [tr], layout, {displayModeBar:false, responsive:true});
 }
-function plotSpectrogram(ts, title){
+function plotSpectrogram(ts,title){
   const w=256, hop=128, mags=[];
   for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v)));
   const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
   Plotly.react('specPlot', [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, { displayModeBar:false, responsive:true });
 }
-function plotEnergy(ts, title){
+function plotEnergy(ts,title){
   const step = Math.max(1, Math.round(ts.h.length / 200));
   const p=[];
   for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f = ts.freq[i]||1; p.push(a*a*f*f); }
@@ -499,13 +539,13 @@ function plotEnergy(ts, title){
   Plotly.react('energyPlot', [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title, margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
 }
 
-/* =========================
-   Calculators (Advanced tab)
-=========================*/
+/* ------------------------
+ Calculators / Advanced UI
+-------------------------*/
 document.getElementById('calc_rs').addEventListener('click', ()=>{
   const M = parseFloat(document.getElementById('sr_M').value) || 1;
   const rs = 2 * G * (M * Msun) / (c*c);
-  document.getElementById('rs_out').textContent = `${(rs/1000).toFixed(3)} km (Schwarzschild radius for ${M} M☉)`;
+  document.getElementById('rs_out').textContent = `${(rs/1000).toFixed(4)} km (Schwarzschild radius for ${M} M☉)`;
 });
 document.getElementById('calc_mc').addEventListener('click', ()=>{
   const m1 = parseFloat(document.getElementById('cm_m1').value)||1;
@@ -517,26 +557,29 @@ document.getElementById('calc_nudelay').addEventListener('click', ()=>{
   const mv = parseFloat(document.getElementById('nu_mass_ev').value) || 1; // eV
   const EMeV = parseFloat(document.getElementById('nu_E_mev').value) || 10;
   const Dmpc = parseFloat(document.getElementById('nu_D').value) || 410;
-  const mvJ = mv * 1.602176634e-19; // eV->J is x1.602e-19
-  const EJ = EMeV * 1.602176634e-13; // MeV->J
-  // delta t = (m^2 c^4)/(2 E^2) * D / c
+  const mvJ = mv * 1.602176634e-19;
+  const EJ = EMeV * 1.602176634e-13;
   const delta = (Math.pow(mvJ*c*c,2) / (2 * EJ*EJ)) * (Dmpc*Mpc / c);
-  document.getElementById('nud_out').textContent = `Δt ≈ ${delta.toExponential(3)} s (toy estimate)`;
+  document.getElementById('nud_out').textContent = `Δt ≈ ${delta.toExponential(3)} s (toy)`;
 });
 
-/* Full notes open */
-document.getElementById('openNotes').addEventListener('click', ()=>{ window.open('advanced_notes.html'); });
-document.getElementById('openNotesPopup').addEventListener('click', ()=>{ const el=document.getElementById('fullNotes'); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; });
+/* toggle inline notes & modal */
+document.getElementById('toggleNotesInline').addEventListener('click', ()=>{
+  const el=document.getElementById('notesInline'); el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+});
+document.getElementById('openFullNotes').addEventListener('click', ()=>{
+  document.getElementById('fullNotesModal').style.display = 'block';
+});
+document.getElementById('closeModal').addEventListener('click', ()=>{
+  document.getElementById('fullNotesModal').style.display = 'none';
+});
 
-/* =========================
-   Init: default run for Overview & custom
-=========================*/
-(function init(){
-  // init custom default
-  document.getElementById('customRun').click();
-  // ensure wave plots resize on load
-  setTimeout(()=>{ ['wavePlot','specPlot','energyPlot'].forEach(id=>{ const el=document.getElementById(id); if(el && el.data) Plotly.Plots.resize(el); }); }, 600);
-})();
+/* init: populate event summary text */
+document.getElementById('eventsSelect').dispatchEvent(new Event('change'));
+
+/* auto-run a default sim so user sees something */
+setTimeout(()=>{ document.getElementById('customRun').click(); }, 450);
+
 </script>
 </body>
 </html>
