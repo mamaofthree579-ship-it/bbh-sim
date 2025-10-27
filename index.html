@@ -1,32 +1,30 @@
-<!doctype html>
+!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Lab — Dark Cinematic (v4.3)</title>
+<title>BBH Lab — Dark Cinematic (final)</title>
 
-<!-- Plotly -->
+<!-- External libs: Plotly + JSZip (CDN) -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<!-- JSZip -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- KaTeX -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
-  onload="renderMathInElement(document.body,{delimiters:[{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}]});"></script>
 
+<!-- Styles (dark, cinematic) -->
 <style>
+/* === Page theme & layout === */
 :root{
-  --bg1:#030416; --bg2:#07112a; --nebula1:#0b2540; --accent:#00d4ff; --warm:#ffb85a; --muted:#9fb0c6;
+  --bg1:#020316; --bg2:#07122a; --accent:#00d4ff; --warm:#ffb85a; --muted:#9fb0c6;
 }
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eaf6ff;background:radial-gradient(1200px 600px at 10% 10%, rgba(255,255,255,0.02), transparent), linear-gradient(180deg,var(--bg1),var(--bg2)); -webkit-font-smoothing:antialiased}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eaf6ff;background:
+  radial-gradient(1200px 600px at 10% 10%, rgba(255,255,255,0.02), transparent),
+  linear-gradient(180deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased}
 .container{max-width:1200px;margin:0 auto;padding:16px}
 .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .title{font-weight:700;color:var(--accent);font-size:1.05rem}
-.subtitle{color:var(--muted);font-size:0.95rem}
+.subtitle{color:var(--muted)}
 .tabbar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .tabbtn{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:#eaf6ff;padding:8px 12px;border-radius:8px;cursor:pointer}
-.tabbtn.active{background:linear-gradient(90deg, rgba(0,212,255,0.06), rgba(255,184,90,0.04));box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+.tabbtn.active{background:linear-gradient(90deg, rgba(0,212,255,0.06), rgba(255,184,90,0.04));box-shadow:0 10px 30px rgba(0,0,0,0.45)}
 .layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
 @media(min-width:1000px){.layout{grid-template-columns:1fr 420px}}
 .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 14px 40px rgba(0,0,0,0.55)}
@@ -36,9 +34,16 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
 .input{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#eaf6ff}
 .canvas{border-radius:8px;background:transparent}
 #overviewCanvas{width:100%;height:320px;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.disk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:260px;height:260px;border-radius:50%;background:radial-gradient(circle at 40% 35%, rgba(255,210,160,0.18), transparent 18%), radial-gradient(circle at 60% 60%, rgba(0,212,255,0.06), transparent 25%), linear-gradient(90deg, rgba(255,160,60,0.06), rgba(0,212,255,0.06));box-shadow:0 20px 80px rgba(0,0,0,0.6);filter:blur(0.25px)}
-.shadow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:140px;height:140px;border-radius:50%;background:radial-gradient(circle at 40% 40%, rgba(0,0,0,0.95), rgba(0,0,0,0.9) 55%, rgba(0,0,0,0.6) 70%);mix-blend-mode:multiply;z-index:5;pointer-events:none}
-.ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(0deg);width:420px;height:420px;border-radius:50%;background:conic-gradient(from 120deg, rgba(255,184,90,0.08), rgba(0,212,255,0.04), rgba(255,184,90,0.06));opacity:0.9;filter:blur(12px);pointer-events:none}
+.disk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:260px;height:260px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%, rgba(255,210,160,0.18), transparent 18%),
+             radial-gradient(circle at 60% 60%, rgba(0,212,255,0.06), transparent 25%),
+             linear-gradient(90deg, rgba(255,160,60,0.06), rgba(0,212,255,0.06));
+  box-shadow:0 20px 80px rgba(0,0,0,0.6);filter:blur(0.25px)}
+.shadow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(circle at 40% 40%, rgba(0,0,0,0.96), rgba(0,0,0,0.9) 55%, rgba(0,0,0,0.6) 70%);mix-blend-mode:multiply;z-index:5;pointer-events:none}
+.ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(0deg);width:420px;height:420px;border-radius:50%;
+  background:conic-gradient(from 120deg, rgba(255,184,90,0.08), rgba(0,212,255,0.04), rgba(255,184,90,0.06));
+  opacity:0.9;filter:blur(12px);pointer-events:none}
 @keyframes rotateRing{from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)}}
 .ring.anim{animation:rotateRing 28s linear infinite}
 .legend{position:absolute;left:12px;bottom:12px;color:var(--muted);font-size:0.9rem;z-index:6}
@@ -50,27 +55,26 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
 .player{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;margin-top:8px;border-radius:8px;background:rgba(0,0,0,0.18)}
 .export-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#eaf6ff;padding:6px 8px;border-radius:6px;cursor:pointer}
 .katex-block{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:8px;color:#eaf6ff}
-.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:86vw;max-width:980px;height:78vh;background:rgba(3,6,22,0.98);border-radius:12px;padding:12px;color:#eaf6ff;box-shadow:0 30px 80px rgba(0,0,0,0.7);display:none;z-index:999;overflow:auto}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:88vw;max-width:980px;height:78vh;background:rgba(3,6,22,0.98);border-radius:12px;padding:12px;color:#eaf6ff;box-shadow:0 30px 80px rgba(0,0,0,0.7);display:none;z-index:999;overflow:auto}
 .modal header{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .modal .content{margin-top:10px;white-space:pre-wrap;font-family:inherit;color:var(--muted)}
 .close-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;color:#eaf6ff;cursor:pointer}
-
-/* small helpers */
 .details{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:8px;color:var(--muted)}
-.footer{margin-top:20px;text-align:center;color:var(--muted)}
+.footer{margin-top:20px;text-align:center;color:var(--muted);font-size:0.9rem}
 </style>
 </head>
 <body>
   <div class="container">
+    <!-- HEADER -->
     <div class="header">
       <div>
         <div class="title">BBH Lab — Dark Cinematic</div>
-        <div class="subtitle">Events • Simulation • Advanced Physics — interactive & educational</div>
+        <div class="subtitle">Events · Simulation · Advanced Physics (lazy Math rendering)</div>
       </div>
-      <div class="small muted">v4.3 • Dark theme • Mobile-friendly</div>
+      <div class="small muted">v4.3 — modal & tab isolation fixes</div>
     </div>
 
-    <!-- Tabs -->
+    <!-- TAB NAV -->
     <div class="tabbar" role="tablist" aria-label="Main tabs">
       <button class="tabbtn active" data-target="tabOverview">Overview</button>
       <button class="tabbtn" data-target="tabSimulation">Simulation</button>
@@ -79,12 +83,12 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
     </div>
 
     <div class="layout">
-      <!-- LEFT column -->
+      <!-- LEFT COLUMN -->
       <div>
-        <!-- Overview -->
+        <!-- =========== Overview Section =========== -->
         <section id="tabOverview" class="card tabcontent" style="display:block">
-          <h3>Overview — what is a black hole?</h3>
-          <p class="small muted">A black hole is a region of spacetime where gravity is extreme. Nearby objects orbit and — if two compact objects merge — gravitational waves are emitted. The visual below is a stylized representation (fast, mobile-friendly).</p>
+          <h3>Overview — What is a black hole?</h3>
+          <p class="small muted">A black hole is a region of spacetime with extreme gravity. When compact objects (black holes or neutron stars) inspiral, they emit gravitational waves. The visualization below is stylized and mobile-friendly.</p>
 
           <div id="overviewCanvas">
             <div class="ring" id="overviewRing"></div>
@@ -96,17 +100,18 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
           <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
             <button id="ovStart" class="tabbtn">Start Animation</button>
             <button id="ovStop" class="tabbtn">Stop</button>
-            <div class="small muted" style="margin-left:auto">Choose Simulation tab to run binaries</div>
+            <div class="small muted" style="margin-left:auto">Go to Simulation tab to run binaries</div>
           </div>
         </section>
 
-        <!-- Simulation -->
+        <!-- =========== Simulation Section =========== -->
         <section id="tabSimulation" class="card tabcontent" style="display:none">
-          <h3>Simulation — orbit, chirp, spectrogram</h3>
-          <div class="small muted">Use custom inputs or Events tab to load a preset.</div>
+          <h3>Simulation — Orbit, Chirp & Spectrogram</h3>
+          <div class="small muted">Use presets from Events or define a custom binary below. Waveform uses a PN-inspired toy chirp (leading order).</div>
 
           <div class="card" style="margin-top:10px">
             <div class="controls" style="align-items:center">
+              <!-- Custom input controls -->
               <label class="small muted">m₁ (M☉): <input id="c_m1" class="input" type="number" value="36" min="0.5" style="width:90px"></label>
               <label class="small muted">m₂ (M☉): <input id="c_m2" class="input" type="number" value="29" min="0.5" style="width:90px"></label>
               <label class="small muted">D (Mpc): <input id="c_D" class="input" type="number" value="410" min="0.01" style="width:110px"></label>
@@ -114,7 +119,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
               <label class="small muted">β: <input id="c_beta" class="input" type="number" value="0.00" step="0.01" style="width:80px"></label>
               <button id="customRun" class="tabbtn">Run</button>
             </div>
-            <div class="small muted" style="margin-top:6px">β is a phenomenological fraction of GW energy → neutrino channel (toy)</div>
+            <div class="small muted" style="margin-top:6px">β is a phenomenological fraction of GW energy → neutrino channel (toy). In Phase 2 β can alter amplitude/time-scale visually.</div>
           </div>
 
           <div id="orbit3d" style="margin-top:12px"></div>
@@ -134,10 +139,10 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
           <div id="energyPlot" style="height:120px;margin-top:12px"></div>
         </section>
 
-        <!-- Events -->
+        <!-- =========== Events Section =========== -->
         <section id="tabEvents" class="card tabcontent" style="display:none">
-          <h3>Events — known LIGO/Virgo detections</h3>
-          <p class="small muted">Select a real detection and simulate it (parameters are simplified summaries).</p>
+          <h3>Events — Known LIGO/Virgo Detections</h3>
+          <p class="small muted">Select an event to populate the Simulation inputs and auto-run a toy simulation.</p>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select id="eventsSelect" class="input">
               <option value="GW150914">GW150914 — BBH (2015)</option>
@@ -151,15 +156,16 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
         </section>
       </div>
 
-      <!-- RIGHT column -->
+      <!-- RIGHT COLUMN (aside) -->
       <aside>
+        <!-- =========== Quick Physics & Calculators =========== -->
         <div class="card">
           <h4>Quick Physics</h4>
           <div class="katex-block">
             <div><strong>Key formulas (leading order)</strong></div>
             <div class="small muted" style="margin-top:6px">
-              \\( r_s = \\dfrac{2GM}{c^2} \\) • Schwarzschild radius<br>
-              \\( \\mathcal{M} = \\dfrac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}} \\) • Chirp mass<br>
+              \\( r_s = \\dfrac{2GM}{c^2} \\) — Schwarzschild radius<br>
+              \\( \\mathcal{M} = \\dfrac{(M_1M_2)^{3/5}}{(M_1+M_2)^{1/5}} \\) — chirp mass<br>
               \\( h(f) \\propto \\dfrac{\\mathcal{M}^{5/3} f^{2/3}}{D} \\)
             </div>
           </div>
@@ -194,11 +200,12 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial
           </div>
         </div>
 
+        <!-- =========== Advanced Physics summary & modal trigger =========== -->
         <div class="card" style="margin-top:12px">
           <h4>Advanced Physics</h4>
-          <div class="small muted">Summary and full derivations (modal)</div>
-          <div style="margin-top:8px;display:flex;gap:8px">
-            <button id="openFullNotes" class="tabbtn">View Full Notes</button>
+          <div class="small muted">Summary & full derivations (MathJax loaded lazily).</div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button id="openFullNotes" class="tabbtn">📘 View Full Derivations</button>
             <button id="toggleNotesInline" class="tabbtn">Toggle Summary</button>
           </div>
           <div id="notesInline" style="display:none;margin-top:8px" class="details">
@@ -207,10 +214,10 @@ I. Geometry & GR:
  r_s = 2GM/c^2
  Φ(r) ≈ -GM/r
 
-II. Inspiral & GW:
+II. Inspiral & GW (leading order):
  𝓜 = (M1 M2)^{3/5} / (M1+M2)^{1/5}
- ḟ = (96/5) π^{8/3} (G𝓜)^{5/3} / c^5 f^{11/3}
- h(f) ≈ 4 G^{5/3}/c^4 π^{2/3} 𝓜^{5/3} f^{2/3}/D
+ ḟ = (96/5) π^{8/3} (G𝓜)^{5/3}/c^5 f^{11/3}
+ h(f) ∝ 𝓜^{5/3} f^{2/3}/D
 
 III. Phenomenological:
  ΔE_ν ≈ α ∫Φ dt
@@ -221,13 +228,14 @@ III. Phenomenological:
       </aside>
     </div>
 
-    <div class="modal" id="fullNotesModal" role="dialog" aria-hidden="true">
+    <!-- Full derivations modal (hidden by default, only active from Advanced tab) -->
+    <div class="modal" id="fullNotesModal" role="dialog" aria-hidden="true" aria-labelledby="modalTitle">
       <header>
-        <strong>Full Derivations & Notes</strong>
-        <button class="close-btn" id="closeModal">Close</button>
+        <div><strong id="modalTitle">Full Derivations & Notes</strong></div>
+        <div><button id="closeModal" class="close-btn">Close</button></div>
       </header>
-      <div class="content">
-        <!-- Full user-supplied derivations inserted here -->
+      <div class="content" id="modalContent">
+        <!-- Full equations & notes (user-supplied) -->
 <pre style="white-space:pre-wrap">
 # I. Geometry & basic GR quantities
 
@@ -238,7 +246,7 @@ Gravitational potential (Newtonian approx)
  \Phi(r) \approx -\frac{GM}{r}
 
 Gravitational redshift (photon / particle energy)
- E_{\rm obs} = E_{\rm em}\,\sqrt{1-\frac{r_s}{r}} \quad (exact Schwarzschild factor)
+ E_{\rm obs} = E_{\rm em}\,\sqrt{1-\frac{r_s}{r}} \quad\text{(exact Schwarzschild factor)}
  E_{\rm obs}\simeq E_{\rm em}\left(1-\frac{GM}{rc^2}\right).
 
 # II. Binary black-hole / neutron-star inspiral & gravitational waves
@@ -264,7 +272,7 @@ Total neutrino energy from a core-collapse supernova (order of magnitude)
  E_{\nu,{\rm tot}}\sim 10^{53}\ \mathrm{erg} \quad(\text{typical benchmark})
 
 Isotropic neutrino energy flux at distance 
- F_\nu = \frac{E_{\nu,{\rm tot}}}{4\pi D^2}
+ F_\nu = \frac{E_{\nu,{\rm_tot}}}{4\pi D^2}
 
 Detector event count estimate (approximate)
  N_{\rm_events} \approx \frac{E_{\nu,{\rm_tot}}}{\langle E_\nu\rangle}\cdot \frac{ \sigma(\langle E_\nu\rangle)\, N_T }{4\pi D^2}
@@ -295,7 +303,7 @@ Emission vs arrival time
  \Delta t_{\nu - {\rm GW}} \simeq (t_{\rm em,\nu}-t_{\rm em,GW}) + \frac{D}{c}\left(\frac{1}{\sqrt{1-m_\nu^2 c^4/E^2}}-1\right).
 
 # VI. Energetics relations & observables
- ... (full content retained as in your notes) ...
+ ... (full content retained) ...
 </pre>
       </div>
     </div>
@@ -303,42 +311,68 @@ Emission vs arrival time
     <div class="footer">BBH Lab — copy, adapt, and explore. Built for outreach & prototyping.</div>
   </div>
 
+<!-- =========================
+    SCRIPT: physics, UI, tab isolation, lazy MathJax
+========================= -->
 <script>
 /* ------------------------
  Constants & helpers
 -------------------------*/
-const G = 6.67430e-11;
-const c = 299792458;
-const Msun = 1.98847e30;
-const Mpc = 3.085677581491367e22;
+const G = 6.67430e-11, c = 299792458, Msun = 1.98847e30, Mpc = 3.085677581491367e22;
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function linspace(a,b,n){const out=[];for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1));return out;}
 function downloadBlob(blob,filename){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },200);}
 
 /* ------------------------
- Tab logic (isolate content)
+ Tab logic: isolate content & close modal when switching away
 -------------------------*/
-document.querySelectorAll('.tabbtn').forEach(btn=>{
+const tabButtons = document.querySelectorAll('.tabbtn');
+const tabContents = document.querySelectorAll('.tabcontent');
+let mathJaxLoaded = false; // for lazy load
+
+tabButtons.forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));
+    // UI active state
+    tabButtons.forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('.tabcontent').forEach(tc=>tc.style.display='none');
+    // hide all tab contents
+    tabContents.forEach(tc=>tc.style.display='none');
+    // show selected
     const target = btn.dataset.target;
     document.getElementById(target).style.display = 'block';
-    // Anim optimizations: stop Overview ring when leaving tab
+
+    // if leaving Advanced tab, close modal & inline notes
+    if(target !== 'tabAdvanced'){
+      // close modal if open
+      document.getElementById('fullNotesModal').style.display = 'none';
+      document.getElementById('notesInline').style.display = 'none';
+    } else {
+      // Advanced tab opened: lazy-load MathJax once
+      if(!mathJaxLoaded){
+        mathJaxLoaded = true;
+        const s = document.createElement('script');
+        s.id = 'mathjaxScript';
+        s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        s.onload = ()=>{ console.info('MathJax loaded'); };
+        document.head.appendChild(s);
+      }
+    }
+
+    // small visual optimization: stop ring anim when leaving overview
     if(target !== 'tabOverview'){ document.getElementById('overviewRing').classList.remove('anim'); }
+    else { /* do nothing; user can start ring */ }
   });
 });
 
 /* ------------------------
- Overview stylized disk animation
+ Overview stylized disk controls
 -------------------------*/
 const ringEl = document.getElementById('overviewRing');
 document.getElementById('ovStart').addEventListener('click', ()=>{ ringEl.classList.add('anim'); });
 document.getElementById('ovStop').addEventListener('click', ()=>{ ringEl.classList.remove('anim'); });
 
 /* ------------------------
- Events: presets
+ Events presets wiring
 -------------------------*/
 const PRESETS = {
   GW150914:{m1:36,m2:29,D:410,sep:15,label:'GW150914 — BBH (2015)'},
@@ -361,224 +395,168 @@ document.getElementById('loadEvent').addEventListener('click', ()=>{
   document.getElementById('c_sep').value = p.sep;
   // switch to Simulation tab and run
   document.querySelector('[data-target="tabSimulation"]').click();
-  setTimeout(()=>{ document.getElementById('customRun').click(); }, 350);
+  setTimeout(()=>{ document.getElementById('customRun').click(); }, 300);
 });
 
 /* ------------------------
- PN-inspired chirp generator
+ PN-inspired chirp generator (leading order)
 -------------------------*/
-function chirpMassKg(m1, m2){ const m1si=m1*Msun, m2si=m2*Msun; return Math.pow(Math.pow(m1si*m2si,3/5)/Math.pow(m1si+m2si,1/5),1); }
-function inspiralK(Mc_SI){ return (5/256) * Math.pow(c,5) / (Math.pow(G*Mc_SI,5/3) * Math.pow(Math.PI, 8/3)); }
-function frequencyFromTime(t, tmerge, K){ const dt = Math.max(1e-12, tmerge - t); return Math.pow(K / dt, 3/8); }
-function amplitudeH(Mc_SI, f, D_SI){ const num = 4 * Math.pow(G,5/3) * Math.pow(Math.PI,2/3) * Math.pow(Mc_SI,5/3) * Math.pow(f,2/3); const den = Math.pow(c,4) * D_SI; return num/den; }
+function chirpMassKg(m1,m2){ const m1si=m1*Msun,m2si=m2*Msun; return Math.pow(Math.pow(m1si*m2si,3/5)/Math.pow(m1si+m2si,1/5),1); }
+function inspiralK(Mc_SI){ return (5/256)*Math.pow(c,5)/(Math.pow(G*Mc_SI,5/3)*Math.pow(Math.PI,8/3)); }
+function frequencyFromTime(t,tmerge,K){ const dt=Math.max(1e-12,tmerge-t); return Math.pow(K/dt,3/8); }
+function amplitudeH(Mc_SI,f,D_SI){ const num=4*Math.pow(G,5/3)*Math.pow(Math.PI,2/3)*Math.pow(Mc_SI,5/3)*Math.pow(f,2/3); const den=Math.pow(c,4)*D_SI; return num/den; }
 function estimateEGW(m1,m2,eps=0.05){ const Mtot=(m1+m2)*Msun; return eps*Mtot*c*c; }
 
 function generatePhysicsChirp(params){
-  const m1=params.m1, m2=params.m2, Dmpc=params.D||410;
-  const D_SI = Math.max(1e16, Dmpc*Mpc);
-  const Mc_SI = chirpMassKg(m1,m2);
-  const K = inspiralK(Mc_SI);
-  const Mtot = (m1+m2)*Msun;
-  const f_isco = Math.max(10, Math.min(2000, Math.pow(c,3)/(Math.pow(6,1.5)*Math.PI*G*Mtot)));
-  const t_merge = K * Math.pow(f_isco, -8/3);
-  const t_end = Math.max(0.5, 0.999 * t_merge);
-  const sr = 2048;
-  const N = Math.max(512, Math.round(Math.min(22, t_end) * sr));
-  const t = linspace(0, t_end, N);
-  const freq = new Array(N), h = new Array(N), phase = new Array(N);
-  let phi = 0;
+  const m1=params.m1,m2=params.m2,Dmpc=params.D||410;
+  const D_SI=Math.max(1e16,Dmpc*Mpc);
+  const Mc_SI=chirpMassKg(m1,m2);
+  const K=inspiralK(Mc_SI);
+  const Mtot=(m1+m2)*Msun;
+  const f_isco=Math.max(10,Math.min(2000,Math.pow(c,3)/(Math.pow(6,1.5)*Math.PI*G*Mtot)));
+  const t_merge=K*Math.pow(f_isco,-8/3);
+  const t_end=Math.max(0.5,0.999*t_merge);
+  const sr=2048;
+  const N=Math.max(512,Math.round(Math.min(22,t_end)*sr));
+  const t=linspace(0,t_end,N); const freq=new Array(N),h=new Array(N),phase=new Array(N);
+  let phi=0;
   for(let i=0;i<N;i++){
-    const ti = t[i];
-    const fi = frequencyFromTime(ti, t_merge, K);
-    freq[i] = fi;
-    const Ai = amplitudeH(Mc_SI, fi, D_SI) * (1 - (params.beta || 0)); // optionally reduce amplitude by beta (toy)
-    const dt = i===0 ? (t[1]-t[0]) : (t[i]-t[i-1]);
-    phi += 2*Math.PI*fi*dt;
-    phase[i] = phi;
-    h[i] = Ai * Math.sin(phi);
+    const ti=t[i]; const fi=frequencyFromTime(ti,t_merge,K); freq[i]=fi;
+    const Ai=amplitudeH(Mc_SI,fi,D_SI) * (1 - (params.beta || 0)); // toy amplitude reduced by beta
+    const dt=i===0?(t[1]-t[0]):(t[i]-t[i-1]); phi+=2*Math.PI*fi*dt; phase[i]=phi; h[i]=Ai*Math.sin(phi);
   }
   return {t,h,freq,duration:t_end,Mc_SI,D_SI,estimateEGW:estimateEGW(m1,m2)};
 }
 
 /* ------------------------
- Orbit / Plotly 3D init & update
+ Orbit 3D (Plotly scatter3d)
 -------------------------*/
 function initOrbitPlot(){
-  const data = [
-    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:14,color:'rgb(255,160,64)'}, name:'BH1' },
-    { x:[0], y:[0], z:[0], type:'scatter3d', mode:'markers', marker:{size:12,color:'rgb(0,212,255)'}, name:'BH2' },
-    { x:[], y:[], z:[], type:'scatter3d', mode:'markers', marker:{size:6,color:[],opacity:1}, name:'Trail', showlegend:false }
+  const data=[
+    {x:[0],y:[0],z:[0],type:'scatter3d',mode:'markers',marker:{size:14,color:'rgb(255,160,64)'},name:'BH1'},
+    {x:[0],y:[0],z:[0],type:'scatter3d',mode:'markers',marker:{size:12,color:'rgb(0,212,255)'},name:'BH2'},
+    {x:[],y:[],z:[],type:'scatter3d',mode:'markers',marker:{size:6,color:[],opacity:1},name:'Trail',showlegend:false}
   ];
-  const layout = { margin:{t:6,l:6,r:6,b:6}, scene:{camera:{eye:{x:1.2,y:1.0,z:0.7}}, xaxis:{visible:false}, yaxis:{visible:false}, zaxis:{visible:false}}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react('orbit3d', data, layout, {displayModeBar:false, responsive:true});
+  const layout={margin:{t:6,l:6,r:6,b:6},scene:{camera:{eye:{x:1.2,y:1.0,z:0.7}},xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false}},paper_bgcolor:'transparent',plot_bgcolor:'transparent'};
+  Plotly.react('orbit3d',data,layout,{displayModeBar:false,responsive:true});
 }
 initOrbitPlot();
 
-function updateOrbit(elid, b1, b2, trailPts){
-  const xs = trailPts.map(p=>p.x), ys = trailPts.map(p=>p.y), zs = trailPts.map(p=>p.z);
-  Plotly.restyle(elid, {'x':[[b1[0]],[b2[0]], xs], 'y':[[b1[1]],[b2[1]], ys], 'z':[[b1[2]],[b2[2]], zs]}, [0,1,2]);
-  const colors = trailPts.map(p=>`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha.toFixed(3)})`);
-  Plotly.restyle(elid, {'marker.color':[null,null,colors]}, [0,1,2]);
+function updateOrbit(elid,b1,b2,trailPts){
+  const xs=trailPts.map(p=>p.x), ys=trailPts.map(p=>p.y), zs=trailPts.map(p=>p.z);
+  Plotly.restyle(elid,{'x':[[b1[0]],[b2[0]],xs],'y':[[b1[1]],[b2[1]],ys],'z':[[b1[2]],[b2[2]],zs]},[0,1,2]);
+  const colors=trailPts.map(p=>`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.alpha.toFixed(3)})`);
+  Plotly.restyle(elid,{'marker.color':[null,null,colors]},[0,1,2]);
 }
 
-function computePositions(frameIdx, ts, params){
-  const idx = clamp(frameIdx, 0, ts.t.length - 1);
-  const fr = ts.freq[idx];
-  const baseRadius = clamp(params.sep * 0.04, 0.06, 1.8);
-  const shrink = clamp((fr / (fr + 250)), 0, 0.95);
-  const tau = idx / Math.max(1, ts.t.length - 1);
-  const radius = baseRadius * (1 - 0.6 * shrink) * (1 - 0.5 * tau);
-  const total = Math.max(1, params.m1 + params.m2);
-  const r1 = radius * (params.m2 / total);
-  const r2 = radius * (params.m1 / total);
-  const speed = 0.04 * (1 + fr / 200) * (1 + total / 120);
-  const theta = frameIdx * speed * 0.45;
-  const tilt = 0.2;
-  const x1 = r1 * Math.cos(theta), y1 = r1 * Math.sin(theta), z1 = tilt * Math.sin(theta*0.7);
-  const x2 = -r2 * Math.cos(theta), y2 = -r2 * Math.sin(theta), z2 = -tilt * Math.sin(theta*0.7);
-  return { bh1:[x1,y1,z1], bh2:[x2,y2,z2], freq:fr };
+function computePositions(frameIdx,ts,params){
+  const idx=clamp(frameIdx,0,ts.t.length-1); const fr=ts.freq[idx];
+  const baseRadius=clamp(params.sep*0.04,0.06,1.8); const shrink=clamp((fr/(fr+250)),0,0.95); const tau=idx/Math.max(1,ts.t.length-1);
+  const radius=baseRadius*(1-0.6*shrink)*(1-0.5*tau); const total=Math.max(1,params.m1+params.m2);
+  const r1=radius*(params.m2/total), r2=radius*(params.m1/total); const speed=0.04*(1+fr/200)*(1+total/120);
+  const theta=frameIdx*speed*0.45; const tilt=0.2;
+  const x1=r1*Math.cos(theta),y1=r1*Math.sin(theta),z1=tilt*Math.sin(theta*0.7);
+  const x2=-r2*Math.cos(theta),y2=-r2*Math.sin(theta),z2=-tilt*Math.sin(theta*0.7);
+  return {bh1:[x1,y1,z1],bh2:[x2,y2,z2],freq:fr};
 }
-function pushTrail(queue, pos, maxLen){ queue.push(pos.slice()); while(queue.length>maxLen) queue.shift(); }
-function trailToPoints(queue, colorRGB){ const out=[]; const L=queue.length; for(let i=0;i<L;i++){ const frac=i/Math.max(1,L-1); const alpha=0.12+0.85*frac; out.push({x:queue[i][0],y:queue[i][1],z:queue[i][2],alpha,color:colorRGB}); } return out; }
+function pushTrail(q,pos,maxLen){ q.push(pos.slice()); while(q.length>maxLen) q.shift(); }
+function trailToPoints(q,colorRGB){ const out=[]; const L=q.length; for(let i=0;i<L;i++){ const frac=i/Math.max(1,L-1); const alpha=0.12+0.85*frac; out.push({x:q[i][0],y:q[i][1],z:q[i][2],alpha,color:colorRGB}); } return out; }
 
 /* ------------------------
- Simulation state & playback
+ Simulation state & controls
 -------------------------*/
-let sim = {params:null, ts:null, trails:{bh1:[],bh2:[]}, playing:false, raf:null, startTime:0, audio:{ctx:null,osc:null,enabled:false}};
+let sim={params:null,ts:null,trails:{bh1:[],bh2:[]},playing:false,raf:null,startTime:0,audio:{ctx:null,osc:null,enabled:false}};
 
-function startSimulationFromInputs(){
-  const params = {
-    m1: parseFloat(document.getElementById('c_m1').value) || 36,
-    m2: parseFloat(document.getElementById('c_m2').value) || 29,
-    D: parseFloat(document.getElementById('c_D').value) || 410,
-    sep: parseFloat(document.getElementById('c_sep').value) || 15,
-    beta: parseFloat(document.getElementById('c_beta').value) || 0.0
-  };
-  sim.params = params;
-  sim.ts = generatePhysicsChirp(params);
-  sim.trails.bh1 = []; sim.trails.bh2 = [];
-  plotWaveform(sim.ts, `Custom — waveform`);
-  plotSpectrogram(sim.ts, `Custom — spectrogram`);
-  plotEnergy(sim.ts, `Estimated radiated power (toy)`);
-  const p0 = computePositions(0, sim.ts, params);
-  updateOrbit('orbit3d', p0.bh1, p0.bh2, []);
+function startSimFromInputs(){
+  const params={ m1:parseFloat(document.getElementById('c_m1').value)||36,
+                 m2:parseFloat(document.getElementById('c_m2').value)||29,
+                 D:parseFloat(document.getElementById('c_D').value)||410,
+                 sep:parseFloat(document.getElementById('c_sep').value)||15,
+                 beta:parseFloat(document.getElementById('c_beta').value)||0.0 };
+  sim.params=params; sim.ts=generatePhysicsChirp(params); sim.trails.bh1=[]; sim.trails.bh2=[];
+  plotWaveform(sim.ts,`Custom — waveform`); plotSpectrogram(sim.ts,`Custom — spectrogram`); plotEnergy(sim.ts,`Estimated radiated power (toy)`);
+  const p0=computePositions(0,sim.ts,params); updateOrbit('orbit3d',p0.bh1,p0.bh2,[]);
   pauseSim();
 }
-document.getElementById('customRun').addEventListener('click', ()=>{ startSimulationFromInputs(); });
+document.getElementById('customRun').addEventListener('click', ()=>{ startSimFromInputs(); });
 
 function playSim(){
-  if(!sim.ts) return;
-  sim.playing = true; sim.startTime = performance.now();
-  if(sim.audio.enabled && !sim.audio.ctx) sim.audio.ctx = new (window.AudioContext||window.webkitAudioContext)();
-  if(sim.audio.enabled && sim.audio.ctx && !sim.audio.osc){
-    const osc = sim.audio.ctx.createOscillator();
-    const gain = sim.audio.ctx.createGain(); gain.gain.value = 0.04;
-    osc.type='sine'; osc.connect(gain); gain.connect(sim.audio.ctx.destination); osc.start();
-    sim.audio.osc = {osc,gain};
-  }
+  if(!sim.ts) return; sim.playing=true; sim.startTime=performance.now();
+  if(sim.audio.enabled && !sim.audio.ctx) sim.audio.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(sim.audio.enabled && sim.audio.ctx && !sim.audio.osc){ const osc=sim.audio.ctx.createOscillator(); const gain=sim.audio.ctx.createGain(); gain.gain.value=0.04; osc.type='sine'; osc.connect(gain); gain.connect(sim.audio.ctx.destination); osc.start(); sim.audio.osc={osc,gain}; }
   function step(){
-    if(!sim.playing){ sim.raf = null; return; }
-    const elapsed = (performance.now() - sim.startTime)/1000;
-    const frac = elapsed / sim.ts.duration;
-    const idx = Math.floor(frac * (sim.ts.t.length - 1));
-    if(idx >= sim.ts.t.length - 1){
-      sim.playing = false;
-      if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc = null; }
-      sim.raf = null; return;
-    }
-    const pos = computePositions(idx, sim.ts, sim.params);
-    const maxTrail = 48;
-    const perBH = Math.max(4, Math.round(maxTrail/6));
-    pushTrail(sim.trails.bh1, pos.bh1, perBH); pushTrail(sim.trails.bh2, pos.bh2, perBH);
-    const pts = trailToPoints(sim.trails.bh1, [255,160,64]).slice(-perBH).concat(trailToPoints(sim.trails.bh2, [0,212,255]).slice(-perBH)).slice(-maxTrail);
-    updateOrbit('orbit3d', pos.bh1, pos.bh2, pts);
-    if(sim.audio.enabled && sim.audio.osc && sim.ts.freq[idx]){
-      const audible = Math.min(2000, 60 + sim.ts.freq[idx]*0.9);
-      try{ sim.audio.osc.osc.frequency.setValueAtTime(audible, sim.audio.ctx.currentTime); }catch(e){}
-    }
-    sim.raf = requestAnimationFrame(step);
+    if(!sim.playing){ sim.raf=null; return; }
+    const elapsed=(performance.now()-sim.startTime)/1000; const frac=elapsed/sim.ts.duration; const idx=Math.floor(frac*(sim.ts.t.length-1));
+    if(idx>=sim.ts.t.length-1){ sim.playing=false; if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc=null; } sim.raf=null; return; }
+    const pos=computePositions(idx,sim.ts,sim.params);
+    const maxTrail=48; const perBH=Math.max(4,Math.round(maxTrail/6));
+    pushTrail(sim.trails.bh1,pos.bh1,perBH); pushTrail(sim.trails.bh2,pos.bh2,perBH);
+    const pts=trailToPoints(sim.trails.bh1,[255,160,64]).slice(-perBH).concat(trailToPoints(sim.trails.bh2,[0,212,255]).slice(-perBH)).slice(-maxTrail);
+    updateOrbit('orbit3d',pos.bh1,pos.bh2,pts);
+    if(sim.audio.enabled && sim.audio.osc && sim.ts.freq[idx]){ const audible=Math.min(2000,60+sim.ts.freq[idx]*0.9); try{ sim.audio.osc.osc.frequency.setValueAtTime(audible, sim.audio.ctx.currentTime); }catch(e){} }
+    sim.raf=requestAnimationFrame(step);
   }
-  if(!sim.raf) sim.raf = requestAnimationFrame(step);
+  if(!sim.raf) sim.raf=requestAnimationFrame(step);
 }
-function pauseSim(){ sim.playing = false; if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc = null; } if(sim.raf){ cancelAnimationFrame(sim.raf); sim.raf = null; } }
+function pauseSim(){ sim.playing=false; if(sim.audio.osc){ try{ sim.audio.osc.osc.stop(); }catch(e){} sim.audio.osc=null; } if(sim.raf){ cancelAnimationFrame(sim.raf); sim.raf=null; } }
 document.getElementById('simPlay').addEventListener('click', ()=>{ playSim(); });
 document.getElementById('simPause').addEventListener('click', ()=>{ pauseSim(); });
-document.getElementById('simRestart').addEventListener('click', ()=>{ if(!sim.params) return; startSimulationFromInputs(); setTimeout(()=>playSim(), 120); });
+document.getElementById('simRestart').addEventListener('click', ()=>{ if(!sim.params) return; startSimFromInputs(); setTimeout(()=>playSim(),120); });
 
-/* Export */
+/* ------------------------
+ Export buttons
+-------------------------*/
 document.getElementById('exportJSON').addEventListener('click', ()=>{
   if(!sim.params){ alert('Run a simulation first'); return; }
-  const blob = new Blob([JSON.stringify(sim.params, null, 2)], {type:'application/json'});
-  downloadBlob(blob, 'sim_params.json');
+  const blob=new Blob([JSON.stringify(sim.params,null,2)],{type:'application/json'}); downloadBlob(blob,'sim_params.json');
 });
 document.getElementById('exportZIP').addEventListener('click', async ()=>{
   if(!sim.ts||!sim.params){ alert('Run a simulation first'); return; }
-  const zip = new JSZip(); zip.file('params.json', JSON.stringify(sim.params,null,2));
-  let csv = 'time,strain\n'; for(let i=0;i<sim.ts.t.length;i++) csv += `${sim.ts.t[i]},${sim.ts.h[i]}\n`; zip.file('waveform.csv', csv);
-  try{ const dataUrl = await Plotly.toImage(document.getElementById('wavePlot'), {format:'png', width:1200, height:400}); const blob=await (await fetch(dataUrl)).blob(); const arr=await blob.arrayBuffer(); zip.file('waveform.png', arr); }catch(e){ console.warn('capture failed', e); }
-  const content = await zip.generateAsync({type:'blob'}); downloadBlob(content, 'sim_package.zip');
+  const zip=new JSZip(); zip.file('params.json',JSON.stringify(sim.params,null,2));
+  let csv='time,strain\n'; for(let i=0;i<sim.ts.t.length;i++) csv+=`${sim.ts.t[i]},${sim.ts.h[i]}\n`;
+  zip.file('waveform.csv',csv);
+  try{ const dataUrl=await Plotly.toImage(document.getElementById('wavePlot'),{format:'png',width:1200,height:400}); const blob=await (await fetch(dataUrl)).blob(); const arr=await blob.arrayBuffer(); zip.file('waveform.png',arr);}catch(e){ console.warn('capture failed',e); }
+  const content=await zip.generateAsync({type:'blob'}); downloadBlob(content,'sim_package.zip');
 });
-
-/* Plot helpers */
-function plotWaveform(ts,title){
-  const tr = { x: ts.t, y: ts.h, mode: 'lines', line: { color: '#ffffff' } };
-  const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent', xaxis:{title:'Time (s)'}, yaxis:{title:'Strain'} };
-  Plotly.react('wavePlot', [tr], layout, {displayModeBar:false, responsive:true});
-}
-function plotSpectrogram(ts,title){
-  const w=256, hop=128, mags=[];
-  for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v)));
-  const layout = { title, margin:{t:36,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' };
-  Plotly.react('specPlot', [{ z: mags, type:'heatmap', colorscale:'Viridis' }], layout, { displayModeBar:false, responsive:true });
-}
-function plotEnergy(ts,title){
-  const step = Math.max(1, Math.round(ts.h.length / 200));
-  const p=[];
-  for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f = ts.freq[i]||1; p.push(a*a*f*f); }
-  const x = linspace(0, ts.duration, p.length);
-  Plotly.react('energyPlot', [{ x, y:p, type:'scatter', mode:'lines', line:{color:'#ffb86b'} }], { title, margin:{t:28,l:50,r:16,b:36}, paper_bgcolor:'transparent', plot_bgcolor:'transparent' }, {displayModeBar:false, responsive:true});
-}
 
 /* ------------------------
- Calculators / Advanced UI
+ Plot helpers (Plotly)
+-------------------------*/
+function plotWaveform(ts,title){ const tr={x:ts.t,y:ts.h,mode:'lines',line:{color:'#ffffff'}}; const layout={title,margin:{t:36,l:50,r:16,b:36},paper_bgcolor:'transparent',plot_bgcolor:'transparent',xaxis:{title:'Time (s)'},yaxis:{title:'Strain'}}; Plotly.react('wavePlot',[tr],layout,{displayModeBar:false,responsive:true}); }
+function plotSpectrogram(ts,title){ const w=256,hop=128,mags=[]; for(let i=0;i+w<ts.h.length;i+=hop) mags.push(ts.h.slice(i,i+w).map(v=>Math.abs(v))); const layout={title,margin:{t:36,l:50,r:16,b:36},paper_bgcolor:'transparent',plot_bgcolor:'transparent'}; Plotly.react('specPlot',[{z:mags,type:'heatmap',colorscale:'Viridis'}],layout,{displayModeBar:false,responsive:true}); }
+function plotEnergy(ts,title){ const step=Math.max(1,Math.round(ts.h.length/200)); const p=[]; for(let i=0;i<ts.h.length;i+=step){ const a=Math.abs(ts.h[i]); const f=ts.freq[i]||1; p.push(a*a*f*f); } const x=linspace(0,ts.duration,p.length); Plotly.react('energyPlot',[{x,y:p,type:'scatter',mode:'lines',line:{color:'#ffb86b'}}],{title,margin:{t:28,l:50,r:16,b:36},paper_bgcolor:'transparent',plot_bgcolor:'transparent'},{displayModeBar:false,responsive:true}); }
+
+/* ------------------------
+ Calculators (Advanced)
 -------------------------*/
 document.getElementById('calc_rs').addEventListener('click', ()=>{
-  const M = parseFloat(document.getElementById('sr_M').value) || 1;
-  const rs = 2 * G * (M * Msun) / (c*c);
-  document.getElementById('rs_out').textContent = `${(rs/1000).toFixed(4)} km (Schwarzschild radius for ${M} M☉)`;
+  const M=parseFloat(document.getElementById('sr_M').value)||1; const rs=2*G*(M*Msun)/(c*c); document.getElementById('rs_out').textContent=`${(rs/1000).toFixed(4)} km (Schwarzschild radius for ${M} M☉)`;
 });
 document.getElementById('calc_mc').addEventListener('click', ()=>{
-  const m1 = parseFloat(document.getElementById('cm_m1').value)||1;
-  const m2 = parseFloat(document.getElementById('cm_m2').value)||1;
-  const mc = Math.pow(Math.pow(m1*m2, 3/5)/Math.pow(m1+m2,1/5), 1);
-  document.getElementById('mc_out').textContent = `${mc.toFixed(4)} M☉ (chirp mass)`;
+  const m1=parseFloat(document.getElementById('cm_m1').value)||1, m2=parseFloat(document.getElementById('cm_m2').value)||1; const mc=Math.pow(Math.pow(m1*m2,3/5)/Math.pow(m1+m2,1/5),1); document.getElementById('mc_out').textContent=`${mc.toFixed(4)} M☉ (chirp mass)`;
 });
 document.getElementById('calc_nudelay').addEventListener('click', ()=>{
-  const mv = parseFloat(document.getElementById('nu_mass_ev').value) || 1; // eV
-  const EMeV = parseFloat(document.getElementById('nu_E_mev').value) || 10;
-  const Dmpc = parseFloat(document.getElementById('nu_D').value) || 410;
-  const mvJ = mv * 1.602176634e-19;
-  const EJ = EMeV * 1.602176634e-13;
-  const delta = (Math.pow(mvJ*c*c,2) / (2 * EJ*EJ)) * (Dmpc*Mpc / c);
-  document.getElementById('nud_out').textContent = `Δt ≈ ${delta.toExponential(3)} s (toy)`;
+  const mv=parseFloat(document.getElementById('nu_mass_ev').value)||1, EMeV=parseFloat(document.getElementById('nu_E_mev').value)||10, Dmpc=parseFloat(document.getElementById('nu_D').value)||410;
+  const mvJ=mv*1.602176634e-19, EJ=EMeV*1.602176634e-13; const delta=(Math.pow(mvJ*c*c,2)/(2*EJ*EJ))*(Dmpc*Mpc/c);
+  document.getElementById('nud_out').textContent=`Δt ≈ ${delta.toExponential(3)} s (toy estimate)`;
 });
 
-/* toggle inline notes & modal */
-document.getElementById('toggleNotesInline').addEventListener('click', ()=>{
-  const el=document.getElementById('notesInline'); el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-});
+/* ------------------------
+ Modal open/close (only from Advanced tab)
+-------------------------*/
 document.getElementById('openFullNotes').addEventListener('click', ()=>{
+  // Only allow open if Advanced tab is active
+  const active = document.querySelector('.tabbtn.active').dataset.target;
+  if(active !== 'tabAdvanced'){ alert('Open Advanced tab first to view full derivations.'); return; }
   document.getElementById('fullNotesModal').style.display = 'block';
 });
-document.getElementById('closeModal').addEventListener('click', ()=>{
-  document.getElementById('fullNotesModal').style.display = 'none';
-});
+document.getElementById('closeModal').addEventListener('click', ()=>{ document.getElementById('fullNotesModal').style.display = 'none'; });
 
-/* init: populate event summary text */
+/* ------------------------
+ Initialize: set event summary & default run
+-------------------------*/
 document.getElementById('eventsSelect').dispatchEvent(new Event('change'));
-
-/* auto-run a default sim so user sees something */
-setTimeout(()=>{ document.getElementById('customRun').click(); }, 450);
+setTimeout(()=>{ document.getElementById('customRun').click(); },450);
 
 </script>
 </body>
