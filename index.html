@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -15,6 +15,7 @@
   button, select, input { margin:5px 0; padding:8px; border:none; border-radius:4px; }
   button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
   button:hover { background:#a64dff; }
+  input[type=range] { width:150px; }
   #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
   #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
   #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
@@ -44,6 +45,8 @@
   <button id="runCustomBtn">Run Custom Simulation</button><br>
   <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
   <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1"><br>
+  <label>Spin₁:</label><input id="spin1Input" type="range" min="0" max="1" step="0.01" value="0.3">
+  <label>Spin₂:</label><input id="spin2Input" type="range" min="0" max="1" step="0.01" value="0.3"><br>
   
   <canvas id="orbitCanvas" width="700" height="400"></canvas>
   <canvas id="chirpCanvas" width="800" height="200"></canvas>
@@ -136,15 +139,27 @@ for(let e in gwEvents){
   eventSelect.add(opt);
 }
 
-// --- Orbit Simulation with Spin & Trails ---
+// --- Orbit Simulation with Spin & Twinkling Stars ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
 let orbitAngle=0;
 let trails=[];
+const stars=[];
+for(let i=0;i<200;i++){
+  stars.push({x:Math.random()*orbitCanvas.width, y:Math.random()*orbitCanvas.height, alpha:Math.random(), speed:Math.random()*0.02});
+}
 
 function drawOrbit(m1,m2,spin1,spin2){
-  orbitCtx.fillStyle='rgba(0,0,0,0.25)';
+  orbitCtx.fillStyle='rgba(0,0,0,0.3)';
   orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
+
+  // Twinkling stars
+  stars.forEach(s=>{
+    s.alpha += s.speed*(Math.random()<0.5?-1:1);
+    if(s.alpha<0) s.alpha=0; if(s.alpha>1) s.alpha=1;
+    orbitCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
+    orbitCtx.fillRect(s.x,s.y,2,2);
+  });
 
   const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
   const r1=70, r2=140;
@@ -263,8 +278,8 @@ function updateSummary(m1,m2){
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m1=parseFloat(document.getElementById('m1Input').value);
   const m2=parseFloat(document.getElementById('m2Input').value);
-  const spin1=Math.random()*0.8;
-  const spin2=Math.random()*0.8;
+  const spin1=parseFloat(document.getElementById('spin1Input').value);
+  const spin2=parseFloat(document.getElementById('spin2Input').value);
   gwEvents["Custom"]={m1,m2,spin1,spin2};
   eventDescriptions["Custom"]= `Custom simulation: m1=${m1} M☉, m2=${m2} M☉, spin₁=${spin1.toFixed(2)}, spin₂=${spin2.toFixed(2)}.`;
   eventSelect.value="Custom";
