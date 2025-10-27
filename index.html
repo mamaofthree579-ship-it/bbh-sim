@@ -88,18 +88,26 @@ tabButtons.forEach(btn=>{
   });
 });
 
-// --- Overview Animation ---
+// --- Overview Animation with Stars ---
 const bhCanvas=document.getElementById('bhCanvas');
 const bhCtx=bhCanvas.getContext('2d');
-let angle=0;
+const bhStars=[];
+for(let i=0;i<150;i++){
+  bhStars.push({x:Math.random()*bhCanvas.width, y:Math.random()*bhCanvas.height, alpha:Math.random(), speed:Math.random()*0.02, drift:Math.random()*0.2});
+}
+let bhAngle=0;
 function drawBH(){
-  bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
-  const cx=bhCanvas.width/2, cy=bhCanvas.height/2;
-  const grad=bhCtx.createRadialGradient(cx,cy,10,cx,cy,200);
-  grad.addColorStop(0,'#000');
-  grad.addColorStop(1,'#33003d');
-  bhCtx.fillStyle=grad;
+  bhCtx.fillStyle='rgba(0,0,0,0.3)';
   bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
+  // Stars twinkle + drift
+  bhStars.forEach(s=>{
+    s.alpha += s.speed*(Math.random()<0.5?-1:1);
+    if(s.alpha<0)s.alpha=0;if(s.alpha>1)s.alpha=1;
+    s.x += s.drift*0.1; if(s.x>bhCanvas.width)s.x=0;
+    bhCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
+    bhCtx.fillRect(s.x,s.y,2,2);
+  });
+  const cx=bhCanvas.width/2, cy=bhCanvas.height/2;
   bhCtx.beginPath();
   bhCtx.arc(cx,cy,50,0,Math.PI*2);
   bhCtx.fillStyle='black';
@@ -110,13 +118,13 @@ function drawBH(){
     bhCtx.strokeStyle=`rgba(180,0,255,${0.015})`;
     bhCtx.stroke();
   }
-  const x=cx+Math.cos(angle)*100;
-  const y=cy+Math.sin(angle)*30;
+  const x=cx+Math.cos(bhAngle)*100;
+  const y=cy+Math.sin(bhAngle)*30;
   bhCtx.beginPath();
   bhCtx.arc(x,y,6,0,Math.PI*2);
   bhCtx.fillStyle='#ffcc99';
   bhCtx.fill();
-  angle+=0.03;
+  bhAngle+=0.03;
   requestAnimationFrame(drawBH);
 }
 drawBH();
@@ -139,24 +147,24 @@ for(let e in gwEvents){
   eventSelect.add(opt);
 }
 
-// --- Orbit Simulation with Spin & Twinkling Stars ---
+// --- Orbit Simulation with Twinkling Parallax Stars ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
 let orbitAngle=0;
 let trails=[];
 const stars=[];
-for(let i=0;i<200;i++){
-  stars.push({x:Math.random()*orbitCanvas.width, y:Math.random()*orbitCanvas.height, alpha:Math.random(), speed:Math.random()*0.02});
+for(let i=0;i<250;i++){
+  stars.push({x:Math.random()*orbitCanvas.width, y:Math.random()*orbitCanvas.height, alpha:Math.random(), speed:Math.random()*0.02, drift:(Math.random()-0.5)*0.2});
 }
 
 function drawOrbit(m1,m2,spin1,spin2){
   orbitCtx.fillStyle='rgba(0,0,0,0.3)';
   orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
-
-  // Twinkling stars
+  // Stars with slow parallax drift
   stars.forEach(s=>{
     s.alpha += s.speed*(Math.random()<0.5?-1:1);
     if(s.alpha<0) s.alpha=0; if(s.alpha>1) s.alpha=1;
+    s.x += s.drift; if(s.x>orbitCanvas.width) s.x=0; if(s.x<0) s.x=orbitCanvas.width;
     orbitCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
     orbitCtx.fillRect(s.x,s.y,2,2);
   });
@@ -185,7 +193,6 @@ function drawOrbit(m1,m2,spin1,spin2){
     orbitCtx.fill();
   }
 
-  // Spinning effect
   const spinAngle1 = orbitAngle * (1 + spin1);
   const spinAngle2 = orbitAngle * (1 + spin2);
 
@@ -203,24 +210,20 @@ function drawOrbit(m1,m2,spin1,spin2){
   requestAnimationFrame(()=>drawOrbit(m1,m2,spin1,spin2));
 }
 
-// --- Chirp + Graphs ---
-const chirpCanvas=document.getElementById('chirpCanvas');
-const chirpCtx=chirpCanvas.getContext('2d');
+// --- Graphs + Chirp ---
 const ampCanvas=document.getElementById('amplitudeCanvas');
 const ampCtx=ampCanvas.getContext('2d');
 const energyCanvas=document.getElementById('energyCanvas');
 const energyCtx=energyCanvas.getContext('2d');
 const freqCanvas=document.getElementById('freqCanvas');
 const freqCtx=freqCanvas.getContext('2d');
-
 function drawGraph(ctx,color,func){
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
   for(let i=0;i<ctx.canvas.width;i++){
     const t=i/ctx.canvas.width;
     const y=ctx.canvas.height/2 - func(t)*ctx.canvas.height/3;
-    if(i===0) ctx.moveTo(i,y);
-    else ctx.lineTo(i,y);
+    if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);
   }
   ctx.strokeStyle=color;
   ctx.lineWidth=2;
@@ -244,7 +247,6 @@ function createChirpAudio(){
   chirpBuffer=buffer;
 }
 createChirpAudio();
-
 document.getElementById('playChirpBtn').addEventListener('click',()=>{
   if(!chirpBuffer) return;
   const src=audioCtx.createBufferSource();
@@ -253,7 +255,7 @@ document.getElementById('playChirpBtn').addEventListener('click',()=>{
   src.start();
 });
 
-// --- Update Event ---
+// --- Event Update ---
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
   if(!ev) return;
@@ -274,7 +276,7 @@ function updateSummary(m1,m2){
   document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
 }
 
-// --- Custom Inputs ---
+// --- Custom Event Button ---
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m1=parseFloat(document.getElementById('m1Input').value);
   const m2=parseFloat(document.getElementById('m2Input').value);
@@ -287,8 +289,6 @@ document.getElementById('runCustomBtn').addEventListener('click',()=>{
 });
 
 eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
-
-// --- Init ---
 updateEvent("GW150914");
 </script>
 
