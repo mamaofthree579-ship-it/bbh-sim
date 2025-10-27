@@ -18,6 +18,7 @@
   #eventInfo, #scienceSummary { background:rgba(20,20,20,0.8); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #444; }
   #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
   #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #333; }
+  #amplitudeCanvas { border:1px solid #333; border-radius:6px; background:rgba(0,0,0,0.5); }
 </style>
 </head>
 <body>
@@ -62,6 +63,8 @@
       <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
       <tr><td>Estimated Distance</td><td id="distance">--</td></tr>
     </table>
+    <h4>Chirp Amplitude Graph</h4>
+    <canvas id="amplitudeCanvas" width="800" height="200"></canvas>
   </div>
 </div>
 
@@ -169,6 +172,7 @@ function createChirpAudioAndPlot(m1,m2,duration=3){
   }
   chirpBuffer=buffer;
   drawWaveform();
+  drawAmplitudeGraph(m1,m2);
 }
 function drawWaveform(highlightIndex=-1){
   chirpCtx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
@@ -205,7 +209,7 @@ document.getElementById('playChirpBtn').addEventListener('click', ()=>{
   source.start();
 });
 
-// --- Update Scientific Summary ---
+// --- Scientific Summary ---
 function updateScientificSummary(m1,m2){
   const chirpMass = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
   const freqRange = "20–400";
@@ -217,7 +221,30 @@ function updateScientificSummary(m1,m2){
   document.getElementById('distance').textContent = distance;
 }
 
-// --- Update Event Info ---
+// --- Chirp Amplitude Graph ---
+const ampCanvas = document.getElementById('amplitudeCanvas');
+const ampCtx = ampCanvas.getContext('2d');
+function drawAmplitudeGraph(m1,m2){
+  ampCtx.clearRect(0,0,ampCanvas.width,ampCanvas.height);
+  const chirpMass = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  const steps = 200;
+  ampCtx.beginPath();
+  for(let i=0;i<steps;i++){
+    const t = i/steps;
+    const h = Math.pow(t,3)*Math.sin(20*t*Math.PI*5);
+    const x = i/steps*ampCanvas.width;
+    const y = ampCanvas.height/2 - h*ampCanvas.height/3;
+    if(i===0) ampCtx.moveTo(x,y);
+    else ampCtx.lineTo(x,y);
+  }
+  ampCtx.strokeStyle='lime';
+  ampCtx.lineWidth=2;
+  ampCtx.stroke();
+  ampCtx.fillStyle='rgba(255,255,255,0.7)';
+  ampCtx.fillText("GW amplitude (h) vs time",10,15);
+}
+
+// --- Event Info ---
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
   if(!ev) return;
