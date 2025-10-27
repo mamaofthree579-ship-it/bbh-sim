@@ -10,10 +10,8 @@
   .tabButton { flex:1; padding:10px; cursor:pointer; background:#222; border:none; color:white; }
   .tabButton.active { background:#555; }
   .tabContent { display:none; padding:10px; }
-  canvas { background:rgba(0,0,0,0.6); border:1px solid #444; }
-  .miniWindow { background:#111; color:white; border:1px solid #666; padding:10px; position:absolute; top:50px; right:50px; width:300px; max-height:400px; overflow:auto; display:none; z-index:10; }
-  .closeBtn { float:right; cursor:pointer; color:red; font-weight:bold; }
-  select, button { margin-top:5px; margin-bottom:10px; }
+  canvas { background:rgba(0,0,0,0.6); border:1px solid #444; margin-bottom:10px; }
+  select, input, button { margin:5px 0; }
 </style>
 </head>
 <body>
@@ -22,45 +20,27 @@
 <div class="tabs">
   <button class="tabButton active" data-tab="overviewTab">Overview</button>
   <button class="tabButton" data-tab="eventsTab">Events</button>
-  <button class="tabButton" data-tab="advancedTab">Advanced Physics</button>
 </div>
 
 <!-- Overview Tab -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>Black Hole Overview</h2>
+  <p>Black holes are regions of spacetime exhibiting extremely strong gravity. The event horizon marks the boundary beyond which nothing can escape, not even light.</p>
   <canvas id="bhCanvas" width="800" height="400"></canvas>
 </div>
 
 <!-- Events Tab -->
 <div id="eventsTab" class="tabContent">
-  <h2>Gravitational-Wave Events</h2>
+  <h2>Binary Black Hole Mergers</h2>
   <label for="eventSelect">Choose Event:</label>
-  <select id="eventSelect"></select>
-  <canvas id="chirpCanvas" width="800" height="300"></canvas>
+  <select id="eventSelect"></select><br>
+  <label>Custom Masses:</label>
+  <input type="number" id="m1Input" placeholder="Mass 1 (M☉)" style="width:100px;">
+  <input type="number" id="m2Input" placeholder="Mass 2 (M☉)" style="width:100px;">
+  <button id="runCustomBtn">Run Custom Simulation</button>
+  <canvas id="orbitCanvas" width="800" height="300"></canvas>
+  <canvas id="chirpCanvas" width="800" height="150"></canvas>
   <button id="playChirpBtn">Play Chirp</button>
-</div>
-
-<!-- Advanced Physics Tab -->
-<div id="advancedTab" class="tabContent">
-  <h2>Advanced Physics Tools</h2>
-  <button onclick="showMiniWindow('formulasWindow')">Show Formulas</button>
-  <button onclick="showMiniWindow('simWindow')">Show Advanced Simulators</button>
-</div>
-
-<!-- Mini Windows -->
-<div id="formulasWindow" class="miniWindow">
-  <span class="closeBtn" onclick="this.parentElement.style.display='none'">×</span>
-  <h3>GR & GW Formulas</h3>
-  <p>Schwarzschild radius: r_s = 2GM/c²</p>
-  <p>Chirp mass: ℳ = (M₁ M₂)^(3/5)/(M₁+M₂)^(1/5)</p>
-  <p>GW strain (leading PN): h(f) ≈ 4 G^(5/3)/c^4 π^(2/3) ℳ^(5/3) f^(2/3)/D</p>
-  <!-- Add more formulas as needed -->
-</div>
-
-<div id="simWindow" class="miniWindow">
-  <span class="closeBtn" onclick="this.parentElement.style.display='none'">×</span>
-  <h3>Advanced Simulators</h3>
-  <p>Coming soon: neutrino calculations, custom GW events, PN waveform generation...</p>
 </div>
 
 <script>
@@ -76,10 +56,7 @@ tabButtons.forEach(btn => {
   });
 });
 
-// --- Mini window helper ---
-function showMiniWindow(id){ document.getElementById(id).style.display='block'; }
-
-// --- Overview black hole canvas ---
+// --- Overview black hole ---
 const bhCanvas = document.getElementById('bhCanvas');
 const bhCtx = bhCanvas.getContext('2d');
 function drawBlackHole(){
@@ -100,25 +77,47 @@ function drawBlackHole(){
 drawBlackHole();
 
 // --- Events tab ---
-// Mock event data
 const gwEvents = {
   "GW150914": { m1: 36, m2: 29 },
   "GW170104": { m1: 31, m2: 19 },
   "Custom": { m1: 30, m2: 30 }
 };
-// Populate event dropdown
+
 const eventSelect = document.getElementById('eventSelect');
 for (let key in gwEvents){
   let opt = document.createElement('option'); opt.value=key; opt.text=key; eventSelect.add(opt);
 }
+
 // Canvas & audio
-const canvas = document.getElementById('chirpCanvas');
-const ctx = canvas.getContext('2d');
+const orbitCanvas = document.getElementById('orbitCanvas');
+const orbitCtx = orbitCanvas.getContext('2d');
+const chirpCanvas = document.getElementById('chirpCanvas');
+const chirpCtx = chirpCanvas.getContext('2d');
 let waveformData = [];
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 let chirpBuffer;
 
-// Create chirp audio & plot
+// --- Orbit visualization ---
+function drawOrbit(m1,m2,t){
+  orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+  const cx = orbitCanvas.width/2;
+  const cy = orbitCanvas.height/2;
+  const a = 50 + (m1+m2); // semi-major proportional to total mass
+  const b = a/2;
+  const angle = t*0.02;
+  // Body 1
+  orbitCtx.beginPath();
+  orbitCtx.arc(cx + a*Math.cos(angle), cy + b*Math.sin(angle), 10, 0, Math.PI*2);
+  orbitCtx.fillStyle='orange';
+  orbitCtx.fill();
+  // Body 2
+  orbitCtx.beginPath();
+  orbitCtx.arc(cx - a*Math.cos(angle), cy - b*Math.sin(angle), 10, 0, Math.PI*2);
+  orbitCtx.fillStyle='blue';
+  orbitCtx.fill();
+}
+
+// --- Chirp waveform & audio ---
 function createChirpAudioAndPlot(m1,m2,duration=3){
   const sampleRate = audioCtx.sampleRate;
   const length = sampleRate*duration;
@@ -138,20 +137,20 @@ function createChirpAudioAndPlot(m1,m2,duration=3){
 
 // Draw waveform
 function drawWaveform(highlightIndex=-1){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.beginPath();
-  ctx.moveTo(0,canvas.height/2);
-  for(let i=0;i<waveformData.length;i+=Math.floor(waveformData.length/canvas.width)){
-    const x=i/waveformData.length*canvas.width;
-    const y=canvas.height/2 - waveformData[i]*canvas.height/2;
-    ctx.lineTo(x,y);
+  chirpCtx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
+  chirpCtx.beginPath();
+  chirpCtx.moveTo(0,chirpCanvas.height/2);
+  for(let i=0;i<waveformData.length;i+=Math.floor(waveformData.length/chirpCanvas.width)){
+    const x=i/waveformData.length*chirpCanvas.width;
+    const y=chirpCanvas.height/2 - waveformData[i]*chirpCanvas.height/2;
+    chirpCtx.lineTo(x,y);
   }
-  ctx.strokeStyle='orange'; ctx.lineWidth=2; ctx.stroke();
-  // Playhead
+  chirpCtx.strokeStyle='orange'; chirpCtx.lineWidth=2; chirpCtx.stroke();
   if(highlightIndex>=0){
-    const x = highlightIndex / waveformData.length * canvas.width;
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height);
-    ctx.strokeStyle='red'; ctx.lineWidth=1; ctx.stroke();
+    const x = highlightIndex / waveformData.length * chirpCanvas.width;
+    chirpCtx.beginPath();
+    chirpCtx.moveTo(x,0); chirpCtx.lineTo(x,chirpCanvas.height);
+    chirpCtx.strokeStyle='red'; chirpCtx.lineWidth=1; chirpCtx.stroke();
   }
 }
 
@@ -173,16 +172,34 @@ document.getElementById('playChirpBtn').addEventListener('click', ()=>{
   source.start();
 });
 
-// Update on event change
-eventSelect.addEventListener('change', ()=>{
-  const ev = gwEvents[eventSelect.value];
+// Event selection
+let orbitTime=0;
+let orbitAnim;
+function updateEvent(eventName){
+  const ev = gwEvents[eventName];
   if(!ev) return;
   createChirpAudioAndPlot(ev.m1,ev.m2);
+  if(orbitAnim) cancelAnimationFrame(orbitAnim);
+  function animateOrbit(){
+    drawOrbit(ev.m1,ev.m2,orbitTime);
+    orbitTime+=1;
+    orbitAnim = requestAnimationFrame(animateOrbit);
+  }
+  animateOrbit();
+}
+eventSelect.addEventListener('change', ()=>updateEvent(eventSelect.value));
+
+// Custom simulation
+document.getElementById('runCustomBtn').addEventListener('click', ()=>{
+  const m1 = parseFloat(document.getElementById('m1Input').value)||30;
+  const m2 = parseFloat(document.getElementById('m2Input').value)||30;
+  gwEvents["Custom"]={m1,m2};
+  eventSelect.value="Custom";
+  updateEvent("Custom");
 });
 
 // Initialize first event
-createChirpAudioAndPlot(gwEvents[eventSelect.value].m1,gwEvents[eventSelect.value].m2);
-
+updateEvent(eventSelect.value);
 </script>
 </body>
 </html>
