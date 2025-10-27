@@ -17,6 +17,7 @@
   .mini-window { display:none; position:fixed; top:20%; left:20%; width:60%; background:#1a1b2c; border:2px solid #444; padding:15px; z-index:10; }
   .close-btn { float:right; cursor:pointer; color:#ff5555; }
   select, input { margin:5px; padding:3px; background:#27293d; color:#fff; border:none; border-radius:3px; }
+  .info-panel { background:#1a1b2c; padding:5px; margin:5px 0; border-radius:3px; }
 </style>
 </head>
 <body>
@@ -35,6 +36,9 @@
 <section id="overview" style="display:block;">
   <h2>Overview</h2>
   <p>Explore binary black hole mergers and simulated gravitational waveforms.</p>
+  <div class="info-panel">
+    <strong>3D Orbit Explanation:</strong> Orange and blue spheres represent black holes orbiting each other. Trails show recent motion.
+  </div>
   <canvas id="orbit3DOverview" width="400" height="400"></canvas>
   <canvas id="chirpGraphOverview" width="400" height="150"></canvas>
   <button class="btn" onclick="playOverviewChirp()">Play Chirp</button>
@@ -60,10 +64,14 @@
     <button class="btn" onclick="runCustom()">Run Simulation</button>
   </div>
 
+  <div class="info-panel">
+    <strong>3D Orbit Explanation:</strong> Orange and blue spheres represent black holes for the selected event. Trails indicate motion history.
+  </div>
   <canvas id="orbit3DEvent" width="400" height="400"></canvas>
   <canvas id="chirpGraphEvent" width="400" height="150"></canvas>
   <canvas id="spectrogramEvent" width="400" height="150"></canvas>
   <button class="btn" onclick="playEventChirp()">Play Chirp</button>
+  <button class="btn" onclick="exportEventData()">Export Data</button>
   <audio id="chirpAudioEvent" src=""></audio>
 </section>
 
@@ -164,26 +172,44 @@ function runCustom(){
   drawSpectrogram("spectrogramEvent");
 }
 
+// --- Export Data ---
+function exportEventData(){
+  const val=document.getElementById("eventSelect").value;
+  let data={};
+  if(val==="Custom"){
+    data.m1=document.getElementById("customM1").value;
+    data.m2=document.getElementById("customM2").value;
+    data.event="Custom";
+  } else data=GW_EVENTS[val];
+  const blob=new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='bbh_event.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // --- Mini Windows ---
 function toggleMiniWindow(id){document.getElementById(id).style.display='block';}
 function closeMini(id){document.getElementById(id).style.display='none';}
 
-// --- Spectrogram Mock ---
+  // --- Spectrogram Mock ---
 function drawSpectrogram(canvasId){
-  const c=document.getElementById(canvasId);
-  const ctx=c.getContext('2d');
-  ctx.fillStyle='#0b0c1a'; ctx.fillRect(0,0,c.width,c.height);
-  for(let i=0;i<100;i++){
-    for(let j=0;j<50;j++){
-      ctx.fillStyle=`rgba(${i*2},${j*5},255,0.3)`;
-      ctx.fillRect(i*4,j*3,4,3);
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0b0c1a';
+  ctx.fillRect(0, 0, c.width, c.height);
+  for(let i = 0; i < 100; i++){
+    for(let j = 0; j < 50; j++){
+      ctx.fillStyle = `rgba(${i*2}, ${j*5}, 255, 0.5)`;
+      ctx.fillRect(i*4, j*3, 4, 3);
     }
   }
 }
 
-// --- Initialize Overview visuals ---
-drawOrbit3D("orbit3DOverview",30,30);
-drawChirp("chirpGraphOverview",30,30);
+// --- Initialize Overview Visuals ---
+drawOrbit3D("orbit3DOverview", 30, 30);
+drawChirp("chirpGraphOverview", 30, 30);
+
 </script>
 
 </body>
