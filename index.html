@@ -659,5 +659,60 @@ window.addEventListener('resize',()=>{ ['presetOrbit','customOrbit','presetWave'
     to { opacity: 1; transform: translateY(0); }
   }
 </style>
+script>
+  // --- TAB SWITCHING ---
+  const tabs = document.querySelectorAll(".tab-button");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  tabs.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabs.forEach(b => b.classList.remove("active-tab"));
+      tabContents.forEach(c => c.style.display = "none");
+      btn.classList.add("active-tab");
+      document.getElementById(btn.dataset.target).style.display = "block";
+    });
+  });
+
+  // --- ADVANCED NOTES TOGGLER ---
+  const toggleBtn = document.getElementById("toggleAdvancedNotes");
+  const notesDiv = document.getElementById("advancedNotes");
+  if (toggleBtn && notesDiv) {
+    toggleBtn.addEventListener("click", () => {
+      notesDiv.style.display = (notesDiv.style.display === "none") ? "block" : "none";
+    });
+  }
+</script>
+
+<style>
+  #tab-bar {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  .tab-button {
+    background: rgba(255,255,255,0.05);
+    color: #eee;
+    border: none;
+    padding: 0.7rem 1.2rem;
+    margin: 0 0.3rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .tab-button:hover {
+    background: rgba(255,255,255,0.15);
+  }
+  .active-tab {
+    background: rgba(0,255,255,0.25);
+    border-bottom: 2px solid cyan;
+  }
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
 </body>
 </html>
