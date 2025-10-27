@@ -11,8 +11,8 @@
   .tab button:hover { background-color: #222; }
   .tab button.active { background-color: #444; }
   .tabcontent { display: none; padding: 10px; }
-  canvas { display: block; margin: 10px auto; border-radius: 6px; }
-  audio { display: block; margin: 10px auto; width: 80%; }
+  canvas { display: block; margin: 10px auto; border-radius: 6px; background: rgba(255,255,255,0.05); }
+  button.play-chirp { display:block; margin:5px auto; padding:6px 12px; background:#444; color:#eee; border:none; cursor:pointer; border-radius:4px; }
   .mini-window { position: fixed; top: 50px; right: 20px; width: 320px; max-height: 400px; background:#111; border:1px solid #555; padding:10px; overflow:auto; color:#eee; display:none; z-index:999; }
   .mini-window button { float:right; background:#333; color:#eee; border:none; cursor:pointer; }
   label, input, select { margin:5px; }
@@ -35,7 +35,7 @@
   <p>Interactive demonstration of binary black hole inspirals.</p>
   <div class="section">
     <canvas id="orbit3D" width="400" height="400"></canvas>
-    <button onclick="playOverviewChirp()">▶ Play Chirp</button>
+    <button class="play-chirp" onclick="playOverviewChirp()">▶ Play Chirp</button>
   </div>
   <div class="section">
     <canvas id="chirpGraph" width="600" height="200"></canvas>
@@ -151,7 +151,7 @@ function drawChirp(canvasId,m1=30,m2=30){
   ctx.stroke();
 }
 
-// Spectrogram
+// Spectrogram (simple mock)
 function drawSpectrogram(canvasId){
   const canvas=document.getElementById(canvasId);
   const ctx=canvas.getContext("2d");
@@ -159,68 +159,47 @@ function drawSpectrogram(canvasId){
   const img=ctx.createImageData(w,h);
   for(let i=0;i<w;i++){
     for(let j=0;j<h;j++){
-      const index=(j*w+i)*4;
-      img.data[index]=Math.floor(100+155*Math.random());
-      img.data[index+1]=Math.floor(50+50*Math.random());
-      img.data[index+2]=Math.floor(200*Math.random());
-      img.data[index+3]=255;
+      const idx=(j*w+i)*4;
+      const val=Math.floor(128+128*Math.sin(i/20)*Math.cos(j/20));
+      img.data[idx]=val; img.data[idx+1]=val; img.data[idx+2]=255-val; img.data[idx+3]=255;
     }
   }
   ctx.putImageData(img,0,0);
 }
 
-// Initialize Overview
-drawOrbit3D("orbit3D"); drawChirp("chirpGraph"); drawSpectrogram("spectrogram");  
-
-// Events & Custom Simulation
-const eventAudioMap={
-  "GW150914":"https://example.com/audio/GW150914.wav",
-  "GW151226":"https://example.com/audio/GW151226.wav",
-  "GW170104":"https://example.com/audio/GW170104.wav",
-  "GW170817":"https://example.com/audio/GW170817.wav"
-};
-
-function onEventChange(){
-  const sel=document.getElementById("eventSelect").value;
-  const custom=document.getElementById("customParams");
-  if(sel==="Custom"){
-    custom.style.display="block";
-  } else {
-    custom.style.display="none";
-    if(sel!==""){
-      updateSimulation(sel);
-    }
-  }
+// Overview chirp play
+function playOverviewChirp(){
+  const audio=new Audio("https://example.com/audio/GW150914.wav");
+  audio.play();
+  drawChirp("chirpGraph",36,29);
+  drawSpectrogram("spectrogram");
 }
 
-function updateSimulation(event){
-  let m1=30,m2=30;
-  if(event==="Custom"){
-    m1=parseFloat(document.getElementById("mass1").value);
-    m2=parseFloat(document.getElementById("mass2").value);
-  }
+// Events dropdown
+function onEventChange(){
+  const val=document.getElementById("eventSelect").value;
+  const custom=document.getElementById("customParams");
+  if(val==="Custom"){ custom.style.display="block"; drawOrbit3D("orbit3DEvent"); drawChirp("chirpGraphEvent"); drawSpectrogram("spectrogramEvent"); }
+  else if(val){ custom.style.display="none"; drawOrbit3D("orbit3DEvent"); drawChirp("chirpGraphEvent"); drawSpectrogram("spectrogramEvent"); }
+  else{ custom.style.display="none"; }
+}
+
+// Update simulation (Custom)
+function updateSimulation(eventName){
+  const m1=parseFloat(document.getElementById("mass1").value);
+  const m2=parseFloat(document.getElementById("mass2").value);
   drawOrbit3D("orbit3DEvent",m1,m2);
   drawChirp("chirpGraphEvent",m1,m2);
   drawSpectrogram("spectrogramEvent");
-  const audio=document.getElementById("chirpAudioEvent");
-  if(eventAudioMap[event]) audio.src=eventAudioMap[event];
-  else audio.src=""; // For Custom, optionally generate audio dynamically
-  audio.load();
-  audio.play();
 }
 
-function exportSimulation(){
-  const m1=document.getElementById("mass1").value;
-  const m2=document.getElementById("mass2").value;
-  const spin1=document.getElementById("spin1").value;
-  const spin2=document.getElementById("spin2").value;
-  const data={m1,m2,spin1,spin2};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download="simulation.json"; a.click();
-  URL.revokeObjectURL(url);
-}
+// Export simulation data (mock)
+function exportSimulation(){alert("Simulation data exported!");}
+
+// Initialize Overview visuals
+drawOrbit3D("orbit3D");
+drawChirp("chirpGraph");
+drawSpectrogram("spectrogram");
 </script>
 </body>
 </html>
