@@ -1,65 +1,87 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black Hole & GW Simulator</title>
+<style>
+  body { margin:0; font-family:Arial, sans-serif; background:#05000a; color:white; overflow-x:hidden; }
+  .tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
+  .tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; transition:0.3s; font-weight:bold; }
+  .tabButton:hover { background:#33003d; }
+  .tabButton.active { background:#550066; color:#fff; }
+  .tabContent { display:none; padding:20px; }
+  canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; background:radial-gradient(circle at center, #14001a 0%, #05000a 100%); }
+  button, select, input { margin:5px 0; padding:8px; border:none; border-radius:4px; }
+  button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
+  button:hover { background:#a64dff; }
+  #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
+  #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
+  #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
+  h2, h3, h4 { color:#e5ccff; }
+</style>
+</head>
+<body>
 
-<html lang="en">  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
-<title>Black Hole & GW Simulator</title>  
-<style>  
-  body { margin:0; font-family:Arial, sans-serif; background:#05000a; color:white; overflow-x:hidden; }  
-  .tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }  
-  .tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; transition:0.3s; font-weight:bold; }  
-  .tabButton:hover { background:#33003d; }  
-  .tabButton.active { background:#550066; color:#fff; }  
-  .tabContent { display:none; padding:20px; }  
-  canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; background:radial-gradient(circle at center, #14001a 0%, #05000a 100%); }  
-  button, select, input { margin:5px 0; padding:8px; border:none; border-radius:4px; }  
-  button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }  
-  button:hover { background:#a64dff; }  
-  #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }  
-  #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }  
-  #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }  
-  h2, h3, h4 { color:#e5ccff; }  
-</style>  
-</head>  
-<body>  <!-- Tabs -->  <div class="tabs">  
-  <button class="tabButton active" data-tab="overviewTab">Overview</button>  
-  <button class="tabButton" data-tab="eventsTab">Events</button>  
-</div>  <!-- Overview -->  <div id="overviewTab" class="tabContent" style="display:block;">  
-  <h2>🌌 Black Hole Overview</h2>  
-  <p>Visualize a rotating black hole surrounded by its glowing accretion disk — light bent by extreme gravity.</p>  
-  <canvas id="bhCanvas" width="800" height="400"></canvas>  
-</div>  <!-- Events -->  <div id="eventsTab" class="tabContent">  
-  <h2>💫 Gravitational-Wave Events</h2>  
-  <label for="eventSelect">Select Event:</label>  
-  <select id="eventSelect"></select>  
-  <button id="runCustomBtn">Run Custom Simulation</button><br>  
-  <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">  
-  <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1"><br>  <canvas id="orbitCanvas" width="700" height="400"></canvas>
-<canvas id="chirpCanvas" width="800" height="200"></canvas>
-<button id="playChirpBtn">🔊 Play Chirp</button>
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tabButton active" data-tab="overviewTab">Overview</button>
+  <button class="tabButton" data-tab="eventsTab">Events</button>
+</div>
 
-  <div id="eventInfo">  
-    <strong>Event Information:</strong>  
-    <p id="eventDescription"></p>  
-  </div>    <div id="scienceSummary">  
-    <strong>Scientific Summary:</strong>  
-    <table>  
-      <tr><th>Parameter</th><th>Value</th></tr>  
-      <tr><td>Chirp Mass (ℳ)</td><td id="chirpMass">--</td></tr>  
-      <tr><td>Frequency Range (Hz)</td><td id="freqRange">--</td></tr>  
-      <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>  
-      <tr><td>Estimated Distance</td><td id="distance">--</td></tr>  
-    </table>  
-    <h4>Chirp Amplitude Graph</h4>  
-    <canvas id="amplitudeCanvas" width="800" height="200"></canvas>  
-    <h4>Energy Loss Rate</h4>  
-    <canvas id="energyCanvas" width="800" height="200"></canvas>  
-    <h4>Frequency Evolution</h4>  
-    <canvas id="freqCanvas" width="800" height="200"></canvas>  
-  </div>  
-</div> 
-  <script>
+<!-- Overview -->
+<div id="overviewTab" class="tabContent" style="display:block;">
+  <h2>🌌 Black Hole Overview</h2>
+  <p>Visualize a rotating black hole surrounded by its glowing accretion disk — light bent by extreme gravity.</p>
+  <canvas id="bhCanvas" width="800" height="400"></canvas>
+</div>
+
+<!-- Events -->
+<div id="eventsTab" class="tabContent">
+  <h2>💫 Gravitational-Wave Events</h2>
+  <label for="eventSelect">Select Event:</label>
+  <select id="eventSelect"></select>
+  <button id="runCustomBtn">Run Custom Simulation</button><br>
+  <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
+  <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1"><br>
+  
+  <canvas id="orbitCanvas" width="700" height="400"></canvas>
+  <canvas id="chirpCanvas" width="800" height="200"></canvas>
+  <button id="playChirpBtn">🔊 Play Chirp</button>
+
+  <div id="eventInfo">
+    <strong>Event Information:</strong>
+    <p id="eventDescription"></p>
+  </div>
+
+  <div id="scienceSummary">
+    <strong>Scientific Summary:</strong>
+    <table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Chirp Mass (ℳ)</td><td id="chirpMass">--</td></tr>
+      <tr><td>Frequency Range (Hz)</td><td id="freqRange">--</td></tr>
+      <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
+      <tr><td>Estimated Distance</td><td id="distance">--</td></tr>
+    </table>
+    <h4>Chirp Amplitude Graph</h4>
+    <canvas id="amplitudeCanvas" width="800" height="200"></canvas>
+    <h4>Energy Loss Rate</h4>
+    <canvas id="energyCanvas" width="800" height="200"></canvas>
+    <h4>Frequency Evolution</h4>
+    <canvas id="freqCanvas" width="800" height="200"></canvas>
+  </div>
+</div>
+
+// --- Summary ---
+function updateSummary(m1,m2){
+  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
+  document.getElementById('freqRange').textContent="20–400 Hz";
+  document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
+  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
+}
+
+<script>
 // --- Tabs ---
 const tabButtons=document.querySelectorAll('.tabButton');
 const tabContents=document.querySelectorAll('.tabContent');
@@ -201,91 +223,6 @@ function drawOrbit(m1,m2,time){
   requestAnimationFrame(()=>drawOrbit(m1,m2,performance.now()));
 }
 
-    // --- Chirp Audio + Waveform ---
-const chirpCanvas=document.getElementById('chirpCanvas');
-const chirpCtx=chirpCanvas.getContext('2d');
-let waveformData=[];
-const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-let chirpBuffer=null;
-
-// Create chirp audio buffer
-function createChirp(m1,m2,duration=3){
-  const sampleRate=audioCtx.sampleRate;
-  const length=sampleRate*duration;
-  const buffer=audioCtx.createBuffer(1,length,sampleRate);
-  const data=buffer.getChannelData(0);
-  waveformData=[];
-  const f0=20; // start freq
-  const f1=400; // end freq
-  for(let i=0;i<length;i++){
-    const t=i/sampleRate;
-    const freq=f0 + (f1-f0)*(t/duration);
-    data[i]=0.2*Math.sin(2*Math.PI*freq*t);
-    waveformData.push(data[i]);
-  }
-  chirpBuffer=buffer;
-  drawChirpWaveform();
-}
-
-// Draw waveform
-function drawChirpWaveform(playheadIndex=-1){
-  chirpCtx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
-  chirpCtx.beginPath();
-  chirpCtx.moveTo(0,chirpCanvas.height/2);
-  const step=Math.floor(waveformData.length/chirpCanvas.width);
-  for(let i=0;i<waveformData.length;i+=step){
-    const x=i/waveformData.length*chirpCanvas.width;
-    const y=chirpCanvas.height/2 - waveformData[i]*chirpCanvas.height/2;
-    chirpCtx.lineTo(x,y);
-  }
-  chirpCtx.strokeStyle='#ff66ff';
-  chirpCtx.lineWidth=2;
-  chirpCtx.stroke();
-
-  if(playheadIndex>=0){
-    const x=playheadIndex/waveformData.length*chirpCanvas.width;
-    chirpCtx.beginPath();
-    chirpCtx.moveTo(x,0);
-    chirpCtx.lineTo(x,chirpCanvas.height);
-    chirpCtx.strokeStyle='red';
-    chirpCtx.lineWidth=1;
-    chirpCtx.stroke();
-  }
-
-
-// Play chirp
-document.getElementById('playChirpBtn').addEventListener('click',()=>{
-  if(!chirpBuffer) return;
-  const source=audioCtx.createBufferSource();
-  source.buffer=chirpBuffer;
-  source.connect(audioCtx.destination);
-  const startTime=audioCtx.currentTime;
-  const duration=chirpBuffer.duration;
-
-  function animate(){
-    const elapsed=audioCtx.currentTime-startTime;
-    if(elapsed>duration) return;
-    const index=Math.floor(elapsed/duration*waveformData.length);
-    drawChirpWaveform(index);
-    requestAnimationFrame(animate);
-  }
-  animate();
-  source.start();
-});
-
-// --- Update event also creates chirp ---
-function updateEvent(eventKey){
-  const ev=gwEvents[eventKey];
-  if(!ev) return;
-  document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
-  drawOrbit(ev.m1,ev.m2,performance.now());
-  updateSummary(ev.m1,ev.m2);
-  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
-  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
-  drawGraph(freqCtx,'#00ccff',t=>t*t);
-  createChirp(ev.m1,ev.m2);
-}
-    
 // --- Update Event ---
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
@@ -343,6 +280,6 @@ eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
 
 // --- Init ---
 updateEvent("GW150914");
-</script>
- </body>  
-</html>  
+  </script>
+    </body>
+</html>
