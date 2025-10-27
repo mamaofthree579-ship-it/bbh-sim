@@ -2,33 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BBH Simulation Project</title>
+<title>BBH Simulation</title>
 <style>
-  body { margin:0; font-family: Arial, sans-serif; background: radial-gradient(ellipse at center, #000010 0%, #000000 100%); color:white; }
-  .tabs { display:flex; background:#111; }
-  .tabButton { flex:1; padding:10px; cursor:pointer; background:#222; border:none; color:white; }
-  .tabButton.active { background:#555; }
+  body { font-family: Arial, sans-serif; background: #111; color: #eee; margin:0; padding:0; }
+  h2 { margin-top:0; }
+  .tabButtons { display:flex; background:#222; }
+  .tabButtons button { flex:1; padding:10px; background:#333; color:#eee; border:none; cursor:pointer; }
+  .tabButtons button.active { background:#555; }
   .tabContent { display:none; padding:10px; }
-  canvas { background:rgba(0,0,0,0.6); border:1px solid #444; }
-  .miniWindow { background:#111; color:white; border:1px solid #666; padding:10px; position:absolute; top:50px; right:50px; width:300px; max-height:400px; overflow:auto; display:none; z-index:10; }
-  .closeBtn { float:right; cursor:pointer; color:red; font-weight:bold; }
-  select, button { margin-top:5px; margin-bottom:10px; }
+  canvas { display:block; background:#000; margin:10px 0; border:1px solid #444; }
+  #customControls { margin-top:10px; }
+  input { width:60px; margin:0 5px; }
+  .miniWindow { background:#222; border:1px solid #555; padding:10px; margin:10px 0; display:none; }
+  .miniWindow button.closeBtn { float:right; background:red; color:#fff; border:none; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<!-- Tabs -->
-<div class="tabs">
-  <button class="tabButton active" data-tab="overviewTab">Overview</button>
-  <button class="tabButton" data-tab="eventsTab">Events</button>
-  <button class="tabButton" data-tab="advancedTab">Advanced Physics</button>
+<!-- Tab Buttons -->
+<div class="tabButtons">
+  <button class="tabBtn active" data-tab="overviewTab">Overview</button>
+  <button class="tabBtn" data-tab="eventsTab">Events</button>
+  <button class="tabBtn" data-tab="advancedTab">Advanced Physics</button>
 </div>
 
 <!-- Overview Tab -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>Black Hole Overview</h2>
   <canvas id="bhCanvas" width="800" height="400"></canvas>
+  <p>Single black hole visualization. No chirp here.</p>
 </div>
 
 <!-- Events Tab -->
@@ -36,153 +38,148 @@
   <h2>Gravitational-Wave Events</h2>
   <label for="eventSelect">Choose Event:</label>
   <select id="eventSelect"></select>
-  <canvas id="chirpCanvas" width="800" height="300"></canvas>
+
+  <canvas id="orbitCanvas" width="800" height="400"></canvas>
+  <canvas id="chirpCanvas" width="800" height="200"></canvas>
   <button id="playChirpBtn">Play Chirp</button>
+  <canvas id="specCanvas" width="800" height="200"></canvas>
+
+  <div id="customControls">
+    <h3>Custom Simulation</h3>
+    <label>Mass 1: <input type="number" id="m1Input" value="30"></label>
+    <label>Mass 2: <input type="number" id="m2Input" value="30"></label>
+    <label>Separation: <input type="number" id="sepInput" value="100"></label>
+    <button id="runCustomBtn">Run Custom Simulation</button>
+  </div>
 </div>
 
 <!-- Advanced Physics Tab -->
 <div id="advancedTab" class="tabContent">
-  <h2>Advanced Physics Tools</h2>
-  <button onclick="showMiniWindow('formulasWindow')">Show Formulas</button>
-  <button onclick="showMiniWindow('simWindow')">Show Advanced Simulators</button>
-</div>
-
-<!-- Mini Windows -->
-<div id="formulasWindow" class="miniWindow">
-  <span class="closeBtn" onclick="this.parentElement.style.display='none'">×</span>
-  <h3>GR & GW Formulas</h3>
-  <p>Schwarzschild radius: r_s = 2GM/c²</p>
-  <p>Chirp mass: ℳ = (M₁ M₂)^(3/5)/(M₁+M₂)^(1/5)</p>
-  <p>GW strain (leading PN): h(f) ≈ 4 G^(5/3)/c^4 π^(2/3) ℳ^(5/3) f^(2/3)/D</p>
-  <!-- Add more formulas as needed -->
-</div>
-
-<div id="simWindow" class="miniWindow">
-  <span class="closeBtn" onclick="this.parentElement.style.display='none'">×</span>
-  <h3>Advanced Simulators</h3>
-  <p>Coming soon: neutrino calculations, custom GW events, PN waveform generation...</p>
+  <h2>Advanced Physics</h2>
+  <button class="advBtn" data-window="window1">Show Formulas & Notes</button>
+  <div id="window1" class="miniWindow">
+    <button class="closeBtn">X</button>
+    <pre>
+# Schwarzschild radius
+r_s = 2GM/c^2
+# Binary inspiral chirp mass
+M_chirp = (M1*M2)^(3/5)/(M1+M2)^(1/5)
+# GW frequency evolution
+df/dt = 96/5 pi^(8/3) (G*M_chirp)^(5/3)/c^5 f^(11/3)
+...
+# Additional formulas and phenomenological neutrino couplings
+...
+    </pre>
+  </div>
 </div>
 
 <script>
-// --- Tabs functionality ---
-const tabButtons = document.querySelectorAll('.tabButton');
-const tabContents = document.querySelectorAll('.tabContent');
-tabButtons.forEach(btn => {
+// --- Tab switching ---
+const tabButtons = document.querySelectorAll('.tabBtn');
+const tabs = document.querySelectorAll('.tabContent');
+tabButtons.forEach(btn=>{
   btn.addEventListener('click', ()=>{
     tabButtons.forEach(b=>b.classList.remove('active'));
+    tabs.forEach(t=>t.style.display='none');
     btn.classList.add('active');
-    tabContents.forEach(tc=>tc.style.display='none');
     document.getElementById(btn.dataset.tab).style.display='block';
   });
 });
 
-// --- Mini window helper ---
-function showMiniWindow(id){ document.getElementById(id).style.display='block'; }
+// --- Mini window logic ---
+document.querySelectorAll('.advBtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{ document.getElementById(btn.dataset.window).style.display='block'; });
+});
+document.querySelectorAll('.miniWindow .closeBtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{ btn.parentElement.style.display='none'; });
+});
 
-// --- Overview black hole canvas ---
+// --- Overview BH visualization ---
 const bhCanvas = document.getElementById('bhCanvas');
 const bhCtx = bhCanvas.getContext('2d');
-function drawBlackHole(){
-  bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
-  // Event horizon
-  bhCtx.beginPath();
-  bhCtx.arc(bhCanvas.width/2, bhCanvas.height/2, 50, 0, Math.PI*2);
-  bhCtx.fillStyle='black';
-  bhCtx.fill();
-  // Accretion disk
-  for(let i=0;i<100;i++){
-    bhCtx.beginPath();
-    bhCtx.arc(bhCanvas.width/2, bhCanvas.height/2, 60+i, 0, Math.PI*2);
-    bhCtx.strokeStyle=`rgba(255,165,0,${0.02*i})`;
-    bhCtx.stroke();
-  }
-}
-drawBlackHole();
+bhCtx.fillStyle='white';
+bhCtx.beginPath();
+bhCtx.arc(bhCanvas.width/2,bhCanvas.height/2,50,0,Math.PI*2);
+bhCtx.fill();
 
-// --- Events tab ---
-// Mock event data
+// --- 3D Orbit Events ---
+const orbitCanvas = document.getElementById('orbitCanvas');
+const oCtx = orbitCanvas.getContext('2d');
+let orbitAngle = 0;
+
+function drawOrbit(m1, m2, separation){
+  oCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+  const cx = orbitCanvas.width/2;
+  const cy = orbitCanvas.height/2;
+  const r1 = separation*m2/(m1+m2);
+  const r2 = separation*m1/(m1+m2);
+  const x1 = cx + r1*Math.cos(orbitAngle);
+  const y1 = cy + r1*Math.sin(orbitAngle);
+  const x2 = cx - r2*Math.cos(orbitAngle);
+  const y2 = cy - r2*Math.sin(orbitAngle);
+
+  oCtx.beginPath();
+  oCtx.arc(x1,y1,8,0,Math.PI*2); oCtx.fillStyle='orange'; oCtx.fill();
+  oCtx.beginPath();
+  oCtx.arc(x2,y2,8,0,Math.PI*2); oCtx.fillStyle='blue'; oCtx.fill();
+  orbitAngle +=0.02;
+  requestAnimationFrame(()=>drawOrbit(m1,m2,separation));
+}
+
+// --- Events & Custom Simulation ---
 const gwEvents = {
-  "GW150914": { m1: 36, m2: 29 },
-  "GW170104": { m1: 31, m2: 19 },
-  "Custom": { m1: 30, m2: 30 }
+  "GW150914": { m1:36, m2:29, sep:100 },
+  "GW170104": { m1:31, m2:19, sep:90 },
+  "Custom": { m1:30, m2:30, sep:100 }
 };
-// Populate event dropdown
 const eventSelect = document.getElementById('eventSelect');
-for (let key in gwEvents){
-  let opt = document.createElement('option'); opt.value=key; opt.text=key; eventSelect.add(opt);
-}
-// Canvas & audio
-const canvas = document.getElementById('chirpCanvas');
-const ctx = canvas.getContext('2d');
-let waveformData = [];
-const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-let chirpBuffer;
+for(let key in gwEvents){ let opt=document.createElement('option'); opt.value=key; opt.text=key; eventSelect.add(opt); }
 
-// Create chirp audio & plot
-function createChirpAudioAndPlot(m1,m2,duration=3){
-  const sampleRate = audioCtx.sampleRate;
-  const length = sampleRate*duration;
-  const buffer = audioCtx.createBuffer(1,length,sampleRate);
-  const data = buffer.getChannelData(0);
-  waveformData=[];
-  const f0=20; const f1=400;
-  for(let i=0;i<length;i++){
-    const t=i/sampleRate;
-    const freq=f0+(f1-f0)*(t/duration);
-    data[i]=0.2*Math.sin(2*Math.PI*freq*t);
-    waveformData.push(data[i]);
-  }
-  chirpBuffer=buffer;
-  drawWaveform();
+function createChirpAudioAndPlot(m1,m2){
+  const chirpCanvas = document.getElementById('chirpCanvas');
+  const cCtx = chirpCanvas.getContext('2d');
+  cCtx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
+  const t = Array.from({length:2000},(_,i)=>i*0.05);
+  const h_plus = t.map(v=>Math.sin(0.2*v)*Math.exp(-0.002*v));
+  const h_cross = t.map(v=>Math.cos(0.2*v)*Math.exp(-0.002*v));
+  cCtx.strokeStyle='orange'; cCtx.beginPath();
+  h_plus.forEach((val,i)=>{ if(i==0)cCtx.moveTo(i,100-val*50); else cCtx.lineTo(i,100-val*50); });
+  cCtx.stroke();
+  cCtx.strokeStyle='blue'; cCtx.beginPath();
+  h_cross.forEach((val,i)=>{ if(i==0)cCtx.moveTo(i,100-val*50); else cCtx.lineTo(i,100-val*50); });
+  cCtx.stroke();
 }
 
-// Draw waveform
-function drawWaveform(highlightIndex=-1){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.beginPath();
-  ctx.moveTo(0,canvas.height/2);
-  for(let i=0;i<waveformData.length;i+=Math.floor(waveformData.length/canvas.width)){
-    const x=i/waveformData.length*canvas.width;
-    const y=canvas.height/2 - waveformData[i]*canvas.height/2;
-    ctx.lineTo(x,y);
-  }
-  ctx.strokeStyle='orange'; ctx.lineWidth=2; ctx.stroke();
-  // Playhead
-  if(highlightIndex>=0){
-    const x = highlightIndex / waveformData.length * canvas.width;
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height);
-    ctx.strokeStyle='red'; ctx.lineWidth=1; ctx.stroke();
-  }
+function updateSimulation(eventKey){
+  const ev = gwEvents[eventKey];
+  drawOrbit(ev.m1, ev.m2, ev.sep);
+  createChirpAudioAndPlot(ev.m1, ev.m2);
 }
-
-// Play chirp
-document.getElementById('playChirpBtn').addEventListener('click', ()=>{
-  if(!chirpBuffer) return;
-  const source = audioCtx.createBufferSource();
-  source.buffer=chirpBuffer; source.connect(audioCtx.destination);
-  const startTime = audioCtx.currentTime;
-  const duration = chirpBuffer.duration;
-  function animate(){
-    const elapsed = audioCtx.currentTime-startTime;
-    if(elapsed>duration) return;
-    const index = Math.floor(elapsed/duration*waveformData.length);
-    drawWaveform(index);
-    requestAnimationFrame(animate);
-  }
-  animate();
-  source.start();
+eventSelect.addEventListener('change', ()=>{ updateSimulation(eventSelect.value); });
+document.getElementById('runCustomBtn').addEventListener('click', ()=>{
+  const m1=parseFloat(document.getElementById('m1Input').value);
+  const m2=parseFloat(document.getElementById('m2Input').value);
+  const sep=parseFloat(document.getElementById('sepInput').value);
+  drawOrbit(m1,m2,sep);
+  createChirpAudioAndPlot(m1,m2);
 });
+updateSimulation(eventSelect.value);
 
-// Update on event change
-eventSelect.addEventListener('change', ()=>{
-  const ev = gwEvents[eventSelect.value];
-  if(!ev) return;
-  createChirpAudioAndPlot(ev.m1,ev.m2);
-});
-
-// Initialize first event
-createChirpAudioAndPlot(gwEvents[eventSelect.value].m1,gwEvents[eventSelect.value].m2);
-
+// --- Spectrogram mock ---
+const specCanvas = document.getElementById('specCanvas');
+const sCtx = specCanvas.getContext('2d');
+function drawSpectrogram(){
+  sCtx.clearRect(0,0,specCanvas.width,specCanvas.height);
+  const width = specCanvas.width;
+  const height = specCanvas.height;
+  for(let x=0;x<width;x++){
+    const intensity=Math.abs(Math.sin(x/20 + orbitAngle));
+    sCtx.fillStyle=`rgba(255,165,0,${intensity*0.3})`;
+    sCtx.fillRect(x,0,1,height);
+  }
+  requestAnimationFrame(drawSpectrogram);
+}
+drawSpectrogram();
 </script>
 </body>
 </html>
