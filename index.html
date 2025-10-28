@@ -274,15 +274,23 @@ document.querySelectorAll('.legend div').forEach(div=>{
 tooltipClose.addEventListener('click', ()=>{ tooltip.style.display='none'; tooltip.setAttribute('aria-hidden','true'); });
 
 /* -----------------------
-   Events DB + UI
+   Events DB + UI (expanded)
    ----------------------- */
 const eventSelect = document.getElementById('eventSelect');
 const events = {
-  "GW150914": { m1:36, m2:29, spin:0.3, color:'#ff66ff', desc: "GW150914 — first detection (2015): 36 + 29 M☉." },
-  "GW170104": { m1:31, m2:19, spin:0.45, color:'#00ccff', desc: "GW170104 — 31 + 19 M☉ (2017)." },
-  "Custom":    { m1:30, m2:30, spin:0.5, color:'#ffd166', desc: "Custom system." }
+  "GW150914": { m1:36, m2:29, spin:0.3, color:'#ff66ff', desc:"GW150914 — First detection (2015): 36 + 29 M☉, ~410 Mly away." },
+  "GW170104": { m1:31, m2:19, spin:0.45, color:'#00ccff', desc:"GW170104 — 31 + 19 M☉ (2017), ~880 Mly distance." },
+  "GW170608": { m1:12, m2:7,  spin:0.25, color:'#66ff99', desc:"GW170608 — Lighter system, 12 + 7 M☉, one of the smallest detected binaries." },
+  "GW190521": { m1:85, m2:66, spin:0.7,  color:'#ff9933', desc:"GW190521 — Exceptionally massive: 85 + 66 M☉, ~5 Gly away, formed an intermediate-mass BH." },
+  "GW190814": { m1:23, m2:2.6, spin:0.05, color:'#ffcc00', desc:"GW190814 — Asymmetric system: possible BH–NS merger." },
+  "GW200115": { m1:6,  m2:1.5, spin:0.2,  color:'#33aaff', desc:"GW200115 — NS–BH candidate, lower-mass compact binary." },
+  "Custom":   { m1:30, m2:30, spin:0.5,  color:'#ffd166', desc:"Custom system — adjustable parameters below." }
 };
-for(const k in events){ const o=document.createElement('option'); o.value=k; o.textContent=k; eventSelect.appendChild(o); }
+ for (const k in events) {
+  const opt = document.createElement('option');
+  opt.value = k;
+  opt.textContent = k;
+  eventSelect.appendChild(opt);}
 
 /* -----------------------
    Orbit canvas + trails
