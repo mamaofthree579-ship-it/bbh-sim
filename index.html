@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -42,7 +42,9 @@
   <h2>💫 Gravitational-Wave Events</h2>
   <label for="eventSelect">Select Event:</label>
   <select id="eventSelect"></select>
-  <button id="runCustomBtn">Run Custom Simulation</button><br>
+  <button id="runCustomBtn">Run Custom Simulation</button>
+  <button id="resetSimBtn">♻️ Reset Simulator</button><br>
+
   <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
   <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1"><br>
   <label>Spin₁:</label><input id="spin1Input" type="range" min="0" max="1" step="0.01" value="0.3">
@@ -88,42 +90,56 @@ tabButtons.forEach(btn=>{
   });
 });
 
-// --- Overview Animation with Stars ---
+// --- Overview Animation with Masked Stars ---
 const bhCanvas=document.getElementById('bhCanvas');
 const bhCtx=bhCanvas.getContext('2d');
 const bhStars=[];
 for(let i=0;i<150;i++){
-  bhStars.push({x:Math.random()*bhCanvas.width, y:Math.random()*bhCanvas.height, alpha:Math.random(), speed:Math.random()*0.02, drift:Math.random()*0.2});
+  bhStars.push({x:Math.random()*bhCanvas.width, y:Math.random()*bhCanvas.height, alpha:Math.random(), speed:Math.random()*0.02});
 }
 let bhAngle=0;
 function drawBH(){
-  bhCtx.fillStyle='rgba(0,0,0,0.3)';
+  bhCtx.fillStyle='rgba(0,0,0,0.4)';
   bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
-  // Stars twinkle + drift
-  bhStars.forEach(s=>{
-    s.alpha += s.speed*(Math.random()<0.5?-1:1);
-    if(s.alpha<0)s.alpha=0;if(s.alpha>1)s.alpha=1;
-    s.x += s.drift*0.1; if(s.x>bhCanvas.width)s.x=0;
-    bhCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
-    bhCtx.fillRect(s.x,s.y,2,2);
-  });
+
   const cx=bhCanvas.width/2, cy=bhCanvas.height/2;
+  const eventHorizonRadius=60;
+  const diskOuterRadius=160;
+
+  // Draw twinkling stars, but skip area near black hole
+  bhStars.forEach(s=>{
+    const dx=s.x-cx, dy=s.y-cy;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>diskOuterRadius){ // mask inner zone
+      s.alpha += s.speed*(Math.random()<0.5?-1:1);
+      if(s.alpha<0)s.alpha=0;if(s.alpha>1)s.alpha=1;
+      bhCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
+      bhCtx.fillRect(s.x,s.y,2,2);
+    }
+  });
+
+  // Event horizon
   bhCtx.beginPath();
-  bhCtx.arc(cx,cy,50,0,Math.PI*2);
+  bhCtx.arc(cx,cy,eventHorizonRadius,0,Math.PI*2);
   bhCtx.fillStyle='black';
   bhCtx.fill();
+
+  // Accretion disk glow
   for(let i=0;i<120;i++){
     bhCtx.beginPath();
-    bhCtx.arc(cx,cy,55+i,0,Math.PI*2);
+    bhCtx.arc(cx,cy,eventHorizonRadius+i,0,Math.PI*2);
     bhCtx.strokeStyle=`rgba(180,0,255,${0.015})`;
     bhCtx.stroke();
   }
+
+  // Orbiting glowing particle
   const x=cx+Math.cos(bhAngle)*100;
   const y=cy+Math.sin(bhAngle)*30;
   bhCtx.beginPath();
   bhCtx.arc(x,y,6,0,Math.PI*2);
   bhCtx.fillStyle='#ffcc99';
   bhCtx.fill();
+
   bhAngle+=0.03;
   requestAnimationFrame(drawBH);
 }
@@ -147,7 +163,7 @@ for(let e in gwEvents){
   eventSelect.add(opt);
 }
 
-// --- Orbit Simulation with Twinkling Parallax Stars ---
+// --- Orbit Simulation with Stars + Trails ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
 let orbitAngle=0;
@@ -160,11 +176,11 @@ for(let i=0;i<250;i++){
 function drawOrbit(m1,m2,spin1,spin2){
   orbitCtx.fillStyle='rgba(0,0,0,0.3)';
   orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
-  // Stars with slow parallax drift
+
   stars.forEach(s=>{
     s.alpha += s.speed*(Math.random()<0.5?-1:1);
-    if(s.alpha<0) s.alpha=0; if(s.alpha>1) s.alpha=1;
-    s.x += s.drift; if(s.x>orbitCanvas.width) s.x=0; if(s.x<0) s.x=orbitCanvas.width;
+    if(s.alpha<0)s.alpha=0;if(s.alpha>1)s.alpha=1;
+    s.x += s.drift; if(s.x>orbitCanvas.width)s.x=0; if(s.x<0)s.x=orbitCanvas.width;
     orbitCtx.fillStyle=`rgba(255,255,255,${s.alpha})`;
     orbitCtx.fillRect(s.x,s.y,2,2);
   });
@@ -193,30 +209,40 @@ function drawOrbit(m1,m2,spin1,spin2){
     orbitCtx.fill();
   }
 
-  const spinAngle1 = orbitAngle * (1 + spin1);
-  const spinAngle2 = orbitAngle * (1 + spin2);
+  const spinAngle1=orbitAngle*(1+spin1);
+  const spinAngle2=orbitAngle*(1+spin2);
 
   orbitCtx.beginPath();
-  orbitCtx.arc(x1 + Math.cos(spinAngle1)*5, y1 + Math.sin(spinAngle1)*5, 10, 0, Math.PI*2);
+  orbitCtx.arc(x1+Math.cos(spinAngle1)*5,y1+Math.sin(spinAngle1)*5,10,0,Math.PI*2);
   orbitCtx.fillStyle='#ff66ff';
   orbitCtx.fill();
 
   orbitCtx.beginPath();
-  orbitCtx.arc(x2 + Math.cos(spinAngle2)*7, y2 + Math.sin(spinAngle2)*7, 16, 0, Math.PI*2);
+  orbitCtx.arc(x2+Math.cos(spinAngle2)*7,y2+Math.sin(spinAngle2)*7,16,0,Math.PI*2);
   orbitCtx.fillStyle='#00ccff';
   orbitCtx.fill();
 
-  orbitAngle += 0.03;
+  orbitAngle+=0.03;
   requestAnimationFrame(()=>drawOrbit(m1,m2,spin1,spin2));
 }
 
-// --- Graphs + Chirp ---
+// --- Reset Function ---
+document.getElementById('resetSimBtn').addEventListener('click',()=>{
+  orbitAngle=0;
+  trails=[];
+  document.getElementById('spin1Input').value=0.3;
+  document.getElementById('spin2Input').value=0.3;
+  updateEvent('GW150914');
+});
+
+// --- Graphs + Summary + Chirp ---
 const ampCanvas=document.getElementById('amplitudeCanvas');
 const ampCtx=ampCanvas.getContext('2d');
 const energyCanvas=document.getElementById('energyCanvas');
 const energyCtx=energyCanvas.getContext('2d');
 const freqCanvas=document.getElementById('freqCanvas');
 const freqCtx=freqCanvas.getContext('2d');
+
 function drawGraph(ctx,color,func){
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
@@ -230,12 +256,29 @@ function drawGraph(ctx,color,func){
   ctx.stroke();
 }
 
-// --- Chirp Audio ---
+function updateSummary(m1,m2){
+  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
+  document.getElementById('freqRange').textContent="20–400 Hz";
+  document.getElementById('gwStrain').textContent=(4e-21*Math.pow(chirpMass/30,5/3)).toExponential(2);
+  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
+}
+
+function updateEvent(eventKey){
+  const ev=gwEvents[eventKey];
+  document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
+  drawOrbit(ev.m1,ev.m2,ev.spin1,ev.spin2);
+  updateSummary(ev.m1,ev.m2);
+  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
+  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
+  drawGraph(freqCtx,'#00ccff',t=>t*t);
+}
+
+// --- Chirp Sound ---
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 let chirpBuffer;
 function createChirpAudio(){
-  const duration=2;
-  const sampleRate=audioCtx.sampleRate;
+  const duration=2, sampleRate=audioCtx.sampleRate;
   const buffer=audioCtx.createBuffer(1,sampleRate*duration,sampleRate);
   const data=buffer.getChannelData(0);
   const f0=30, f1=400;
@@ -255,28 +298,7 @@ document.getElementById('playChirpBtn').addEventListener('click',()=>{
   src.start();
 });
 
-// --- Event Update ---
-function updateEvent(eventKey){
-  const ev=gwEvents[eventKey];
-  if(!ev) return;
-  document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
-  drawOrbit(ev.m1,ev.m2,ev.spin1,ev.spin2);
-  updateSummary(ev.m1,ev.m2);
-  drawGraph(ampCtx,'#a64dff',t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
-  drawGraph(energyCtx,'#ff66ff',t=>Math.pow(t,2.5)*Math.exp(-3*t));
-  drawGraph(freqCtx,'#00ccff',t=>t*t);
-}
-
-// --- Summary ---
-function updateSummary(m1,m2){
-  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
-  document.getElementById('freqRange').textContent="20–400 Hz";
-  document.getElementById('gwStrain').textContent=(4e-21*Math.pow(chirpMass/30,5/3)).toExponential(2);
-  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
-}
-
-// --- Custom Event Button ---
+// --- Custom Event ---
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m1=parseFloat(document.getElementById('m1Input').value);
   const m2=parseFloat(document.getElementById('m2Input').value);
@@ -291,6 +313,5 @@ document.getElementById('runCustomBtn').addEventListener('click',()=>{
 eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
 updateEvent("GW150914");
 </script>
-
 </body>
 </html>
