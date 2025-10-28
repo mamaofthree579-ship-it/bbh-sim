@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Simulator — Overview, Events & Sync</title>
+<title>BBH Simulator — Overview, Events & Advanced Physics</title>
 <style>
   :root{
     --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --muted:#33003d; --text:#e5ccff;
@@ -26,9 +26,10 @@
   .btn.secondary{background:#444}
   .legend{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:8px;color:var(--text);font-size:0.95rem}
   .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;cursor:pointer; border:1px solid rgba(255,255,255,0.06)}
-  .tooltip { position: absolute; background: rgba(20,10,30,0.95); color: #fff; padding:8px; border-radius:6px; border:1px solid rgba(120,90,200,0.25); max-width:320px; font-size:0.9rem; display:none; z-index:1000; }
+  .tooltip { position: absolute; background: rgba(20,10,30,0.95); color: #fff; padding:8px; border-radius:6px; border:1px solid rgba(120,90,200,0.25); max-width:360px; font-size:0.9rem; display:none; z-index:1000; }
   .tooltip .close { float:right; cursor:pointer; color:#ffd; margin-left:8px; font-weight:bold }
-  #status{font-size:0.9rem;color:#ffd;}
+  a.advLink { color: #ffd; text-decoration: underline; cursor:pointer }
+  pre { background:#070018; padding:8px; border-radius:6px; overflow:auto; color:#f0f0ff; }
 </style>
 </head>
 <body>
@@ -37,13 +38,14 @@
 <div class="tabs">
   <button class="tabButton active" data-tab="overviewTab">Overview</button>
   <button class="tabButton" data-tab="eventsTab">Events</button>
+  <button class="tabButton" data-tab="advancedTab">Advanced Physics</button>
 </div>
 
 <!-- Overview -->
 <div id="overviewTab" class="container tabContent" style="display:block">
   <h2>🌌 Black Hole Overview</h2>
   <div class="panel">
-    <p class="small">A rotating black hole with an accretion disk. Click a swatch to see the formula / explanation (dismissible).</p>
+    <p class="small">A rotating black hole with an accretion disk. Click a swatch to see the formula/explanation. Click the link in the tooltip to open the advanced derivation.</p>
     <canvas id="bhCanvas" width="920" height="420"></canvas>
 
     <div class="legend" aria-hidden="true">
@@ -84,6 +86,7 @@
         <div style="margin-top:6px">
           <button id="playChirpBtn" class="btn">🔊 Play Chirp</button>
           <button id="stopChirpBtn" class="btn secondary">⏹ Stop</button>
+          <button id="exportBtn" class="btn secondary" title="Export current params & waveform as JSON">⬇ Export JSON</button>
           <span class="muted" style="margin-left:10px">Playhead shown on chirp canvas</span>
         </div>
       </div>
@@ -114,6 +117,38 @@
   </div>
 </div>
 
+<!-- Advanced Physics Tab -->
+<div id="advancedTab" class="container tabContent" style="display:none">
+  <h2>📚 Advanced Physics</h2>
+  <div class="panel">
+    <h3>I. Geometry & basic GR quantities</h3>
+    <pre>Schwarzschild radius:
+r_s = 2 G M / c^2
+
+Gravitational potential (Newtonian approx):
+Φ(r) ≈ - G M / r
+
+Gravitational redshift:
+E_obs = E_em * sqrt(1 - r_s / r)</pre>
+
+    <h3>II. Binary inspiral & GW basics</h3>
+    <pre>Chirp mass:
+ℳ = (M1 M2)^(3/5) / (M1 + M2)^(1/5)
+
+Leading PN frequency evolution (Peters–Mathews):
+ḟ = (96/5) π^(8/3) (G ℳ)^(5/3) / c^5 * f^(11/3)
+
+Inspiral strain (leading PN):
+h(f) ≈ (4 G^(5/3) / c^4) π^(2/3) ℳ^(5/3) f^(2/3) / D</pre>
+
+    <h3>III. Neutrino notes & phenomenological couplings</h3>
+    <pre>ΔE_ν = α ∫ ∇Φ(r(t)) dt
+E_ν,extra = β E_GW_available (0 ≤ β ≤ 1)</pre>
+
+    <p class="small muted">Click a legend swatch on the Overview to return here and see the matching derivation highlighted.</p>
+  </div>
+</div>
+
 <!-- Tooltip container -->
 <div id="tooltip" class="tooltip" role="dialog" aria-hidden="true">
   <span class="close" id="tooltipClose">×</span>
@@ -122,7 +157,7 @@
 
 <script>
 /* -----------------------
-   Tabs
+   Tabs handling
    ----------------------- */
 document.querySelectorAll('.tabButton').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -130,11 +165,13 @@ document.querySelectorAll('.tabButton').forEach(btn=>{
     btn.classList.add('active');
     document.querySelectorAll('.tabContent').forEach(c=>c.style.display='none');
     document.getElementById(btn.dataset.tab).style.display='block';
+    // close tooltip if open
+    tooltip.style.display='none'; tooltip.setAttribute('aria-hidden','true');
   });
 });
 
 /* -----------------------
-   Overview: starfield + outlines + legend tooltips
+   Overview drawing (stars, disk, horizon, jet)
    ----------------------- */
 const bhCanvas = document.getElementById('bhCanvas');
 const bhCtx = bhCanvas.getContext('2d');
@@ -152,7 +189,7 @@ function drawOverview(){
   g.addColorStop(0,'#070012'); g.addColorStop(1,'#010006');
   bhCtx.fillStyle = g; bhCtx.fillRect(0,0,bhW,bhH);
 
-  // stars (masked)
+  // stars (mask)
   for(const s of stars){
     s.phi += 0.02 + Math.random()*0.01;
     s.x += s.vx; if(s.x < -2) s.x = bhW + 2; if(s.x > bhW+2) s.x = -2;
@@ -172,7 +209,7 @@ function drawOverview(){
     bhCtx.stroke();
   }
 
-  // event horizon (violet)
+  // event horizon outline (violet)
   bhCtx.beginPath(); bhCtx.arc(bhCx,bhCy,horizonR,0,Math.PI*2);
   bhCtx.strokeStyle = 'rgba(140,80,255,0.35)'; bhCtx.lineWidth = 2; bhCtx.stroke();
 
@@ -180,7 +217,7 @@ function drawOverview(){
   bhCtx.fillStyle = 'rgba(120,200,255,0.06)';
   bhCtx.fillRect(bhCx-6, 0, 12, bhCy-120);
 
-  // central horizon
+  // central horizon fill
   bhCtx.beginPath(); bhCtx.arc(bhCx,bhCy,horizonR,0,Math.PI*2); bhCtx.fillStyle='black'; bhCtx.fill();
 
   // hotspot
@@ -193,13 +230,13 @@ function drawOverview(){
 }
 drawOverview();
 
-/* legend tooltips: content keyed by id */
+/* -----------------------
+   Tooltip & link to Advanced tab
+   ----------------------- */
 const tooltipData = {
-  "eh": `<strong>Event horizon</strong><br/>Radius (Schwarzschild): <code>r_s = 2 G M / c^2</code>.<br/>This marks where the escape velocity equals c.`,
-  "ad": `<strong>Accretion disk</strong><br/>Hot plasma orbiting the BH; viscous heating and differential rotation produce emission. Use disk models (Novikov–Thorne) to compute luminosity.`,
-  "jet": `<strong>Relativistic jet</strong><br/>Collimated outflows along spin axis; powered by accretion & magnetic fields (Blandford–Znajek).`,
-  "chirp": `<strong>Chirp mass</strong><br/>\u2113 = ((M_1 M_2)^{3/5})/(M_1+M_2)^{1/5}<br/>Controls GW phase/frequency evolution.`,
-  "pn": `<strong>Frequency evolution (leading PN)</strong><br/><code>\\dot f = (96/5) \\pi^{8/3} (G \\mathcal{M})^{5/3} / c^5 \\; f^{11/3}</code>`
+  "eh": { html:`<strong>Event horizon</strong><br>r_s = 2 G M / c^2.<br><a class="advLink" data-target="I">Open derivation</a>` , targetSection:"I" },
+  "ad": { html:`<strong>Accretion disk</strong><br>Viscous disk models (Novikov–Thorne).<br><a class="advLink" data-target="II">Open derivation</a>`, targetSection:"II" },
+  "jet":{ html:`<strong>Relativistic jet</strong><br>Magnetic extraction of spin energy (Blandford–Znajek).<br><a class="advLink" data-target="III">Open derivation</a>`, targetSection:"III" }
 };
 const tooltip = document.getElementById('tooltip');
 const tooltipContent = document.getElementById('tooltipContent');
@@ -210,17 +247,34 @@ document.querySelectorAll('.legend div').forEach(div=>{
   const key = div.getAttribute('data-tooltip');
   div.addEventListener('click',(ev)=>{
     const rect = ev.currentTarget.getBoundingClientRect();
-    tooltipContent.innerHTML = tooltipData[key] || 'Info';
-    tooltip.style.left = (rect.left + window.scrollX + rect.width/2 - 160) + 'px';
-    tooltip.style.top  = (rect.top + window.scrollY - 110) + 'px';
-    tooltip.style.display = 'block';
-    tooltip.setAttribute('aria-hidden','false');
+    tooltipContent.innerHTML = tooltipData[key].html;
+    tooltip.style.left = (rect.left + window.scrollX + rect.width/2 - 180) + 'px';
+    tooltip.style.top  = (rect.top + window.scrollY - 120) + 'px';
+    tooltip.style.display = 'block'; tooltip.setAttribute('aria-hidden','false');
+    // wire adv link
+    tooltip.querySelectorAll('.advLink').forEach(a=>{
+      a.addEventListener('click', (e)=>{
+        const t = e.currentTarget.getAttribute('data-target');
+        // open advanced tab and scroll to section
+        document.querySelectorAll('.tabButton').forEach(b=>b.classList.remove('active'));
+        document.querySelector('[data-tab="advancedTab"]').classList.add('active');
+        document.querySelectorAll('.tabContent').forEach(c=>c.style.display='none');
+        document.getElementById('advancedTab').style.display='block';
+        // scroll to section heading if matching
+        const adv = document.getElementById('advancedTab');
+        // small mapping
+        if(t==='I') adv.querySelector('h3').scrollIntoView({behavior:'smooth'});
+        if(t==='II') adv.querySelectorAll('h3')[1].scrollIntoView({behavior:'smooth'});
+        if(t==='III') adv.querySelectorAll('h3')[2].scrollIntoView({behavior:'smooth'});
+        tooltip.style.display='none'; tooltip.setAttribute('aria-hidden','true');
+      });
+    });
   });
 });
 tooltipClose.addEventListener('click', ()=>{ tooltip.style.display='none'; tooltip.setAttribute('aria-hidden','true'); });
 
 /* -----------------------
-   Events: DB, colors
+   Events DB + UI
    ----------------------- */
 const eventSelect = document.getElementById('eventSelect');
 const events = {
@@ -240,6 +294,7 @@ let angle = 0;
 let trailsA = [], trailsB = [];
 const TRAIL_MAX = 180;
 let orbitAnimHandle = null;
+
 function startOrbit(m1,m2,spin,accent){
   if(orbitAnimHandle) cancelAnimationFrame(orbitAnimHandle);
   trailsA = []; trailsB = []; angle = 0;
@@ -281,12 +336,12 @@ function startOrbit(m1,m2,spin,accent){
 }
 
 /* -----------------------
-   Chirp waveform + audio sync
+   Chirp waveform & audio (Option A: 20–~400 Hz sweep made audible)
    ----------------------- */
 const chirpCanvas = document.getElementById('chirpCanvas');
 const cctx = chirpCanvas.getContext('2d');
-const waveform = new Float32Array(1200);
-let audioCtx = null, osc = null, gainNode = null;
+const waveform = new Float32Array(1400);
+let audioCtx = null, osc = null, oscHarm = null, gainNode = null, gainHarm = null;
 let playStart = 0, playDur = 0, playRAF = null;
 let currentAccent = '#ff66ff';
 
@@ -322,31 +377,51 @@ function drawChirp(playIdx=-1){
   }
 }
 
+/* Play chirp with a faint harmonic to aid audibility while keeping the 20–400 Hz sweep */
 async function playChirpAudio(m1,m2,spin,accent){
-  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if(audioCtx.state === 'suspended') await audioCtx.resume().catch(()=>{});
   stopChirpAudio();
 
   const Mc = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  const fStart = 25 + spin*20;
-  const fEnd   = 250 + (Mc/30)*300;
-  const duration = Math.max(0.6, 3.0 - (Mc/40));
+  const fStart = 20 + spin*10;              // start near 20 Hz
+  const fEnd   = 400 + (Mc/30)*200;         // extend somewhat to make higher harmonics audible
+  const duration = Math.max(0.8, 3.2 - (Mc/40)); // a bit longer for low-mass
 
+  // main oscillator
   osc = audioCtx.createOscillator();
   gainNode = audioCtx.createGain();
   osc.type = 'sine';
   osc.connect(gainNode); gainNode.connect(audioCtx.destination);
 
-  const now = audioCtx.currentTime;
-  osc.frequency.setValueAtTime(fStart, now);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(fEnd,fStart+1), now + duration);
+  // harmonic oscillator (one octave up) — low gain
+  oscHarm = audioCtx.createOscillator();
+  gainHarm = audioCtx.createGain();
+  oscHarm.type = 'sine';
+  oscHarm.connect(gainHarm); gainHarm.connect(audioCtx.destination);
 
+  const now = audioCtx.currentTime;
+  // main sweep
+  osc.frequency.setValueAtTime(Math.max(fStart,1), now);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(fEnd, fStart+1), now + duration);
+  // harmonic sweep at 2x frequency (keeps phase relation)
+  oscHarm.frequency.setValueAtTime(Math.max(fStart*2,2), now);
+  oscHarm.frequency.exponentialRampToValueAtTime(Math.max(fEnd*2, fStart*2+2), now + duration);
+
+  // gain envelopes: main loud enough but safe
   gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.linearRampToValueAtTime(0.18, now + 0.02);
+  // slowly raise to 0.28 (audible yet not harsh)
+  gainNode.gain.linearRampToValueAtTime(0.28, now + 0.03);
+  // slowly decay at end
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-  osc.start(now);
-  osc.stop(now + duration + 0.05);
+  // harmonic much softer (coloration)
+  gainHarm.gain.setValueAtTime(0.0001, now);
+  gainHarm.gain.linearRampToValueAtTime(0.06, now + 0.03);
+  gainHarm.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  osc.start(now); osc.stop(now + duration + 0.05);
+  oscHarm.start(now); oscHarm.stop(now + duration + 0.05);
 
   // visuals sync
   playStart = performance.now();
@@ -356,35 +431,36 @@ async function playChirpAudio(m1,m2,spin,accent){
 }
 
 function stopChirpAudio(){
-  try{ if(osc) osc.stop(); } catch(e){}
-  try{ if(gainNode) gainNode.disconnect(); } catch(e){}
-  try{ if(osc) osc.disconnect(); } catch(e){}
-  osc = null; gainNode = null;
+  try{ if(osc) osc.stop(); }catch(e){}
+  try{ if(oscHarm) oscHarm.stop(); }catch(e){}
+  try{ if(gainNode) gainNode.disconnect(); }catch(e){}
+  try{ if(gainHarm) gainHarm.disconnect(); }catch(e){}
+  try{ if(osc) osc.disconnect(); }catch(e){}
+  try{ if(oscHarm) oscHarm.disconnect(); }catch(e){}
+  osc = null; oscHarm = null; gainNode = null; gainHarm = null;
   document.getElementById('audioState').textContent = 'idle';
   if(playRAF){ cancelAnimationFrame(playRAF); playRAF = null; drawChirp(-1); drawSummaryGraphs(currentAccent, 0); }
 }
 
-/* animate playhead and also animate graphs */
+/* animate playhead and graphs in sync */
 function animatePlayheadAndGraphs(accent){
   const start = playStart;
   function step(){
     const now = performance.now();
     const elapsed = now - start;
     if(elapsed >= playDur){
-      stopChirpAudio();
-      return;
+      stopChirpAudio(); return;
     }
     const prog = elapsed / playDur;
     const idx = Math.floor(prog * waveform.length);
     drawChirp(idx);
     drawPulseOverlay(prog);
-    drawSummaryGraphs(accent, prog); // animate graphs in sync
+    drawSummaryGraphs(accent, prog);
     playRAF = requestAnimationFrame(step);
   }
   step();
 }
 
-/* pulse overlay draws subtle colored pulse at playhead */
 function drawPulseOverlay(progress){
   const W = chirpCanvas.width, H = chirpCanvas.height;
   const centerX = progress * W;
@@ -398,16 +474,15 @@ function drawPulseOverlay(progress){
 }
 
 /* -----------------------
-   Summary graphs (animated when progress provided)
+   Summary graphs drawing
    ----------------------- */
 function drawSummaryGraphs(accent, progress=0){
-  // progress = 0..1; when 0, draw base static; when >0 animate scaled by progress
   const ampCtx = document.getElementById('amplitudeCanvas').getContext('2d');
   const engCtx = document.getElementById('energyCanvas').getContext('2d');
   const fqCtx  = document.getElementById('freqCanvas').getContext('2d');
-  drawGraphAnim(ampCtx, accent, t => Math.pow(t* (0.3 + 0.7*progress + 0.7), 3) * Math.sin(40*t*Math.PI), progress);
-  drawGraphAnim(engCtx, accent, t => Math.pow(t*(0.2 + 0.8*progress + 0.6), 2.5) * Math.exp(-3*t*(1 - 0.4*(1-progress))), progress);
-  drawGraphAnim(fqCtx,  accent, t => Math.pow(t*(0.6 + 0.4*progress + 0.4), 1.6), progress);
+  drawGraphAnim(ampCtx, accent, t => Math.pow(t*(0.3+0.7*progress+0.5), 3) * Math.sin(40*t*Math.PI), progress);
+  drawGraphAnim(engCtx, accent, t => Math.pow(t*(0.2+0.8*progress+0.4), 2.5) * Math.exp(-3*t*(1 - 0.4*(1-progress))), progress);
+  drawGraphAnim(fqCtx,  accent, t => Math.pow(t*(0.6+0.4*progress+0.2), 1.6), progress);
 }
 function drawGraphAnim(ctx, color, fn, progress){
   const W = ctx.canvas.width, H = ctx.canvas.height;
@@ -421,7 +496,7 @@ function drawGraphAnim(ctx, color, fn, progress){
 }
 
 /* -----------------------
-   Helpers (color conversion)
+   Helpers: colors & math UI
    ----------------------- */
 function hexToRgba(hex, alpha=1.0){
   if(!hex) return `rgba(200,200,200,${alpha})`;
@@ -444,18 +519,18 @@ function shadeColor(hex, percent){
 function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
 
 /* -----------------------
-   UI wiring + event handling
+   UI wiring + interactions
    ----------------------- */
-const runCustomBtn = document.getElementById('runCustomBtn');
-const resetBtn = document.getElementById('resetBtn');
 const playChirpBtn = document.getElementById('playChirpBtn');
 const stopChirpBtn = document.getElementById('stopChirpBtn');
+const exportBtn = document.getElementById('exportBtn');
+const runCustomBtn = document.getElementById('runCustomBtn');
+const resetBtn = document.getElementById('resetBtn');
 const m1Input = document.getElementById('m1Input');
 const m2Input = document.getElementById('m2Input');
 const spinInput = document.getElementById('spinInput');
 const spinVal = document.getElementById('spinVal');
 const audioState = document.getElementById('audioState');
-
 spinVal.textContent = Number(spinInput.value).toFixed(2);
 spinInput.addEventListener('input', ()=> spinVal.textContent = Number(spinInput.value).toFixed(2) );
 
@@ -471,10 +546,19 @@ function loadEvent(key){
   generateWaveformSamples(ev.m1, ev.m2, ev.spin);
   drawSummaryGraphs(ev.color, 0);
   startOrbit(ev.m1, ev.m2, ev.spin, ev.color);
+  updateSummary(ev.m1, ev.m2);
 }
 
-eventSelect.addEventListener('change', ()=> loadEvent(eventSelect.value));
+function updateSummary(m1,m2){
+  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
+  document.getElementById('freqRange').textContent="20–400 Hz";
+  document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
+  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
+}
 
+/* populate/select handlers */
+eventSelect.addEventListener('change', ()=> loadEvent(eventSelect.value));
 runCustomBtn.addEventListener('click', ()=>{
   const m1 = clamp(parseFloat(m1Input.value) || 30, 1, 1e6);
   const m2 = clamp(parseFloat(m2Input.value) || 30, 1, 1e6);
@@ -482,13 +566,13 @@ runCustomBtn.addEventListener('click', ()=>{
   events['Custom'] = { m1, m2, spin, color: '#ffd166', desc: `Custom: ${m1} + ${m2} M☉, spin ${spin}` };
   loadEvent('Custom');
 });
-
 resetBtn.addEventListener('click', ()=>{
   trailsA = []; trailsB = []; angle = 0;
   loadEvent(selectedEventKey || 'GW150914');
   stopChirpAudio();
 });
 
+/* play/stop wiring (user gesture necessary for audio) */
 playChirpBtn.addEventListener('click', async ()=>{
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if(audioCtx.state === 'suspended') await audioCtx.resume().catch(()=>{});
@@ -496,8 +580,24 @@ playChirpBtn.addEventListener('click', async ()=>{
   generateWaveformSamples(ev.m1, ev.m2, ev.spin);
   playChirpAudio(ev.m1, ev.m2, ev.spin, ev.color);
 });
+stopChirpBtn.addEventListener('click', ()=> stopChirpAudio());
 
-stopChirpBtn.addEventListener('click', ()=> stopChirpAudio() );
+/* Export JSON: parameters + waveform samples (floats truncated for size) */
+exportBtn.addEventListener('click', ()=>{
+  const ev = events[eventSelect.value] || events['Custom'];
+  const params = {
+    simulation_name: eventSelect.value,
+    m1: ev.m1, m2: ev.m2, spin: ev.spin,
+    accent: ev.color,
+    timestamp: new Date().toISOString()
+  };
+  const samples = Array.from(waveform).map((v,i)=> Math.round(v*1e6)/1e6 ); // reduced precision
+  const payload = { params, samples, sample_rate: waveform.length / 3.0 }; // approximate rate
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `${eventSelect.value}_waveform.json`; a.click();
+  URL.revokeObjectURL(url);
+});
 
 /* ensure audio resumes on first gesture */
 ['click','keydown','pointerdown','touchstart'].forEach(evt => {
@@ -508,7 +608,7 @@ stopChirpBtn.addEventListener('click', ()=> stopChirpAudio() );
 
 /* initial load */
 loadEvent('GW150914');
-drawSummaryGraphs(currentAccent || '#ff66ff', 0);
+
 </script>
 </body>
 </html>
