@@ -88,7 +88,7 @@ tabButtons.forEach(btn=>{
   });
 });
 
-// --- Overview Animation with masked stars ---
+// --- Overview with masked stars ---
 const bhCanvas=document.getElementById('bhCanvas');
 const bhCtx=bhCanvas.getContext('2d');
 const stars=Array.from({length:150},()=>({
@@ -100,34 +100,40 @@ const stars=Array.from({length:150},()=>({
 let bhAngle=0;
 function drawBH(){
   bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
-  const cx=bhCanvas.width/2, cy=bhCanvas.height/2;
-  const rBH=70;
-  // stars
+  const cx=bhCanvas.width/2, cy=bhCanvas.height/2, rBH=70;
+  // Stars (mask out inside the BH region)
   stars.forEach(s=>{
     s.tw+=0.05;
     const brightness=0.6+0.4*Math.sin(s.tw);
-    if(Math.hypot(s.x-cx,s.y-cy)>rBH+10){
+    if(Math.hypot(s.x-cx,s.y-cy)>rBH+5){
       bhCtx.beginPath();
       bhCtx.arc(s.x,s.y,s.r,0,2*Math.PI);
       bhCtx.fillStyle=`rgba(255,255,255,${brightness})`;
       bhCtx.fill();
     }
   });
-  // black hole + disk
+  // Accretion disk glow
   const grad=bhCtx.createRadialGradient(cx,cy,10,cx,cy,200);
   grad.addColorStop(0,'#000');
   grad.addColorStop(1,'#33003d');
   bhCtx.fillStyle=grad;
   bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH,0,2*Math.PI); bhCtx.fillStyle='black'; bhCtx.fill();
+  // BH core
+  bhCtx.beginPath();
+  bhCtx.arc(cx,cy,rBH,0,2*Math.PI);
+  bhCtx.fillStyle='black'; bhCtx.fill();
+  // Orbiting hotspot
   const x=cx+Math.cos(bhAngle)*100, y=cy+Math.sin(bhAngle)*40;
-  bhCtx.beginPath(); bhCtx.arc(x,y,6,0,2*Math.PI); bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
+  bhCtx.beginPath();
+  bhCtx.arc(x,y,6,0,2*Math.PI);
+  bhCtx.fillStyle='#ffcc99';
+  bhCtx.fill();
   bhAngle+=0.03;
   requestAnimationFrame(drawBH);
 }
 drawBH();
 
-// --- GW Events ---
+// --- GW Events Setup ---
 const gwEvents={
   "GW150914":{m1:36,m2:29,spin:0.3},
   "GW170104":{m1:31,m2:19,spin:0.5},
@@ -144,56 +150,46 @@ for(let e in gwEvents){
   opt.value=e; opt.text=e; eventSelect.add(opt);
 }
 
-// --- Orbit Simulation ---
+// --- Orbit Simulation with Trails ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
 let orbitAngle=0, orbitAnim;
+const trail=[];
+
 function drawOrbit(m1,m2,spin){
   cancelAnimationFrame(orbitAnim);
   function animate(){
-    orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
     const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
     const r1=80, r2=160;
     const x1=cx+Math.cos(orbitAngle)*r1, y1=cy+Math.sin(orbitAngle)*r1;
     const x2=cx-Math.cos(orbitAngle)*r2, y2=cy-Math.sin(orbitAngle)*r2;
-    const grad=orbitCtx.createRadialGradient(cx,cy,50,cx,cy,300);
-    grad.addColorStop(0,'rgba(40,0,70,0.6)');
-    grad.addColorStop(1,'rgba(0,0,0,1)');
-    orbitCtx.fillStyle=grad;
+
+    trail.push({x1,y1,x2,y2});
+    if(trail.length>100) trail.shift();
+
+    orbitCtx.fillStyle='rgba(0,0,0,0.2)';
     orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
-    for(let i=0;i<5;i++){
-      orbitCtx.beginPath();
-      orbitCtx.arc(cx,cy,100+i*40,0,2*Math.PI);
-      orbitCtx.strokeStyle=`rgba(160,0,255,${0.05*(5-i)})`;
-      orbitCtx.stroke();
-    }
+
+    // Trails
+    orbitCtx.beginPath();
+    trail.forEach((p,i)=>{
+      orbitCtx.fillStyle=`rgba(255,100,255,${i/trail.length})`;
+      orbitCtx.fillRect(p.x1,p.y1,2,2);
+      orbitCtx.fillStyle=`rgba(100,255,255,${i/trail.length})`;
+      orbitCtx.fillRect(p.x2,p.y2,2,2);
+    });
+
+    // Bodies
     orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle='#ff66ff'; orbitCtx.fill();
     orbitCtx.beginPath(); orbitCtx.arc(x2,y2,16,0,2*Math.PI); orbitCtx.fillStyle='#00ccff'; orbitCtx.fill();
-    // spin trail
-    orbitCtx.beginPath();
-    const trailX=cx+Math.cos(orbitAngle*1.2+spin)*r1*1.2;
-    const trailY=cy+Math.sin(orbitAngle*1.2+spin)*r1*0.6;
-    orbitCtx.arc(trailX,trailY,4,0,2*Math.PI);
-    orbitCtx.fillStyle=`rgba(255,255,200,${0.7-spin/2})`;
-    orbitCtx.fill();
+
     orbitAngle+=0.025+spin*0.01;
     orbitAnim=requestAnimationFrame(animate);
   }
   animate();
 }
 
-// --- Graphs + Chirp Sound ---
-function drawGraph(ctx,color,func){
-  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  ctx.beginPath();
-  for(let i=0;i<ctx.canvas.width;i++){
-    const t=i/ctx.canvas.width;
-    const y=ctx.canvas.height/2 - func(t)*ctx.canvas.height/3;
-    if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);
-  }
-  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
-}
-
+// --- Chirp Sound ---
 function playChirp(fStart,fEnd,duration){
   const audio=new (window.AudioContext||window.webkitAudioContext)();
   const osc=audio.createOscillator();
@@ -206,7 +202,19 @@ function playChirp(fStart,fEnd,duration){
   osc.start(); osc.stop(audio.currentTime+duration);
 }
 
-// --- Update Event ---
+// --- Graph Helper ---
+function drawGraph(ctx,color,func){
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.beginPath();
+  for(let i=0;i<ctx.canvas.width;i++){
+    const t=i/ctx.canvas.width;
+    const y=ctx.canvas.height/2 - func(t)*ctx.canvas.height/3;
+    if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);
+  }
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+}
+
+// --- Event Update ---
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
   document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
@@ -226,7 +234,7 @@ function updateSummary(m1,m2){
   document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
 }
 
-// --- Custom ---
+// --- Custom Controls ---
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m1=parseFloat(document.getElementById('m1Input').value);
   const m2=parseFloat(document.getElementById('m2Input').value);
@@ -237,9 +245,7 @@ document.getElementById('runCustomBtn').addEventListener('click',()=>{
   updateEvent("Custom");
 });
 
-document.getElementById('resetBtn').addEventListener('click',()=>{
-  updateEvent(eventSelect.value);
-});
+document.getElementById('resetBtn').addEventListener('click',()=>updateEvent(eventSelect.value));
 
 document.getElementById('playChirpBtn').addEventListener('click',()=>{
   const ev=gwEvents[eventSelect.value];
