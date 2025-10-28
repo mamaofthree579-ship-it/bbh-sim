@@ -5,28 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>BBH Simulator — Overview & Events</title>
 <style>
-  :root{
-    --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --accent-2:#a64dff;
-    --muted:#33003d; --text:#e5ccff;
-  }
-  body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
-  .tabs{display:flex;background:var(--panel);border-bottom:2px solid var(--muted);}
-  .tabButton{flex:1;padding:12px;cursor:pointer;background:transparent;border:0;color:var(--text);font-weight:700}
-  .tabButton.active{background:var(--accent);color:#fff}
-  .container{padding:18px}
-  h2{margin:6px 0 10px;color:var(--text)}
-  canvas{display:block;margin:12px auto;border-radius:8px;background:radial-gradient(circle at center,#14001a 0%, #05000a 100%);box-shadow:0 6px 18px rgba(0,0,0,0.6);}
-  label,input,select,button{margin:6px 6px 6px 0}
-  input[type=range]{vertical-align:middle}
-  .controls{margin:8px 0}
-  .panel{background:rgba(30,0,40,0.6);padding:10px;border-radius:8px;border:1px solid var(--muted);max-width:920px;margin:12px auto}
-  .row{display:flex;gap:8px;align-items:center}
-  .small{font-size:0.9rem;color:#d6c7ff}
-  .muted{color:#bdaeff}
-  .btn{background:var(--accent);border-radius:6px;color:white;padding:8px 12px;border:0;cursor:pointer}
-  .btn.secondary{background:#444}
-  .flex{display:flex;gap:8px;align-items:center}
-  #status{font-size:0.9rem;color:#ffd;}
+:root{
+  --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --muted:#33003d; --text:#e5ccff;
+}
+body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);}
+.tabs{display:flex;background:var(--panel);border-bottom:2px solid var(--muted);}
+.tabButton{flex:1;padding:12px;cursor:pointer;background:transparent;border:0;color:var(--text);font-weight:700;}
+.tabButton.active{background:var(--accent);color:#fff;}
+.container{padding:18px;}
+canvas{display:block;margin:12px auto;border-radius:8px;background:radial-gradient(circle at center,#14001a 0%, #05000a 100%);box-shadow:0 6px 18px rgba(0,0,0,0.6);}
+.panel{background:rgba(30,0,40,0.6);padding:10px;border-radius:8px;border:1px solid var(--muted);max-width:920px;margin:12px auto;}
+.btn{background:var(--accent);border-radius:6px;color:white;padding:8px 12px;border:0;cursor:pointer;}
+.btn.secondary{background:#444;}
+.small{font-size:0.9rem;color:#d6c7ff;}
+.muted{color:#bdaeff;}
+#status{font-size:0.9rem;color:#ffd;}
 </style>
 </head>
 <body>
@@ -41,7 +34,7 @@
 <div id="overviewTab" class="container tabContent" style="display:block;">
   <h2>🌌 Black Hole Overview</h2>
   <div class="panel">
-    <p class="small">A rotating black hole with an accretion disk. Stars are masked inside the disk/horizon so none show through the hole.</p>
+    <p class="small">A rotating black hole with an accretion disk. Stars are masked so none appear inside the black hole.</p>
     <canvas id="bhCanvas" width="900" height="420"></canvas>
   </div>
 </div>
@@ -49,482 +42,202 @@
 <!-- Events -->
 <div id="eventsTab" class="container tabContent" style="display:none;">
   <h2>💫 Gravitational-Wave Events</h2>
-
   <div class="panel">
-    <div class="row controls">
+    <div>
       <label for="eventSelect">Event</label>
       <select id="eventSelect"></select>
-
       <button id="runCustomBtn" class="btn">Run Custom</button>
       <button id="resetBtn" class="btn secondary">Reset Simulator</button>
-
-      <div style="margin-left:auto" id="status">Audio: <span id="audioState">idle</span></div>
+      <span id="status">Audio: <span id="audioState">idle</span></span>
     </div>
 
-    <div class="row controls">
+    <div>
       <label>M₁ (M☉)</label><input id="m1Input" type="number" value="30" step="0.1" min="1">
       <label>M₂ (M☉)</label><input id="m2Input" type="number" value="30" step="0.1" min="1">
-      <label>Spin a* (0–1)</label><input id="spinInput" type="range" min="0" max="1" step="0.01" value="0.5">
+      <label>Spin a*</label><input id="spinInput" type="range" min="0" max="1" step="0.01" value="0.5">
       <span id="spinVal" class="muted">0.50</span>
     </div>
 
     <canvas id="orbitCanvas" width="900" height="380"></canvas>
-
-    <div class="row" style="align-items:flex-start;">
-      <div style="flex:1">
-        <canvas id="chirpCanvas" width="900" height="160"></canvas>
-        <div style="margin-top:6px">
-          <button id="playChirpBtn" class="btn">🔊 Play Chirp</button>
-          <button id="stopChirpBtn" class="btn secondary">⏹ Stop</button>
-          <span class="muted" style="margin-left:10px">Playhead shown on the chirp waveform</span>
-        </div>
-      </div>
-
-      <div style="width:320px;margin-left:16px">
-        <div id="eventInfo" class="panel">
-          <strong>Event Info</strong>
-          <p id="eventDescription" class="small muted">—</p>
-          <table style="width:100%;margin-top:8px;color:var(--text)">
-            <tr><td class="small muted">Chirp mass</td><td id="chirpMass" style="text-align:right">—</td></tr>
-            <tr><td class="small muted">Freq range</td><td id="freqRange" style="text-align:right">—</td></tr>
-            <tr><td class="small muted">Estimated h</td><td id="gwStrain" style="text-align:right">—</td></tr>
-            <tr><td class="small muted">Distance est.</td><td id="distance" style="text-align:right">—</td></tr>
-          </table>
-        </div>
-      </div>
+    <canvas id="chirpCanvas" width="900" height="160"></canvas>
+    <div>
+      <button id="playChirpBtn" class="btn">🔊 Play Chirp</button>
+      <button id="stopChirpBtn" class="btn secondary">⏹ Stop</button>
     </div>
 
-  </div>
-
-  <div class="panel" style="max-width:920px">
-    <strong>Scientific Summary</strong>
-    <div style="margin-top:8px" id="scienceGraphs">
-      <h4 class="small muted">Amplitude</h4>
-      <canvas id="amplitudeCanvas" width="900" height="110"></canvas>
-      <h4 class="small muted">Energy</h4>
-      <canvas id="energyCanvas" width="900" height="110"></canvas>
-      <h4 class="small muted">Frequency evolution</h4>
-      <canvas id="freqCanvas" width="900" height="110"></canvas>
+    <div id="eventInfo" class="panel">
+      <strong>Event Info</strong>
+      <p id="eventDescription" class="small muted">—</p>
+      <table style="width:100%;color:var(--text)">
+        <tr><td class="small muted">Chirp mass</td><td id="chirpMass" style="text-align:right">—</td></tr>
+        <tr><td class="small muted">Freq range</td><td id="freqRange" style="text-align:right">—</td></tr>
+        <tr><td class="small muted">Estimated h</td><td id="gwStrain" style="text-align:right">—</td></tr>
+        <tr><td class="small muted">Distance est.</td><td id="distance" style="text-align:right">—</td></tr>
+      </table>
     </div>
   </div>
 </div>
 
 <script>
-/* ------------------------------
-   Utility & state
-   ------------------------------ */
-const tabButtons = document.querySelectorAll('.tabButton');
-const tabContents = document.querySelectorAll('.tabContent');
-tabButtons.forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    tabButtons.forEach(b=>b.classList.remove('active'));
+// Tab switching
+document.querySelectorAll('.tabButton').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tabButton').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    tabContents.forEach(tc=>tc.style.display='none');
+    document.querySelectorAll('.tabContent').forEach(c=>c.style.display='none');
     document.getElementById(btn.dataset.tab).style.display='block';
   });
 });
 
-/* ------------------------------
-   Overview: masked starfield + BH
-   ------------------------------ */
-const bhCanvas = document.getElementById('bhCanvas');
-const bhCtx = bhCanvas.getContext('2d');
-const bhStars = Array.from({length:160}, ()=>({
-  x: Math.random()*bhCanvas.width,
-  y: Math.random()*bhCanvas.height,
-  r: 0.6 + Math.random()*1.2,
-  phase: Math.random()*Math.PI*2,
-  drift: (Math.random()-0.5)*0.12
-}));
-let bhAngle = 0;
+// Overview starfield + black hole
+const bhCanvas=document.getElementById('bhCanvas');
+const ctx=bhCanvas.getContext('2d');
+const stars=[...Array(160)].map(()=>({x:Math.random()*bhCanvas.width,y:Math.random()*bhCanvas.height,r:Math.random()*1.2+0.5,phi:Math.random()*Math.PI*2}));
 function drawOverview(){
-  bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
-  const cx = bhCanvas.width/2, cy = bhCanvas.height/2;
-  const horizon = 70;
-  // background gradient
-  const g = bhCtx.createRadialGradient(cx,cy,10,cx,cy,250);
-  g.addColorStop(0,'#0a0012'); g.addColorStop(1,'#020006');
-  bhCtx.fillStyle = g;
-  bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
-  // stars (masked inside disk)
-  for(let s of bhStars){
-    s.phase += 0.02 + Math.random()*0.02;
-    s.x += s.drift;
-    if(s.x < -2) s.x = bhCanvas.width+2;
-    if(s.x > bhCanvas.width+2) s.x = -2;
-    const dist = Math.hypot(s.x-cx, s.y-cy);
-    if(dist > horizon + 18){ // mask stars near BH/disk
-      const alpha = 0.5 + 0.5*Math.sin(s.phase);
-      bhCtx.beginPath();
-      bhCtx.fillStyle = `rgba(255,255,255,${alpha})`;
-      bhCtx.arc(s.x,s.y,s.r,0,Math.PI*2); bhCtx.fill();
+  const cx=bhCanvas.width/2,cy=bhCanvas.height/2,r=70;
+  ctx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
+  const grad=ctx.createRadialGradient(cx,cy,5,cx,cy,250);
+  grad.addColorStop(0,'#0a0012'); grad.addColorStop(1,'#020006');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
+  for(const s of stars){
+    s.phi+=0.02;
+    const dist=Math.hypot(s.x-cx,s.y-cy);
+    if(dist>r+15){
+      ctx.beginPath();
+      ctx.fillStyle=`rgba(255,255,255,${0.5+0.5*Math.sin(s.phi)})`;
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
     }
   }
-  // accretion disk rings
-  for(let i=0;i<100;i++){
-    bhCtx.beginPath();
-    bhCtx.arc(cx,cy, horizon+6+i, 0, Math.PI*2);
-    bhCtx.strokeStyle = `rgba(160,40,200,${0.004})`;
-    bhCtx.stroke();
+  for(let i=0;i<80;i++){
+    ctx.beginPath();
+    ctx.arc(cx,cy,r+i,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(160,40,200,${0.005})`;ctx.stroke();
   }
-  // horizon
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,horizon,0,Math.PI*2); bhCtx.fillStyle='black'; bhCtx.fill();
-  // small orbiting particle
-  const ox = cx + Math.cos(bhAngle)*110;
-  const oy = cy + Math.sin(bhAngle)*34;
-  bhCtx.beginPath(); bhCtx.arc(ox,oy,6,0,Math.PI*2); bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
-  bhAngle += 0.018;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='black';ctx.fill();
   requestAnimationFrame(drawOverview);
 }
 drawOverview();
 
-/* ------------------------------
-   Events: state, UI elements
-   ------------------------------ */
-const eventSelect = document.getElementById('eventSelect');
-const runCustomBtn = document.getElementById('runCustomBtn');
-const resetBtn = document.getElementById('resetBtn');
-const playChirpBtn = document.getElementById('playChirpBtn');
-const stopChirpBtn = document.getElementById('stopChirpBtn');
-const m1Input = document.getElementById('m1Input');
-const m2Input = document.getElementById('m2Input');
-const spinInput = document.getElementById('spinInput');
-const spinVal = document.getElementById('spinVal');
-const audioState = document.getElementById('audioState');
-
-spinVal.textContent = Number(spinInput.value).toFixed(2);
-spinInput.addEventListener('input', ()=> spinVal.textContent = Number(spinInput.value).toFixed(2));
-
-const eventsDB = {
-  "GW150914": { m1:36, m2:29, spin:0.3, desc:"GW150914 — first detection (2015): 36+29 M☉." },
-  "GW170104": { m1:31, m2:19, spin:0.45, desc:"GW170104 — 31+19 M☉ (2017)." },
-  "Custom":    { m1:30, m2:30, spin:0.5, desc:"Custom system." }
+// Events section
+const eventSelect=document.getElementById('eventSelect');
+const eventsDB={
+  "GW150914":{m1:36,m2:29,spin:0.3,desc:"GW150914 — first detection (2015): 36+29 M☉."},
+  "GW170104":{m1:31,m2:19,spin:0.45,desc:"GW170104 — 31+19 M☉ (2017)."},
+  "Custom":{m1:30,m2:30,spin:0.5,desc:"Custom system."}
 };
-for(const key of Object.keys(eventsDB)){
-  const opt = document.createElement('option'); opt.value = key; opt.textContent = key;
-  eventSelect.appendChild(opt);
+for(const k in eventsDB){
+  const opt=document.createElement('option');
+  opt.value=k;opt.textContent=k;eventSelect.appendChild(opt);
 }
 
-/* ------------------------------
-   Orbit + trails
-   ------------------------------ */
-const orbitCanvas = document.getElementById('orbitCanvas');
-const octx = orbitCanvas.getContext('2d');
-
-let orbitAngle = 0;
-let trails1 = []; // arrays of {x,y,alpha}
-let trails2 = [];
-const MAX_TRAIL = 160; // fade length
-
-let orbitRunning = true;
-let currentEventKey = "GW150914";
-
-function updateTrailArrays(x1,y1,x2,y2){
-  trails1.push({x:x1,y:y1,a:1.0});
-  trails2.push({x:x2,y:y2,a:1.0});
-  if(trails1.length>MAX_TRAIL) trails1.shift();
-  if(trails2.length>MAX_TRAIL) trails2.shift();
-  // decay alphas
-  for(let i=0;i<trails1.length;i++) trails1[i].a = (i+1)/trails1.length;
-  for(let i=0;i<trails2.length;i++) trails2[i].a = (i+1)/trails2.length;
-}
-
-function drawOrbitFrame(m1,m2,spin){
-  // single RAF loop for orbit + trails
-  if(!orbitRunning) return;
+const orbitCanvas=document.getElementById('orbitCanvas');
+const octx=orbitCanvas.getContext('2d');
+let orbitAngle=0,trails1=[],trails2=[];
+function drawOrbit(m1,m2,spin){
   octx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
-  const cx = orbitCanvas.width/2, cy = orbitCanvas.height/2;
-  const r1 = 80, r2 = 160;
-
-  const x1 = cx + Math.cos(orbitAngle)*r1;
-  const y1 = cy + Math.sin(orbitAngle)*r1;
-  const x2 = cx - Math.cos(orbitAngle)*r2;
-  const y2 = cy - Math.sin(orbitAngle)*r2;
-
-  updateTrailArrays(x1,y1,x2,y2);
-
-  // background gradient
-  const g = octx.createLinearGradient(0,0,0,orbitCanvas.height);
-  g.addColorStop(0,'#07000d'); g.addColorStop(1,'#020006');
-  octx.fillStyle = g;
-  octx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
-
-  // draw faint rings
-  for(let i=0;i<5;i++){
-    octx.beginPath();
-    octx.arc(cx,cy,90+i*40,0,Math.PI*2);
-    octx.strokeStyle = `rgba(160,0,255,${0.03*(5-i)})`;
-    octx.stroke();
-  }
-
-  // draw trails: oldest are fainter
+  const cx=orbitCanvas.width/2,cy=orbitCanvas.height/2;
+  const r1=80,r2=160;
+  const x1=cx+Math.cos(orbitAngle)*r1,y1=cy+Math.sin(orbitAngle)*r1;
+  const x2=cx-Math.cos(orbitAngle)*r2,y2=cy-Math.sin(orbitAngle)*r2;
+  trails1.push({x:x1,y:y1}); trails2.push({x:x2,y:y2});
+  if(trails1.length>100) trails1.shift(); if(trails2.length>100) trails2.shift();
+  octx.fillStyle='#030008';octx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
   for(let i=0;i<trails1.length;i++){
-    const t = trails1[i];
-    octx.beginPath();
-    octx.fillStyle = `rgba(255,120,255,${0.35 * (t.a)})`;
-    octx.arc(t.x,t.y,2.5,0,Math.PI*2); octx.fill();
+    octx.beginPath();octx.arc(trails1[i].x,trails1[i].y,2,0,Math.PI*2);
+    octx.fillStyle=`rgba(255,120,255,${i/trails1.length})`;octx.fill();
   }
   for(let i=0;i<trails2.length;i++){
-    const t = trails2[i];
-    octx.beginPath();
-    octx.fillStyle = `rgba(80,220,255,${0.35 * (t.a)})`;
-    octx.arc(t.x,t.y,3.2,0,Math.PI*2); octx.fill();
+    octx.beginPath();octx.arc(trails2[i].x,trails2[i].y,3,0,Math.PI*2);
+    octx.fillStyle=`rgba(80,220,255,${i/trails2.length})`;octx.fill();
   }
-
-  // primary BH draw (with spin-dependent glow)
-  octx.beginPath(); octx.arc(x1,y1,12,0,Math.PI*2); octx.fillStyle='#ff66ff'; octx.fill();
-  octx.beginPath(); octx.arc(x1,y1,14 + spin*6,0,Math.PI*2);
-  octx.strokeStyle = `rgba(255,150,255,${0.2 + 0.6*spin})`; octx.lineWidth = 2; octx.stroke();
-
-  // secondary BH draw
-  octx.beginPath(); octx.arc(x2,y2,18,0,Math.PI*2); octx.fillStyle='#00ccff'; octx.fill();
-  octx.beginPath(); octx.arc(x2,y2,20 + spin*6,0,Math.PI*2);
-  octx.strokeStyle = `rgba(0,200,255,${0.2 + 0.6*spin})`; octx.lineWidth = 2; octx.stroke();
-
-  // small dynamic accent (frame dragging visual)
-  const accentX = cx + Math.cos(orbitAngle*1.2 + spin*2.0)* (r1*1.1);
-  const accentY = cy + Math.sin(orbitAngle*1.2 + spin*2.0)* (r1*0.6);
-  octx.beginPath(); octx.arc(accentX,accentY,4,0,Math.PI*2); octx.fillStyle='rgba(255,220,150,0.9)'; octx.fill();
-
-  // advance orbitAngle: spin increases orbital speed slightly (frame-dragging stylized)
-  orbitAngle += 0.018 + spin*0.012;
-
-  // schedule next frame
-  requestAnimationFrame(()=>drawOrbitFrame(m1,m2,spin));
+  octx.beginPath();octx.arc(x1,y1,12,0,Math.PI*2);octx.fillStyle='#ff66ff';octx.fill();
+  octx.beginPath();octx.arc(x2,y2,16,0,Math.PI*2);octx.fillStyle='#00ccff';octx.fill();
+  orbitAngle+=0.018+spin*0.01;
+  requestAnimationFrame(()=>drawOrbit(m1,m2,spin));
 }
+drawOrbit(30,30,0.5);
 
-/* ------------------------------
-   Chirp waveform + audio
-   ------------------------------ */
-const chirpCanvas = document.getElementById('chirpCanvas');
-const cctx = chirpCanvas.getContext('2d');
-let waveformSamples = []; // floats - used for drawing and playhead
-let chirpPlayRAF = null;
-let audioCtx = null;
-let currentOsc = null;
-let currentGain = null;
-let playStartTime = 0;
-let playDuration = 0;
-
+// Chirp waveform + audio
+const chirpCanvas=document.getElementById('chirpCanvas');
+const cctx=chirpCanvas.getContext('2d');
+let waveform=[];
 function generateWaveform(m1,m2,spin){
-  // simple phenomenological chirp: amplitude ramp * sin(phase)
-  const len = 1200;
-  waveformSamples = new Float32Array(len);
-  // chirp mass combination (affects frequency evolution)
-  const Mchirp = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  // base frequency start and end shift with spin and mass
-  const f0 = 20 + spin*15; // Hz-ish indicator for drawing (not exact)
-  const f1 = 300 + (Mchirp/30)*200; // final freq indicator for drawing
-  for(let i=0;i<len;i++){
-    const t = i/len;
-    const amp = Math.pow(t,2) * Math.exp(-1.5*(1-t)); // envelope
-    // instantaneous phase freq sweep - simple linear in t for visuals
-    const freq = f0 + (f1-f0)*Math.pow(t,1.6);
-    waveformSamples[i] = amp * Math.sin(2*Math.PI * freq * t * 1.6);
+  const N=800;waveform=[];
+  for(let i=0;i<N;i++){
+    const t=i/N,amp=Math.pow(t,2)*Math.exp(-1.5*(1-t));
+    const f=20+(300*t)+(spin*50);waveform.push(amp*Math.sin(f*t));
   }
   drawChirp(-1);
 }
-
-function drawChirp(playheadIndex = -1){
-  cctx.clearRect(0,0,cctx.canvas.width,cctx.canvas.height);
+function drawChirp(idx=-1){
+  cctx.clearRect(0,0,chirpCanvas.width,chirpCanvas.height);
   cctx.beginPath();
-  const N = waveformSamples.length;
-  for(let i=0;i<N;i++){
-    const x = i/N * cctx.canvas.width;
-    const y = cctx.canvas.height/2 - waveformSamples[i] * (cctx.canvas.height/2) * 0.9;
-    if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
+  for(let i=0;i<waveform.length;i++){
+    const x=i/waveform.length*chirpCanvas.width;
+    const y=chirpCanvas.height/2 - waveform[i]*chirpCanvas.height*0.4;
+    if(i===0)cctx.moveTo(x,y);else cctx.lineTo(x,y);
   }
-  cctx.strokeStyle = '#a64dff'; cctx.lineWidth = 2; cctx.stroke();
-  if(playheadIndex >= 0){
-    const x = playheadIndex / waveformSamples.length * cctx.canvas.width;
-    cctx.beginPath(); cctx.moveTo(x,0); cctx.lineTo(x,cctx.canvas.height);
-    cctx.strokeStyle = 'red'; cctx.lineWidth = 1; cctx.stroke();
+  cctx.strokeStyle='#a64dff';cctx.stroke();
+  if(idx>=0){
+    const x=idx/waveform.length*chirpCanvas.width;
+    cctx.beginPath();cctx.moveTo(x,0);cctx.lineTo(x,chirpCanvas.height);
+    cctx.strokeStyle='red';cctx.stroke();
   }
 }
-
-/* audio helpers (ensure user gesture) */
-function ensureAudioContext(){
-  if(audioCtx && audioCtx.state!=='closed') return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioState.textContent = 'ready';
+let audioCtx,currentOsc,currentGain;
+function playChirp(m1,m2,spin){
+  if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  stopChirp();
+  const Mchirp=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  const f0=25+spin*20,f1=250+(Mchirp/30)*300;
+  const dur=Math.max(0.6,3.0-(Mchirp/40));
+  currentOsc=audioCtx.createOscillator();
+  currentGain=audioCtx.createGain();
+  currentOsc.type='sine';
+  currentGain.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+  currentOsc.connect(currentGain);currentGain.connect(audioCtx.destination);
+  currentOsc.frequency.setValueAtTime(f0,audioCtx.currentTime);
+  currentOsc.frequency.linearRampToValueAtTime(f1,audioCtx.currentTime+dur);
+  currentGain.gain.linearRampToValueAtTime(0.2,audioCtx.currentTime+0.02);
+  currentGain.gain.linearRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+  currentOsc.start(audioCtx.currentTime);
+  currentOsc.stop(audioCtx.currentTime+dur);
+  document.getElementById('audioState').textContent='playing';
+}
+function stopChirp(){
+  if(currentOsc){try{currentOsc.stop();}catch(e){}}
+  if(currentGain){currentGain.disconnect();}
+  if(currentOsc){currentOsc.disconnect();}
+  currentOsc=null;currentGain=null;
+  document.getElementById('audioState').textContent='idle';
 }
 
-/* play a chirp using oscillator (frequency sweep) with gain envelope */
-function playChirpAudio(m1,m2,spin){
-  // ensure audio ctx exists & is resumed
-  ensureAudioContext();
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-
-  // compute chirp params from Mchirp and spin
-  const Mchirp = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  const fStart = 25 + spin*20; // Hz baseline
-  const fEnd   = 250 + (Mchirp/30)*300; // more massive -> higher final freq
-  const duration = Math.max(0.6, 3.0 - (Mchirp/40)); // heavier => shorter
-
-  // stop any existing
-  stopChirpAudio();
-
-  // create oscillator + gain
-  currentOsc = audioCtx.createOscillator();
-  currentGain = audioCtx.createGain();
-
-  currentOsc.type = 'sine';
-  currentGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-  currentOsc.connect(currentGain);
-  currentGain.connect(audioCtx.destination);
-
-  // scheduling frequency sweep and gain envelope
-  const now = audioCtx.currentTime;
-  currentOsc.frequency.setValueAtTime(fStart, now);
-  // use linear ramp for smoothness (exponential can misbehave at low values)
-  currentOsc.frequency.linearRampToValueAtTime(fEnd, now + duration);
-
-  // gain: quick fade in, slow fade out
-  currentGain.gain.linearRampToValueAtTime(0.20, now + 0.02);
-  currentGain.gain.linearRampToValueAtTime(0.0001, now + duration);
-
-  currentOsc.start(now);
-  currentOsc.stop(now + duration + 0.05);
-
-  // visual playhead animation synced to audio time
-  playStartTime = now;
-  playDuration = duration;
-  audioState.textContent = 'playing';
-  animatePlayhead();
-}
-
-function stopChirpAudio(){
-  if(currentOsc){
-    try{ currentOsc.stop(); }catch(e){}
-    currentOsc.disconnect && currentOsc.disconnect();
-    currentGain && currentGain.disconnect();
-  }
-  currentOsc = null; currentGain = null;
-  audioState.textContent = 'idle';
-  if(chirpPlayRAF) { cancelAnimationFrame(chirpPlayRAF); chirpPlayRAF = null; drawChirp(-1); }
-}
-
-function animatePlayhead(){
-  function step(){
-    if(!audioCtx || !playStartTime) return;
-    const elapsed = audioCtx.currentTime - playStartTime;
-    if(elapsed > playDuration){
-      stopChirpAudio();
-      return;
-    }
-    const idx = Math.floor((elapsed/playDuration) * waveformSamples.length);
-    drawChirp(idx);
-    chirpPlayRAF = requestAnimationFrame(step);
-  }
-  step();
-}
-
-/* ------------------------------
-   Graphs (static summary graphs)
-   ------------------------------ */
-function drawSummaryGraphs(){
-  const ampCtx = document.getElementById('amplitudeCanvas').getContext('2d');
-  const engCtx = document.getElementById('energyCanvas').getContext('2d');
-  const fqCtx  = document.getElementById('freqCanvas').getContext('2d');
-  const funcs = [
-    [ampCtx, '#a64dff', t => Math.pow(t,3) * Math.sin(40*t*Math.PI)],
-    [engCtx, '#ff66aa', t => Math.pow(t,2.5) * Math.exp(-3*t)],
-    [fqCtx, '#00ccff', t => Math.pow(t,1.7)]
-  ];
-  funcs.forEach(([ctx,color,fn])=>{
-    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-    ctx.beginPath();
-    for(let i=0;i<ctx.canvas.width;i++){
-      const t = i/ctx.canvas.width;
-      const y = ctx.canvas.height/2 - fn(t)*ctx.canvas.height/3;
-      if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);
-    }
-    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
-  });
-}
-drawSummaryGraphs();
-
-/* ------------------------------
-   UI wiring and event handling
-   ------------------------------ */
-function setSummary(m1,m2){
-  // chirp mass
-  const Mc = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
-  document.getElementById('chirpMass').textContent = Mc.toFixed(2) + ' M☉';
-  document.getElementById('freqRange').textContent = '20–400 Hz (approx)';
-  const h = 4e-21 * Math.pow(Mc/30, 5/3);
-  document.getElementById('gwStrain').textContent = h.toExponential(2);
-  document.getElementById('distance').textContent = `${Math.max(1,Math.round(Mc*30))} Mly (toy)`;
-}
+// UI hooks
+const m1=document.getElementById('m1Input');
+const m2=document.getElementById('m2Input');
+const spin=document.getElementById('spinInput');
+const spinVal=document.getElementById('spinVal');
+spin.addEventListener('input',()=>spinVal.textContent=Number(spin.value).toFixed(2));
 
 function loadEvent(key){
-  currentEventKey = key;
-  const ev = eventsDBLookup(key);
-  document.getElementById('eventDescription').textContent = ev.desc || '';
-  // set UI controls
-  m1Input.value = ev.m1; m2Input.value = ev.m2; spinInput.value = ev.spin;
-  spinVal.textContent = Number(ev.spin).toFixed(2);
-  // generate waveform and start orbit
-  generateWaveform(ev.m1, ev.m2, ev.spin);
-  drawOrbitFrame(ev.m1, ev.m2, ev.spin);
-  setSummary(ev.m1, ev.m2);
+  const e=eventsDB[key];
+  m1.value=e.m1;m2.value=e.m2;spin.value=e.spin;spinVal.textContent=e.spin.toFixed(2);
+  document.getElementById('eventDescription').textContent=e.desc;
+  generateWaveform(e.m1,e.m2,e.spin);
 }
-
-function eventsDBLookup(key){
-  // helper returns the event object
-  return eventsDB[key] || {m1:30,m2:30,spin:0.5,desc:'Custom'};
-}
-
-// initialize UI with DB above
-const eventsDB = eventsDB || eventsDB;
-for(const k in eventsDB){
-  // already populated select earlier
-}
-// initial load:
+eventSelect.addEventListener('change',()=>loadEvent(eventSelect.value));
+document.getElementById('runCustomBtn').addEventListener('click',()=>{
+  generateWaveform(m1.value,m2.value,spin.value);
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  trails1=[];trails2=[];orbitAngle=0;loadEvent('GW150914');
+});
+document.getElementById('playChirpBtn').addEventListener('click',()=>{
+  playChirp(m1.value,m2.value,spin.value);
+});
+document.getElementById('stopChirpBtn').addEventListener('click',stopChirp);
 loadEvent('GW150914');
-
-// event handlers
-eventSelect.addEventListener('change', ()=> loadEvent(eventSelect.value) );
-
-runCustomBtn.addEventListener('click', ()=>{
-  const m1 = parseFloat(m1Input.value) || 30;
-  const m2 = parseFloat(m2Input.value) || 30;
-  const spin = parseFloat(spinInput.value) || 0;
-  eventsDB['Custom'] = { m1, m2, spin, desc:`Custom: ${m1} + ${m2} M☉, spin ${spin}` };
-  eventSelect.value = 'Custom';
-  loadEvent('Custom');
-});
-
-resetBtn.addEventListener('click', ()=>{
-  // reset trails + orbit + reload default event
-  trails1 = []; trails2 = []; orbitAngle = 0;
-  loadEvent('GW150914');
-  stopChirpAudio();
-});
-
-/* Play/Stop chirp wiring (ensures audio context is resumed) */
-playChirpBtn.addEventListener('click', async ()=>{
-  ensureAudioContext(); 
-  if(audioCtx.state === 'suspended') await audioCtx.resume();
-  audioState.textContent = 'starting';
-  const ev = eventsDBLookup(eventSelect.value);
-  // generate waveform for visuals based on current parameters
-  generateWaveform(ev.m1, ev.m2, ev.spin);
-  // schedule audio playback with parameters influenced by chirp mass & spin
-  playChirpAudio(ev.m1, ev.m2, ev.spin);
-});
-
-stopChirpBtn.addEventListener('click', ()=> {
-  stopChirpAudio();
-});
-
-/* resume audioCtx on any user gesture to satisfy autoplay policies */
-['click','keydown','pointerdown','touchstart'].forEach(evt=>{
-  window.addEventListener(evt, ()=> {
-    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().then(()=>audioState.textContent='ready').catch(()=>{});
-  }, {once:true});
-});
-
 </script>
 </body>
 </html>
