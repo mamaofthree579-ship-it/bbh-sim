@@ -162,6 +162,24 @@ function drawOrbit(m1,m2,spin,color){
   animate();
 }
 
+// --- Real-time GW Graphs ---
+let animFrame;
+function animateGW(ev){
+  const ampCtx=document.getElementById('amplitudeCanvas').getContext('2d');
+  const energyCtx=document.getElementById('energyCanvas').getContext('2d');
+  const freqCtx=document.getElementById('freqCanvas').getContext('2d');
+  let t=0;
+  cancelAnimationFrame(animFrame);
+  function step(){
+    t+=0.01;
+    drawGraph(ampCtx,ev.color,tt=>Math.pow(tt,3)*Math.sin(20*tt*Math.PI*5*t));
+    drawGraph(energyCtx,ev.color,tt=>Math.pow(tt,2.5)*Math.exp(-3*tt*t));
+    drawGraph(freqCtx,ev.color,tt=>tt*tt*t);
+    animFrame=requestAnimationFrame(step);
+  }
+  step();
+}
+
 function drawGraph(ctx,color,func){
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
@@ -173,6 +191,7 @@ function drawGraph(ctx,color,func){
   ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
 }
 
+// --- Chirp & Summary ---
 function playChirp(fStart,fEnd,duration){
   try {
     const audio=new (window.AudioContext||window.webkitAudioContext)();
@@ -199,9 +218,7 @@ function updateEvent(eventKey){
   document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
   drawOrbit(ev.m1,ev.m2,ev.spin,ev.color);
   updateSummary(ev.m1,ev.m2);
-  drawGraph(document.getElementById('amplitudeCanvas').getContext('2d'),ev.color,t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
-  drawGraph(document.getElementById('energyCanvas').getContext('2d'),ev.color,t=>Math.pow(t,2.5)*Math.exp(-3*t));
-  drawGraph(document.getElementById('freqCanvas').getContext('2d'),ev.color,t=>t*t);
+  animateGW(ev);
 }
 
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
