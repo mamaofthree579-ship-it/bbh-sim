@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sagittarius A* Overview & Calculator</title>
+<title>Sagittarius A* Overview with Calculator</title>
 <style>
   body {
     margin: 0;
-    background: radial-gradient(circle at center, #0a0012 0%, #020005 100%);
+    background: radial-gradient(circle at center, #070010 0%, #000010 100%);
     color: white;
     font-family: 'Segoe UI', Arial, sans-serif;
-    overflow: hidden;
+    overflow-x: hidden;
+    text-align: center;
   }
   canvas {
     display: block;
@@ -40,50 +41,52 @@
     color: #e5ccff;
     display: none;
   }
-  #controlPanel {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    background: rgba(25,0,40,0.75);
-    border: 1px solid #4a0075;
-    padding: 10px 15px;
+  #calculatorPanel {
+    margin: 25px auto;
+    padding: 15px 25px;
+    max-width: 420px;
+    background: rgba(25, 0, 40, 0.8);
+    border: 1px solid #5a0090;
     border-radius: 10px;
-    font-size: 13px;
+    text-align: left;
+    font-size: 14px;
   }
-  #controlPanel input {
-    width: 110px;
+  #calculatorPanel input {
+    width: 100%;
     margin-top: 4px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     background: #1a0030;
     color: #e5ccff;
     border: 1px solid #5a0090;
     border-radius: 4px;
-    padding: 3px;
+    padding: 5px;
   }
-  #controlPanel button {
+  #calculatorPanel button {
     background: #8000ff;
     color: white;
     border: none;
-    padding: 5px 10px;
+    padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
+    display: block;
+    margin: 10px auto;
   }
-  #controlPanel button:hover {
+  #calculatorPanel button:hover {
     background: #a64dff;
+  }
+  #calcResults {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #cdb7ff;
   }
 </style>
 </head>
 <body>
+
 <canvas id="overviewCanvas" width="900" height="500"></canvas>
 
-<div id="controlPanel">
-  <strong>Sagittarius A* Calculator</strong><br>
-  Radius r (m):<br><input id="radiusInput" type="number" value="7.8e17" step="1e16"><br>
-  Dark Matter ρ_DM (kg/m³):<br><input id="densityInput" type="number" value="1e-21" step="1e-22"><br>
-  <button id="updateBtn">Update</button>
-  <div id="calcResults"></div>
-</div>
-
+<!-- Labels -->
 <div id="labels">
   <div class="label" id="labelBH">Sagittarius A*</div>
   <div class="label" id="labelDisk">Accretion Disk</div>
@@ -93,6 +96,17 @@
 
 <div id="tooltip" class="tooltip"></div>
 
+<!-- Calculator -->
+<div id="calculatorPanel">
+  <strong>Sagittarius A* Time Dilation Calculator</strong><br><br>
+  Radius r (m):<br>
+  <input id="radiusInput" type="number" value="7.8e17" step="1e16">
+  Dark Matter ρ<sub>DM</sub> (kg/m³):<br>
+  <input id="densityInput" type="number" value="1e-21" step="1e-22">
+  <button id="updateBtn">Run Calculation</button>
+  <div id="calcResults"></div>
+</div>
+
 <script>
 const canvas = document.getElementById('overviewCanvas');
 const ctx = canvas.getContext('2d');
@@ -100,23 +114,27 @@ const w = canvas.width, h = canvas.height;
 const cx = w/2, cy = h/2;
 let t = 0;
 
-// stars
+// Stars
 const stars = Array.from({length:180},()=>({
   x:Math.random()*w, y:Math.random()*h, tw:Math.random()*Math.PI*2, r:Math.random()*1.3
 }));
 
-// physics constants
+// Physics constants
 const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
 let radius=7.8e17, rho=1e-21;
 let gamma = calcGamma(radius);
 let hotspotAngle = 0;
 
-// Tooltip data
+// Hotspot trail
+const trail = [];
+const maxTrail = 80;
+
+// Tooltip info
 const info = {
   labelBH:"Sagittarius A* — the Milky Way’s central black hole (~4.3 million M☉).",
-  labelDisk:"Accretion disk: heated gas orbiting near c, emitting X-rays.",
+  labelDisk:"Accretion disk: heated gas orbiting near light speed, emitting X-rays.",
   labelEH:"Event horizon: boundary beyond which light cannot escape.",
-  labelLens:"Lensing zone: light from stars bends around the black hole."
+  labelLens:"Lensing zone: starlight bends around the intense gravity field."
 };
 const tooltip = document.getElementById('tooltip');
 document.querySelectorAll('.label').forEach(lbl=>{
@@ -136,7 +154,6 @@ function calcGamma(r){
   return val>0 ? Math.sqrt(val) : 0;
 }
 
-// mouse parallax
 let mouseX=0, mouseY=0;
 document.addEventListener('mousemove', e=>{
   mouseX = (e.clientX - cx)/w;
@@ -145,7 +162,7 @@ document.addEventListener('mousemove', e=>{
 
 function drawScene(){
   ctx.clearRect(0,0,w,h);
-  // stars
+  // Stars
   for(const s of stars){
     s.tw+=0.02;
     const bright=0.6+0.4*Math.sin(s.tw);
@@ -156,7 +173,7 @@ function drawScene(){
     ctx.fill();
   }
 
-  // accretion disk
+  // Accretion disk
   const diskGrad = ctx.createRadialGradient(cx,cy,50,cx,cy,180);
   diskGrad.addColorStop(0,'rgba(255,160,60,0.2)');
   diskGrad.addColorStop(0.5,'rgba(255,100,0,0.08)');
@@ -170,21 +187,34 @@ function drawScene(){
   ctx.fillStyle=diskGrad;
   ctx.fill();
 
-  // rotating hotspot (linked to gamma)
+  // Rotating hotspot
   const speed = (0.02 + (1-gamma)*0.5);
   const xh = Math.cos(hotspotAngle)*100;
   const yh = Math.sin(hotspotAngle)*40;
+  hotspotAngle += speed;
+  trail.push({x:xh, y:yh});
+  if(trail.length>maxTrail) trail.shift();
+
+  // Draw trail
+  for(let i=0;i<trail.length;i++){
+    const alpha = i/trail.length;
+    ctx.beginPath();
+    ctx.arc(trail[i].x, trail[i].y, 3, 0, 2*Math.PI);
+    ctx.fillStyle=`rgba(255,200,100,${alpha*0.6})`;
+    ctx.fill();
+  }
+
+  // Hotspot itself
   ctx.beginPath();
   ctx.arc(xh,yh,6,0,2*Math.PI);
-  ctx.fillStyle='rgba(255,200,100,0.9)';
+  ctx.fillStyle='rgba(255,220,150,0.95)';
   ctx.shadowColor='rgba(255,180,80,0.6)';
   ctx.shadowBlur=20;
   ctx.fill();
   ctx.shadowBlur=0;
   ctx.restore();
-  hotspotAngle += speed;
 
-  // event horizon
+  // Event horizon
   const horizonGrad = ctx.createRadialGradient(cx,cy,10,cx,cy,80);
   horizonGrad.addColorStop(0,'black');
   horizonGrad.addColorStop(1,'rgba(40,0,60,0.9)');
@@ -193,7 +223,7 @@ function drawScene(){
   ctx.fillStyle=horizonGrad;
   ctx.fill();
 
-  // glow ring intensity depends on rho
+  // Halo based on rho
   const glow = 3 + Math.sin(t/20)*1.5;
   const glowAlpha = 0.4 + Math.min(rho*1e21,1)*0.5;
   ctx.beginPath();
@@ -202,14 +232,14 @@ function drawScene(){
   ctx.lineWidth=glow;
   ctx.stroke();
 
-  // lensing halo
+  // Gravitational lens halo
   const flareGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,300);
   flareGrad.addColorStop(0,`rgba(120,0,255,${0.05+rho*1e21*0.1})`);
   flareGrad.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=flareGrad;
   ctx.fillRect(0,0,w,h);
 
-  // label placement
+  // Label positions
   document.getElementById('labelBH').style.left=(cx-150)+'px';
   document.getElementById('labelBH').style.top=(cy-110)+'px';
   document.getElementById('labelDisk').style.left=(cx+120)+'px';
@@ -224,7 +254,7 @@ function drawScene(){
 }
 drawScene();
 
-// control panel update
+// Calculator
 document.getElementById('updateBtn').addEventListener('click',()=>{
   radius=parseFloat(document.getElementById('radiusInput').value);
   rho=parseFloat(document.getElementById('densityInput').value);
