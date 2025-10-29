@@ -95,6 +95,23 @@ h2,h3,h4 { color:#e5ccff; }
   margin:5px 0;
 }
 .sliderGroup label { width:140px; }
+#calcCanvas {
+  width:100%;
+  height:250px;
+  background:radial-gradient(circle at center, #0a0015 0%, #000 100%);
+  border-radius:12px;
+  border:1px solid #440066;
+  margin-top:15px;
+}
+.resultBox {
+  margin-top:10px;
+  padding:10px;
+  border:1px solid #33003d;
+  background:rgba(20,0,40,0.7);
+  border-radius:8px;
+  color:#e5ccff;
+  line-height:1.6em;
+}
 </style>
 </head>
 <body>
@@ -171,13 +188,18 @@ h2,h3,h4 { color:#e5ccff; }
       <label>α (coefficient):</label>
       <input type="range" id="alphaInput" min="0" max="5e20" value="1e20" step="1e19">
     </div>
-    <label><input type="checkbox" id="quantumToggle"> Include Qμν (Quantum Correction)</label>
-    <p><strong>Γ Effective:</strong> <span id="gammaOut">--</span></p>
+    <label><input type="checkbox" id="quantumToggle"> Include Qμν (Quantum Correction)</label><br>
+    <button id="runCalcBtn">▶ Run Simulation</button>
+
+    <canvas id="calcCanvas" width="800" height="250"></canvas>
+    <div class="resultBox" id="resultBox">
+      Adjust parameters and click <strong>Run Simulation</strong> to calculate effective decay rate and time dilation near Sagittarius A*.
+    </div>
   </div>
 </div>
 
 <script>
-// Tab system
+/* ----------------- Tabs ----------------- */
 const tabButtons=document.querySelectorAll('.tabButton');
 const tabContents=document.querySelectorAll('.tabContent');
 tabButtons.forEach(btn=>{
@@ -189,15 +211,10 @@ tabButtons.forEach(btn=>{
   });
 });
 
-// --- Overview animation (with masked stars) ---
+/* ----------------- Overview Animation ----------------- */
 const bhCanvas=document.getElementById('bhCanvas');
 const bhCtx=bhCanvas.getContext('2d');
-const stars=Array.from({length:150},()=>({
-  x:Math.random()*bhCanvas.width,
-  y:Math.random()*bhCanvas.height,
-  r:Math.random()*1.2,
-  tw:Math.random()*2*Math.PI
-}));
+const stars=Array.from({length:150},()=>({x:Math.random()*bhCanvas.width,y:Math.random()*bhCanvas.height,r:Math.random()*1.2,tw:Math.random()*2*Math.PI}));
 let bhAngle=0;
 function drawBH(){
   bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
@@ -210,12 +227,9 @@ function drawBH(){
       bhCtx.fillStyle=`rgba(255,255,255,${bright})`; bhCtx.fill();
     }
   });
-  // outlines
-  bhCtx.strokeStyle="#5500aa"; bhCtx.lineWidth=2;
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH,0,2*Math.PI); bhCtx.stroke();
+  bhCtx.strokeStyle="#5500aa"; bhCtx.lineWidth=2; bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH,0,2*Math.PI); bhCtx.stroke();
   bhCtx.strokeStyle="#ff7700"; bhCtx.beginPath(); bhCtx.arc(cx,cy,110,0,2*Math.PI); bhCtx.stroke();
   bhCtx.strokeStyle="#0099ff"; bhCtx.beginPath(); bhCtx.arc(cx,cy,160,0,2*Math.PI); bhCtx.stroke();
-  // rotating marker
   const x=cx+Math.cos(bhAngle)*100, y=cy+Math.sin(bhAngle)*40;
   bhCtx.beginPath(); bhCtx.arc(x,y,6,0,2*Math.PI);
   bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
@@ -224,7 +238,7 @@ function drawBH(){
 }
 drawBH();
 
-// --- Event visuals ---
+/* ----------------- Events ----------------- */
 const gwEvents={
   "GW150914":{m1:36,m2:29,spin:0.3,color:"#ff99cc"},
   "GW170104":{m1:31,m2:19,spin:0.5,color:"#99ccff"},
@@ -236,9 +250,7 @@ const eventDescriptions={
   "Custom":"Custom system based on chosen parameters."
 };
 const eventSelect=document.getElementById('eventSelect');
-for(const e in gwEvents){
-  const opt=document.createElement('option');opt.value=e;opt.text=e;eventSelect.add(opt);
-}
+for(const e in gwEvents){const opt=document.createElement('option');opt.value=e;opt.text=e;eventSelect.add(opt);}
 
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
@@ -260,7 +272,6 @@ function drawOrbit(m1,m2,spin,color){
   }
   animate();
 }
-
 function drawGraph(ctx,color,func){
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
@@ -271,7 +282,6 @@ function drawGraph(ctx,color,func){
   }
   ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
 }
-
 function updateSummary(m1,m2){
   const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
   document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
@@ -279,7 +289,6 @@ function updateSummary(m1,m2){
   document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
   document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
 }
-
 function updateEvent(key){
   const ev=gwEvents[key];
   document.getElementById('eventDescription').textContent=eventDescriptions[key];
@@ -299,8 +308,6 @@ document.getElementById('runCustomBtn').addEventListener('click',()=>{
 });
 document.getElementById('resetBtn').addEventListener('click',()=>updateEvent(eventSelect.value));
 eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
-
-// Chirp button
 function playChirp(fStart,fEnd,duration){
   const audio=new (window.AudioContext||window.webkitAudioContext)();
   const osc=audio.createOscillator();
@@ -322,8 +329,11 @@ document.getElementById('playChirpBtn').addEventListener('click',()=>{
 });
 updateEvent("GW150914");
 
-// --- Calculator functions ---
-function computeGamma(){
+/* ----------------- Calculator Tab ----------------- */
+const calcCanvas=document.getElementById('calcCanvas');
+const calcCtx=calcCanvas.getContext('2d');
+
+function runCalc(){
   const G=6.67430e-11, c=3e8, M=4.3e6*1.989e30;
   const r=parseFloat(document.getElementById('rInput').value);
   const rho=parseFloat(document.getElementById('rhoInput').value);
@@ -333,12 +343,45 @@ function computeGamma(){
   const gammaDark=1 + alpha*rho;
   let gammaEff=gammaTime*gammaDark;
   if(quantum) gammaEff*=1.05;
-  document.getElementById('gammaOut').textContent=gammaEff.toExponential(3);
+
+  // draw result waveform
+  calcCtx.clearRect(0,0,calcCanvas.width,calcCanvas.height);
+  calcCtx.beginPath();
+  for(let i=0;i<calcCanvas.width;i++){
+    const t=i/calcCanvas.width;
+    const y=calcCanvas.height/2 - Math.sin(10*Math.PI*t)*(gammaEff*50);
+    if(i===0) calcCtx.moveTo(i,y); else calcCtx.lineTo(i,y);
+  }
+  calcCtx.strokeStyle="#a64dff";
+  calcCtx.lineWidth=2;
+  calcCtx.stroke();
+
+  // Result text display
+  const decayRate = (1 / gammaEff).toExponential(3);
+  const timeDilation = gammaTime.toFixed(6);
+  const darkMatterFactor = gammaDark.toFixed(6);
+
+  const resultBox = document.getElementById("resultBox");
+  resultBox.innerHTML = `
+    <strong>Results:</strong><br>
+    <b>Time Dilation (γ<sub>t</sub>):</b> ${timeDilation}<br>
+    <b>Dark Matter Factor (γ<sub>DM</sub>):</b> ${darkMatterFactor}<br>
+    <b>Effective Decay Multiplier (γ<sub>eff</sub>):</b> ${gammaEff.toFixed(6)}<br>
+    <b>Observed Decay Rate (Γ):</b> ${decayRate} s⁻¹<br><br>
+
+    <em>Equations:</em><br>
+    <code>γ<sub>t</sub> = √(1 - (2GM)/(rc²))</code><br>
+    <code>Γ<sub>dark</sub> = Γ₀ (1 + α·ρ<sub>DM</sub>)</code><br>
+    <code>Γ<sub>eff</sub> = Γ₀ / (γ<sub>t</sub> × γ<sub>DM</sub>)</code><br>
+    ${quantum ? "<code>+ Quantum correction applied: × 1.05</code>" : ""}
+    <br><br>
+    The combined result shows how gravitational time dilation and local dark matter density 
+    near <strong>Sagittarius A*</strong> affect the observed decay rates of particles.
+  `;
 }
-["rInput","rhoInput","alphaInput","quantumToggle"].forEach(id=>{
-  document.getElementById(id).addEventListener('input',computeGamma);
-});
-computeGamma();
+
+// Button listener
+document.getElementById("runCalcBtn").addEventListener("click", runCalc);
 </script>
 </body>
 </html>
