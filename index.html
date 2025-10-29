@@ -1,9 +1,9 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Enhanced Black Hole Overview Preview</title>
+<title>Sagittarius A* Overview & Calculator</title>
 <style>
   body {
     margin: 0;
@@ -21,17 +21,16 @@
     position: absolute;
     color: #e5ccff;
     font-size: 14px;
-    pointer-events: auto;
     background: rgba(20, 0, 30, 0.6);
     padding: 5px 10px;
     border-radius: 6px;
     border: 1px solid rgba(120, 0, 180, 0.6);
-    transition: opacity 0.4s;
     opacity: 0.9;
+    pointer-events: auto;
   }
   .tooltip {
     position: absolute;
-    max-width: 250px;
+    max-width: 260px;
     font-size: 13px;
     line-height: 1.3em;
     padding: 8px;
@@ -41,13 +40,52 @@
     color: #e5ccff;
     display: none;
   }
+  #controlPanel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(25,0,40,0.75);
+    border: 1px solid #4a0075;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  #controlPanel input {
+    width: 110px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    background: #1a0030;
+    color: #e5ccff;
+    border: 1px solid #5a0090;
+    border-radius: 4px;
+    padding: 3px;
+  }
+  #controlPanel button {
+    background: #8000ff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #controlPanel button:hover {
+    background: #a64dff;
+  }
 </style>
 </head>
 <body>
 <canvas id="overviewCanvas" width="900" height="500"></canvas>
 
+<div id="controlPanel">
+  <strong>Sagittarius A* Calculator</strong><br>
+  Radius r (m):<br><input id="radiusInput" type="number" value="7.8e17" step="1e16"><br>
+  Dark Matter ρ_DM (kg/m³):<br><input id="densityInput" type="number" value="1e-21" step="1e-22"><br>
+  <button id="updateBtn">Update</button>
+  <div id="calcResults"></div>
+</div>
+
 <div id="labels">
-  <div class="label" id="labelBH">Sagittarius A* (Supermassive Black Hole)</div>
+  <div class="label" id="labelBH">Sagittarius A*</div>
   <div class="label" id="labelDisk">Accretion Disk</div>
   <div class="label" id="labelEH">Event Horizon</div>
   <div class="label" id="labelLens">Gravitational Lensing Zone</div>
@@ -60,36 +98,46 @@ const canvas = document.getElementById('overviewCanvas');
 const ctx = canvas.getContext('2d');
 const w = canvas.width, h = canvas.height;
 const cx = w/2, cy = h/2;
-const stars = Array.from({length:180},()=>({
-  x:Math.random()*w,
-  y:Math.random()*h,
-  tw:Math.random()*Math.PI*2,
-  r:Math.random()*1.3
-}));
 let t = 0;
+
+// stars
+const stars = Array.from({length:180},()=>({
+  x:Math.random()*w, y:Math.random()*h, tw:Math.random()*Math.PI*2, r:Math.random()*1.3
+}));
+
+// physics constants
+const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
+let radius=7.8e17, rho=1e-21;
+let gamma = calcGamma(radius);
+let hotspotAngle = 0;
 
 // Tooltip data
 const info = {
-  labelBH: "Sagittarius A* is the supermassive black hole at the center of the Milky Way, ~4.3 million solar masses.",
-  labelDisk: "Accretion disk: gas and dust heated to millions of degrees as it spirals inward, emitting intense light.",
-  labelEH: "Event horizon: the point of no return — beyond this boundary, not even light can escape.",
-  labelLens: "Gravitational lensing: light from distant stars bends around the black hole due to extreme spacetime curvature."
+  labelBH:"Sagittarius A* — the Milky Way’s central black hole (~4.3 million M☉).",
+  labelDisk:"Accretion disk: heated gas orbiting near c, emitting X-rays.",
+  labelEH:"Event horizon: boundary beyond which light cannot escape.",
+  labelLens:"Lensing zone: light from stars bends around the black hole."
 };
 const tooltip = document.getElementById('tooltip');
 document.querySelectorAll('.label').forEach(lbl=>{
-  lbl.addEventListener('mouseenter', e=>{
+  lbl.addEventListener('mouseenter',()=>{
     tooltip.innerText = info[lbl.id];
     tooltip.style.display='block';
   });
-  lbl.addEventListener('mousemove', e=>{
-    tooltip.style.left = (e.pageX + 12)+'px';
-    tooltip.style.top = (e.pageY + 12)+'px';
+  lbl.addEventListener('mousemove',e=>{
+    tooltip.style.left=(e.pageX+12)+'px';
+    tooltip.style.top=(e.pageY+12)+'px';
   });
-  lbl.addEventListener('mouseleave', ()=>tooltip.style.display='none');
+  lbl.addEventListener('mouseleave',()=>tooltip.style.display='none');
 });
 
-// Depth and parallax
-let mouseX = 0, mouseY = 0;
+function calcGamma(r){
+  const val = 1 - (G*M)/(r*c*c);
+  return val>0 ? Math.sqrt(val) : 0;
+}
+
+// mouse parallax
+let mouseX=0, mouseY=0;
 document.addEventListener('mousemove', e=>{
   mouseX = (e.clientX - cx)/w;
   mouseY = (e.clientY - cy)/h;
@@ -97,34 +145,46 @@ document.addEventListener('mousemove', e=>{
 
 function drawScene(){
   ctx.clearRect(0,0,w,h);
-  // starfield with slight distortion
+  // stars
   for(const s of stars){
-    s.tw += 0.02;
-    const bx = s.x + mouseX*20*(s.r);
-    const by = s.y + mouseY*20*(s.r);
-    const bright = 0.6 + 0.4*Math.sin(s.tw);
+    s.tw+=0.02;
+    const bright=0.6+0.4*Math.sin(s.tw);
+    const bx=s.x+mouseX*20*s.r, by=s.y+mouseY*20*s.r;
     ctx.beginPath();
     ctx.arc(bx,by,s.r,0,2*Math.PI);
     ctx.fillStyle=`rgba(255,255,255,${bright})`;
     ctx.fill();
   }
 
-  // accretion disk with depth rotation
-  const diskGradient = ctx.createRadialGradient(cx,cy,40,cx,cy,180);
-  diskGradient.addColorStop(0,'rgba(255,160,60,0.2)');
-  diskGradient.addColorStop(0.5,'rgba(255,100,0,0.08)');
-  diskGradient.addColorStop(1,'rgba(100,0,150,0.05)');
+  // accretion disk
+  const diskGrad = ctx.createRadialGradient(cx,cy,50,cx,cy,180);
+  diskGrad.addColorStop(0,'rgba(255,160,60,0.2)');
+  diskGrad.addColorStop(0.5,'rgba(255,100,0,0.08)');
+  diskGrad.addColorStop(1,'rgba(100,0,150,0.05)');
   ctx.save();
   ctx.translate(cx,cy);
   ctx.rotate(0.1*Math.sin(t/100));
   ctx.scale(1,0.6);
   ctx.beginPath();
   ctx.arc(0,0,160,0,2*Math.PI);
-  ctx.fillStyle=diskGradient;
+  ctx.fillStyle=diskGrad;
   ctx.fill();
-  ctx.restore();
 
-  // event horizon core
+  // rotating hotspot (linked to gamma)
+  const speed = (0.02 + (1-gamma)*0.5);
+  const xh = Math.cos(hotspotAngle)*100;
+  const yh = Math.sin(hotspotAngle)*40;
+  ctx.beginPath();
+  ctx.arc(xh,yh,6,0,2*Math.PI);
+  ctx.fillStyle='rgba(255,200,100,0.9)';
+  ctx.shadowColor='rgba(255,180,80,0.6)';
+  ctx.shadowBlur=20;
+  ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.restore();
+  hotspotAngle += speed;
+
+  // event horizon
   const horizonGrad = ctx.createRadialGradient(cx,cy,10,cx,cy,80);
   horizonGrad.addColorStop(0,'black');
   horizonGrad.addColorStop(1,'rgba(40,0,60,0.9)');
@@ -133,35 +193,46 @@ function drawScene(){
   ctx.fillStyle=horizonGrad;
   ctx.fill();
 
-  // glowing ring
+  // glow ring intensity depends on rho
   const glow = 3 + Math.sin(t/20)*1.5;
+  const glowAlpha = 0.4 + Math.min(rho*1e21,1)*0.5;
   ctx.beginPath();
   ctx.arc(cx,cy,82,0,2*Math.PI);
-  ctx.strokeStyle=`rgba(200,100,255,${0.5+0.3*Math.sin(t/15)})`;
+  ctx.strokeStyle=`rgba(200,100,255,${glowAlpha})`;
   ctx.lineWidth=glow;
   ctx.stroke();
 
-  // gravitational lens flare
+  // lensing halo
   const flareGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,300);
-  flareGrad.addColorStop(0,'rgba(120,0,255,0.05)');
+  flareGrad.addColorStop(0,`rgba(120,0,255,${0.05+rho*1e21*0.1})`);
   flareGrad.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=flareGrad;
   ctx.fillRect(0,0,w,h);
 
-  // Label positions (auto anchored)
-  document.getElementById('labelBH').style.left = (cx-160)+'px';
-  document.getElementById('labelBH').style.top = (cy-110)+'px';
-  document.getElementById('labelDisk').style.left = (cx+120)+'px';
-  document.getElementById('labelDisk').style.top = (cy-10)+'px';
-  document.getElementById('labelEH').style.left = (cx-60)+'px';
-  document.getElementById('labelEH').style.top = (cy+70)+'px';
-  document.getElementById('labelLens').style.left = (cx-220)+'px';
-  document.getElementById('labelLens').style.top = (cy+150)+'px';
+  // label placement
+  document.getElementById('labelBH').style.left=(cx-150)+'px';
+  document.getElementById('labelBH').style.top=(cy-110)+'px';
+  document.getElementById('labelDisk').style.left=(cx+120)+'px';
+  document.getElementById('labelDisk').style.top=(cy-10)+'px';
+  document.getElementById('labelEH').style.left=(cx-60)+'px';
+  document.getElementById('labelEH').style.top=(cy+70)+'px';
+  document.getElementById('labelLens').style.left=(cx-220)+'px';
+  document.getElementById('labelLens').style.top=(cy+150)+'px';
 
   t++;
   requestAnimationFrame(drawScene);
 }
 drawScene();
+
+// control panel update
+document.getElementById('updateBtn').addEventListener('click',()=>{
+  radius=parseFloat(document.getElementById('radiusInput').value);
+  rho=parseFloat(document.getElementById('densityInput').value);
+  gamma = calcGamma(radius);
+  const Gamma_dark=1*(1+1e21*rho);
+  document.getElementById('calcResults').innerHTML=
+    `<small>γ = ${gamma.toFixed(6)}<br>Γ_dark = ${Gamma_dark.toExponential(2)}</small>`;
+});
 </script>
 </body>
 </html>
