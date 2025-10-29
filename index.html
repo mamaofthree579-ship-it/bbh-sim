@@ -37,7 +37,62 @@ h2,h3,h4 { color:#e5ccff; }
   <canvas id="bhCanvas" width="800" height="400"></canvas>
 </div>
 
+<!-- Events -->
+<div id="eventsTab" class="tabContent">
+  <h2>💫 Gravitational-Wave Events</h2>
+  <label for="eventSelect">Select Event:</label>
+  <select id="eventSelect"></select>
+  <button id="runCustomBtn">Run Custom Simulation</button>
+  <button id="resetBtn">Reset Simulation</button><br>
+
+  <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
+  <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1">
+  <label>Spin (a*):</label><input id="spinInput" type="number" value="0.5" step="0.1" min="0" max="1"><br>
+  
+  <canvas id="orbitCanvas" width="700" height="400"></canvas>
+  <canvas id="chirpCanvas" width="800" height="200"></canvas>
+  <button id="playChirpBtn">🔊 Play Chirp</button>
+
+  <div id="eventInfo">
+    <strong>Event Information:</strong>
+    <p id="eventDescription"></p>
+  </div>
+
+  <div id="scienceSummary">
+    <strong>Scientific Summary:</strong>
+    <table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Chirp Mass (ℳ)</td><td id="chirpMass">--</td></tr>
+      <tr><td>Frequency Range (Hz)</td><td id="freqRange">--</td></tr>
+      <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
+      <tr><td>Estimated Distance</td><td id="distance">--</td></tr>
+    </table>
+    <h4>Chirp Amplitude</h4>
+    <canvas id="amplitudeCanvas" width="800" height="200"></canvas>
+    <h4>Energy Loss</h4>
+    <canvas id="energyCanvas" width="800" height="200"></canvas>
+    <h4>Frequency Evolution</h4>
+    <canvas id="freqCanvas" width="800" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Calculators -->
+<div id="calculatorsTab" class="tabContent">
+  <h2>🧮 Time Dilation & Dark Matter Effects</h2>
+  <p>Simulate time dilation near Sagittarius A* and particle decay modifications under dark matter density.</p>
+  
+  <label>Radius from Black Hole (m):</label>
+  <input id="radiusInput" type="number" value="7.8e17" step="1e16">
+  <label>Dark Matter Density (ρ_DM, kg/m³):</label>
+  <input id="densityInput" type="number" value="1e-21" step="1e-22">
+  <button id="runCalcBtn">Run Simulation</button>
+
+  <div id="calcResults"></div>
+  <canvas id="decayCanvas" width="800" height="300"></canvas>
+</div>
+
 <script>
+  
 // --- Overview animation with labels ---
 const bhCanvas = document.getElementById('bhCanvas');
 const bhCtx = bhCanvas.getContext('2d');
@@ -114,64 +169,6 @@ function drawBH(){
 }
 
 drawBH();
-</script>
-
-
-<!-- Events -->
-<div id="eventsTab" class="tabContent">
-  <h2>💫 Gravitational-Wave Events</h2>
-  <label for="eventSelect">Select Event:</label>
-  <select id="eventSelect"></select>
-  <button id="runCustomBtn">Run Custom Simulation</button>
-  <button id="resetBtn">Reset Simulation</button><br>
-
-  <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
-  <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1">
-  <label>Spin (a*):</label><input id="spinInput" type="number" value="0.5" step="0.1" min="0" max="1"><br>
-  
-  <canvas id="orbitCanvas" width="700" height="400"></canvas>
-  <canvas id="chirpCanvas" width="800" height="200"></canvas>
-  <button id="playChirpBtn">🔊 Play Chirp</button>
-
-  <div id="eventInfo">
-    <strong>Event Information:</strong>
-    <p id="eventDescription"></p>
-  </div>
-
-  <div id="scienceSummary">
-    <strong>Scientific Summary:</strong>
-    <table>
-      <tr><th>Parameter</th><th>Value</th></tr>
-      <tr><td>Chirp Mass (ℳ)</td><td id="chirpMass">--</td></tr>
-      <tr><td>Frequency Range (Hz)</td><td id="freqRange">--</td></tr>
-      <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
-      <tr><td>Estimated Distance</td><td id="distance">--</td></tr>
-    </table>
-    <h4>Chirp Amplitude</h4>
-    <canvas id="amplitudeCanvas" width="800" height="200"></canvas>
-    <h4>Energy Loss</h4>
-    <canvas id="energyCanvas" width="800" height="200"></canvas>
-    <h4>Frequency Evolution</h4>
-    <canvas id="freqCanvas" width="800" height="200"></canvas>
-  </div>
-</div>
-
-<!-- Calculators -->
-<div id="calculatorsTab" class="tabContent">
-  <h2>🧮 Time Dilation & Dark Matter Effects</h2>
-  <p>Simulate time dilation near Sagittarius A* and particle decay modifications under dark matter density.</p>
-  
-  <label>Radius from Black Hole (m):</label>
-  <input id="radiusInput" type="number" value="7.8e17" step="1e16">
-  <label>Dark Matter Density (ρ_DM, kg/m³):</label>
-  <input id="densityInput" type="number" value="1e-21" step="1e-22">
-  <button id="runCalcBtn">Run Simulation</button>
-
-  <div id="calcResults"></div>
-  <canvas id="decayCanvas" width="800" height="300"></canvas>
-</div>
-
-<script>
   // --- Realistic GW chirp data approximation ---
 function generateChirp(t, m1, m2) {
     const G=6.6743e-11, c=3e8;
