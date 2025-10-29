@@ -92,6 +92,63 @@ h2,h3,h4 { color:#e5ccff; }
 </div>
 
 <script>
+  // --- Realistic GW chirp data approximation ---
+function generateChirp(t, m1, m2) {
+    const G=6.6743e-11, c=3e8;
+    const M = m1 + m2;
+    const mu = (m1*m2)/M;
+    const chirpMass = Math.pow(mu,3/5)*Math.pow(M,2/5);
+    const f = 30 + 200*t; // Simplified frequency sweep 30->230 Hz
+    const amp = Math.pow(chirpMass/30,5/3) * Math.pow(t,0.8) * Math.exp(-3*t);
+    return {y:amp, freq:f};
+}
+
+function drawWaveform(ctx, m1, m2, color) {
+    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    ctx.beginPath();
+    for(let i=0;i<ctx.canvas.width;i++){
+        const t=i/ctx.canvas.width;
+        const val = generateChirp(t, m1, m2);
+        const y = ctx.canvas.height/2 - val.y*ctx.canvas.height/2;
+        i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);
+    }
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2;
+    ctx.stroke();
+}
+
+function playEventChirp(m1, m2) {
+    try{
+        const audio = new (window.AudioContext||window.webkitAudioContext)();
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.connect(gain); gain.connect(audio.destination);
+        const duration = 2;
+        osc.start();
+        osc.stop(audio.currentTime + duration);
+        osc.frequency.setValueAtTime(30,audio.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(230,audio.currentTime + duration);
+        gain.gain.setValueAtTime(0.2,audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+duration);
+    } catch(e){ console.log("Audio error:", e);}
+}
+
+// --- Override previous updateEvent function ---
+function updateEvent(eventKey){
+    const ev = gwEvents[eventKey];
+    document.getElementById('eventDescription').textContent = eventDescriptions[eventKey];
+    drawOrbit(ev.m1, ev.m2, ev.spin, ev.color);
+    updateSummary(ev.m1, ev.m2);
+    // Waveform canvases
+    drawWaveform(document.getElementById('amplitudeCanvas').getContext('2d'), ev.m1, ev.m2, ev.color);
+    drawWaveform(document.getElementById('energyCanvas').getContext('2d'), ev.m1, ev.m2, ev.color);
+    drawWaveform(document.getElementById('freqCanvas').getContext('2d'), ev.m1, ev.m2, ev.color);
+}
+
+document.getElementById('playChirpBtn').addEventListener('click',()=>{
+    const ev = gwEvents[eventSelect.value];
+    playEventChirp(ev.m1, ev.m2);
+});
 // --- Tabs ---
 const tabButtons=document.querySelectorAll('.tabButton');
 const tabContents=document.querySelectorAll('.tabContent');
