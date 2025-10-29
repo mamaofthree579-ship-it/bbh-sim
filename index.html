@@ -144,48 +144,50 @@ for(let e in gwEvents){const opt=document.createElement('option');opt.value=e;op
 
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
-let orbitAngle=0, orbitAnim;
+let orbitAngle=0, animFrame;
 
-function drawOrbit(m1,m2,spin,color,flashIntensity=0){
+// Draw orbit with optional flash
+function drawOrbit(ev, flash=0){
   orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
   const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
   const r1=80, r2=160;
   const x1=cx+Math.cos(orbitAngle)*r1, y1=cy+Math.sin(orbitAngle)*r1;
   const x2=cx-Math.cos(orbitAngle)*r2, y2=cy-Math.sin(orbitAngle)*r2;
 
-  // Merger flash
-  if(flashIntensity>0){
-    orbitCtx.fillStyle=`rgba(255,255,200,${flashIntensity})`;
+  // Flash overlay
+  if(flash>0){
+    orbitCtx.fillStyle=`rgba(255,255,200,${flash})`;
     orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
   }
 
-  orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle=color; orbitCtx.fill();
+  orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle=ev.color; orbitCtx.fill();
   orbitCtx.beginPath(); orbitCtx.arc(x2,y2,16,0,2*Math.PI); orbitCtx.fillStyle='#ffffff'; orbitCtx.fill();
 }
 
-let animFrame;
+// Animate GW & orbit with merger flash
 function animateGW(ev){
-  const ampCtx=document.getElementById('amplitudeCanvas').getContext('2d');
-  const energyCtx=document.getElementById('energyCanvas').getContext('2d');
-  const freqCtx=document.getElementById('freqCanvas').getContext('2d');
-  let t=0;
   cancelAnimationFrame(animFrame);
+  let t=0;
   function step(){
     t+=0.01;
-    drawGraph(ampCtx,ev.color,tt=>Math.pow(tt,3)*Math.sin(20*tt*Math.PI*5*t));
-    drawGraph(energyCtx,ev.color,tt=>Math.pow(tt,2.5)*Math.exp(-3*tt*t));
-    drawGraph(freqCtx,ev.color,tt=>tt*tt*t);
 
-    // Flash near peak (t>0.95)
-    let flash= t>0.95 ? Math.min((t-0.95)*20,1) : 0;
-    drawOrbit(ev.m1,ev.m2,ev.spin,ev.color,flash);
+    // Draw graphs
+    drawGraph(document.getElementById('amplitudeCanvas').getContext('2d'),ev.color,tt=>Math.pow(tt,3)*Math.sin(20*tt*Math.PI*5*t));
+    drawGraph(document.getElementById('energyCanvas').getContext('2d'),ev.color,tt=>Math.pow(tt,2.5)*Math.exp(-3*tt*t));
+    drawGraph(document.getElementById('freqCanvas').getContext('2d'),ev.color,tt=>tt*tt*t);
 
-    orbitAngle+=0.02+ev.spin*0.01;
-    animFrame=requestAnimationFrame(step);
+    // Flash near end (t>0.95)
+    let flash = 0;
+    if(t>0.95 && t<1.05) flash = Math.sin((t-0.95)*Math.PI*5); // quick fade
+    drawOrbit(ev, flash);
+
+    orbitAngle += 0.02 + ev.spin*0.01;
+    if(t<1.2) animFrame=requestAnimationFrame(step); // stop after flash
   }
   step();
 }
 
+// Graph helper
 function drawGraph(ctx,color,func){
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
@@ -197,8 +199,9 @@ function drawGraph(ctx,color,func){
   ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
 }
 
+// Audio chirp
 function playChirp(fStart,fEnd,duration){
-  try {
+  try{
     const audio=new (window.AudioContext||window.webkitAudioContext)();
     const osc=audio.createOscillator(), gain=audio.createGain();
     osc.connect(gain); gain.connect(audio.destination);
@@ -207,9 +210,10 @@ function playChirp(fStart,fEnd,duration){
     gain.gain.setValueAtTime(0.2,audio.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+duration);
     osc.start(); osc.stop(audio.currentTime+duration);
-  } catch(e){console.log("Audio context error:",e);}
+  } catch(e){console.log(e);}
 }
 
+// Event summary
 function updateSummary(m1,m2){
   const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
   document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
@@ -218,6 +222,7 @@ function updateSummary(m1,m2){
   document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
 }
 
+// Update event
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
   document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
@@ -225,12 +230,13 @@ function updateEvent(eventKey){
   animateGW(ev);
 }
 
+// Event handlers
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m1=parseFloat(document.getElementById('m1Input').value);
   const m2=parseFloat(document.getElementById('m2Input').value);
   const spin=parseFloat(document.getElementById('spinInput').value);
   gwEvents["Custom"]={m1,m2,spin,color:'#ffffff'};
-  eventDescriptions["Custom"]= `Custom system: m1=${m1} M☉, m2=${m2} M☉, spin=${spin}`;
+  eventDescriptions["Custom"]=`Custom system: m1=${m1} M☉, m2=${m2} M☉, spin=${spin}`;
   eventSelect.value="Custom";
   updateEvent("Custom");
 });
@@ -238,8 +244,7 @@ document.getElementById('resetBtn').addEventListener('click',()=>updateEvent(eve
 document.getElementById('playChirpBtn').addEventListener('click',()=>{
   const ev=gwEvents[eventSelect.value];
   const chirpMass=Math.pow((ev.m1*ev.m2)**(3/5)/(ev.m1+ev.m2)**(1/5),1);
-  const fStart=30+ev.spin*10, fEnd=300+(chirpMass/30)*300;
-  playChirp(fStart,fEnd,2);
+  playChirp(30+ev.spin*10, 300+(chirpMass/30)*300, 2);
 });
 eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
 updateEvent("GW150914");
