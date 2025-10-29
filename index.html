@@ -317,6 +317,27 @@ window.MathJax = {
   <span class="close" id="tooltipClose">×</span>
   <div id="tooltipContent"></div>
 </div>
+  
+<div id="calcTab" class="tabContent">
+  <h2>🧮 Calculators & Simulators</h2>
+  <div id="decayPanel">
+    <h3>Decay + Dark-Matter + Quantum Corrections</h3>
+    <div class="sliderGroup">
+      <label>Radius r (m):</label>
+      <input type="range" id="rInput" min="1e7" max="1e10" value="1e9" step="1e7">
+    </div>
+    <div class="sliderGroup">
+      <label>ρ<sub>DM</sub> (kg/m³):</label>
+      <input type="range" id="rhoInput" min="0" max="1e-20" value="1e-22" step="1e-23">
+    </div>
+    <div class="sliderGroup">
+      <label>α (coefficient):</label>
+      <input type="range" id="alphaInput" min="0" max="5e20" value="1e20" step="1e19">
+    </div>
+    <label><input type="checkbox" id="quantumToggle"> Include Qμν (Quantum Correction)</label>
+    <p><strong>Γ Effective:</strong> <span id="gammaOut">--</span></p>
+  </div>
+</div>
 
 <script>
 /* -----------------------
@@ -772,6 +793,24 @@ document.querySelectorAll('.collapsible').forEach(coll=>{
 /* initial load */
 loadEvent('GW150914');
 
+  // --- Calculator functions ---
+function computeGamma(){
+  const G=6.67430e-11, c=3e8, M=4.3e6*1.989e30;
+  const r=parseFloat(document.getElementById('rInput').value);
+  const rho=parseFloat(document.getElementById('rhoInput').value);
+  const alpha=parseFloat(document.getElementById('alphaInput').value);
+  const quantum=document.getElementById('quantumToggle').checked;
+  const gammaTime=Math.sqrt(1 - (2*G*M)/(r*c*c));
+  const gammaDark=1 + alpha*rho;
+  let gammaEff=gammaTime*gammaDark;
+  if(quantum) gammaEff*=1.05;
+  document.getElementById('gammaOut').textContent=gammaEff.toExponential(3);
+}
+["rInput","rhoInput","alphaInput","quantumToggle"].forEach(id=>{
+  document.getElementById(id).addEventListener('input',computeGamma);
+});
+computeGamma();
+  
 </script>
 </body>
 </html>
