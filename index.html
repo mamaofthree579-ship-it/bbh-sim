@@ -30,12 +30,92 @@ h2,h3,h4 { color:#e5ccff; }
   <button class="tabButton" data-tab="calculatorsTab">Calculators</button>
 </div>
 
-<!-- Overview -->
+!-- Overview -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>🌌 Black Hole Overview</h2>
   <p>Observe a rotating black hole surrounded by a glowing accretion disk and distant stars, warped by extreme gravity.</p>
   <canvas id="bhCanvas" width="800" height="400"></canvas>
 </div>
+
+<script>
+// --- Overview animation with labels ---
+const bhCanvas = document.getElementById('bhCanvas');
+const bhCtx = bhCanvas.getContext('2d');
+
+const stars = Array.from({length:150},()=>({
+    x:Math.random()*bhCanvas.width,
+    y:Math.random()*bhCanvas.height,
+    r:Math.random()*1.2,
+    tw:Math.random()*2*Math.PI
+}));
+
+let bhAngle = 0;
+
+function drawBH(){
+    bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
+
+    const cx = bhCanvas.width/2, cy = bhCanvas.height/2;
+    const rBH = 70;
+
+    // --- Draw background stars ---
+    stars.forEach(s=>{
+        s.tw += 0.05;
+        const b = 0.6 + 0.4*Math.sin(s.tw);
+        if(Math.hypot(s.x-cx,s.y-cy) > rBH+20){
+            bhCtx.beginPath();
+            bhCtx.arc(s.x,s.y,s.r,0,2*Math.PI);
+            bhCtx.fillStyle = `rgba(255,255,255,${b})`;
+            bhCtx.fill();
+        }
+    });
+
+    // --- Radial background gradient ---
+    const grad = bhCtx.createRadialGradient(cx,cy,10,cx,cy,200);
+    grad.addColorStop(0,'#000');
+    grad.addColorStop(1,'#220033');
+    bhCtx.fillStyle = grad;
+    bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
+
+    // --- Black hole ---
+    bhCtx.beginPath();
+    bhCtx.arc(cx,cy,rBH,0,2*Math.PI);
+    bhCtx.fillStyle = 'black';
+    bhCtx.fill();
+
+    // --- Accretion disk ---
+    const ringGrad = bhCtx.createRadialGradient(cx,cy,rBH,cx,cy,rBH+60);
+    ringGrad.addColorStop(0,'rgba(255,200,100,0.2)');
+    ringGrad.addColorStop(1,'rgba(255,150,0,0.05)');
+    bhCtx.beginPath();
+    bhCtx.arc(cx,cy,rBH+30,0,2*Math.PI);
+    bhCtx.strokeStyle='rgba(255,180,60,0.5)';
+    bhCtx.lineWidth=3;
+    bhCtx.stroke();
+
+    // --- Orbiting hotspot ---
+    const x = cx + Math.cos(bhAngle)*100;
+    const y = cy + Math.sin(bhAngle)*40;
+    bhCtx.beginPath();
+    bhCtx.arc(x,y,6,0,2*Math.PI);
+    bhCtx.fillStyle = '#ffcc99';
+    bhCtx.fill();
+
+    // --- Labels ---
+    bhCtx.font = '16px Arial';
+    bhCtx.fillStyle = 'white';
+    bhCtx.textAlign = 'center';
+    bhCtx.fillText('Black Hole', cx, cy - rBH - 10);
+    bhCtx.fillText('Accretion Disk', cx, cy + rBH + 50);
+    bhCtx.fillText('Hotspot', x, y - 10);
+
+    // --- Animate ---
+    bhAngle += 0.03;
+    requestAnimationFrame(drawBH);
+}
+
+drawBH();
+</script>
+
 
 <!-- Events -->
 <div id="eventsTab" class="tabContent">
