@@ -3,21 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sagittarius A* Overview with Calculator</title>
+<title>Sagittarius A* & Gravitational-Wave Simulator</title>
 <style>
   body {
     margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
     background: radial-gradient(circle at center, #070010 0%, #000010 100%);
     color: white;
-    font-family: 'Segoe UI', Arial, sans-serif;
     overflow-x: hidden;
-    text-align: center;
   }
-  canvas {
-    display: block;
-    margin: 0 auto;
-    background: radial-gradient(circle at center, #12001c 0%, #000010 100%);
-  }
+  /* Tabs */
+  .tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
+  .tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; font-weight:bold; transition:0.3s; }
+  .tabButton:hover { background:#33003d; }
+  .tabButton.active { background:#550066; color:white; }
+  .tabContent { display:none; padding:20px; }
+
+  /* Overview */
+  canvas { display:block; margin:0 auto; background:radial-gradient(circle at center, #12001c 0%, #000010 100%); border-radius:8px; }
   .label {
     position: absolute;
     color: #e5ccff;
@@ -71,198 +74,196 @@
     display: block;
     margin: 10px auto;
   }
-  #calculatorPanel button:hover {
-    background: #a64dff;
+  #calculatorPanel button:hover { background:#a64dff; }
+  #calcResults { text-align:center; margin-top:8px; font-size:13px; color:#cdb7ff; }
+
+  /* Events */
+  #eventsTab canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; }
+  #scienceSummary {
+    background:rgba(30,0,40,0.7);
+    padding:10px; border-radius:8px;
+    margin-top:10px; border:1px solid #33003d;
   }
-  #calcResults {
-    text-align: center;
-    margin-top: 8px;
-    font-size: 13px;
-    color: #cdb7ff;
+  #scienceSummary table {
+    width:100%; border-collapse:collapse; margin-top:5px;
+  }
+  #scienceSummary th, #scienceSummary td {
+    text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff;
   }
 </style>
 </head>
 <body>
 
-<canvas id="overviewCanvas" width="900" height="500"></canvas>
-
-<!-- Labels -->
-<div id="labels">
-  <div class="label" id="labelBH">Sagittarius A*</div>
-  <div class="label" id="labelDisk">Accretion Disk</div>
-  <div class="label" id="labelEH">Event Horizon</div>
-  <div class="label" id="labelLens">Gravitational Lensing Zone</div>
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tabButton active" data-tab="overviewTab">Overview</button>
+  <button class="tabButton" data-tab="eventsTab">Events</button>
 </div>
 
-<div id="tooltip" class="tooltip"></div>
+<!-- Overview -->
+<div id="overviewTab" class="tabContent" style="display:block;">
+  <h2>🌌 Sagittarius A* Overview</h2>
+  <canvas id="overviewCanvas" width="900" height="500"></canvas>
 
-<!-- Calculator -->
-<div id="calculatorPanel">
-  <strong>Sagittarius A* Time Dilation Calculator</strong><br><br>
-  Radius r (m):<br>
-  <input id="radiusInput" type="number" value="7.8e17" step="1e16">
-  Dark Matter ρ<sub>DM</sub> (kg/m³):<br>
-  <input id="densityInput" type="number" value="1e-21" step="1e-22">
-  <button id="updateBtn">Run Calculation</button>
-  <div id="calcResults"></div>
+  <!-- Labels -->
+  <div id="labels">
+    <div class="label" id="labelBH">Sagittarius A*</div>
+    <div class="label" id="labelDisk">Accretion Disk</div>
+    <div class="label" id="labelEH">Event Horizon</div>
+    <div class="label" id="labelLens">Gravitational Lensing Zone</div>
+  </div>
+  <div id="tooltip" class="tooltip"></div>
+
+  <!-- Calculator -->
+  <div id="calculatorPanel">
+    <strong>Sagittarius A* Time Dilation Calculator</strong><br><br>
+    Radius r (m):<br>
+    <input id="radiusInput" type="number" value="7.8e17" step="1e16">
+    Dark Matter ρ<sub>DM</sub> (kg/m³):<br>
+    <input id="densityInput" type="number" value="1e-21" step="1e-22">
+    <button id="updateBtn">Run Calculation</button>
+    <div id="calcResults"></div>
+  </div>
+</div>
+
+<!-- Events Tab -->
+<div id="eventsTab" class="tabContent">
+  <h2>💫 Gravitational-Wave Events</h2>
+  <label for="eventSelect">Select Event:</label>
+  <select id="eventSelect"></select>
+  <button id="runCustomBtn">Run Custom Simulation</button>
+  <button id="resetBtn">Reset</button><br>
+
+  <label>M₁ (M☉):</label><input id="m1Input" type="number" value="30" step="0.1">
+  <label>M₂ (M☉):</label><input id="m2Input" type="number" value="30" step="0.1">
+  <label>Spin (a*):</label><input id="spinInput" type="number" value="0.5" step="0.1" min="0" max="1"><br>
+
+  <canvas id="orbitCanvas" width="700" height="400"></canvas>
+  <canvas id="chirpCanvas" width="800" height="200"></canvas>
+  <button id="playChirpBtn">🔊 Play Chirp</button>
+
+  <div id="scienceSummary">
+    <strong>Scientific Summary:</strong>
+    <table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Chirp Mass (ℳ)</td><td id="chirpMass">--</td></tr>
+      <tr><td>Frequency Range (Hz)</td><td id="freqRange">--</td></tr>
+      <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
+      <tr><td>Estimated Distance</td><td id="distance">--</td></tr>
+    </table>
+  </div>
 </div>
 
 <script>
-const canvas = document.getElementById('overviewCanvas');
-const ctx = canvas.getContext('2d');
-const w = canvas.width, h = canvas.height;
-const cx = w/2, cy = h/2;
-let t = 0;
+/* ---- Tabs ---- */
+const tabButtons=document.querySelectorAll('.tabButton');
+const tabContents=document.querySelectorAll('.tabContent');
+tabButtons.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    tabButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    tabContents.forEach(tc=>tc.style.display='none');
+    document.getElementById(btn.dataset.tab).style.display='block';
+  });
+});
 
-// Stars
-const stars = Array.from({length:180},()=>({
-  x:Math.random()*w, y:Math.random()*h, tw:Math.random()*Math.PI*2, r:Math.random()*1.3
-}));
-
-// Physics constants
+/* ---- Overview ---- */
+const canvas=document.getElementById('overviewCanvas');
+const ctx=canvas.getContext('2d');
+const w=canvas.width, h=canvas.height;
+const cx=w/2, cy=h/2;
+let t=0;
+const stars=Array.from({length:180},()=>({x:Math.random()*w,y:Math.random()*h,tw:Math.random()*Math.PI*2,r:Math.random()*1.3}));
 const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
 let radius=7.8e17, rho=1e-21;
-let gamma = calcGamma(radius);
-let hotspotAngle = 0;
-
-// Hotspot trail
-const trail = [];
-const maxTrail = 80;
-
-// Tooltip info
-const info = {
-  labelBH:"Sagittarius A* — the Milky Way’s central black hole (~4.3 million M☉).",
-  labelDisk:"Accretion disk: heated gas orbiting near light speed, emitting X-rays.",
-  labelEH:"Event horizon: boundary beyond which light cannot escape.",
-  labelLens:"Lensing zone: starlight bends around the intense gravity field."
-};
-const tooltip = document.getElementById('tooltip');
-document.querySelectorAll('.label').forEach(lbl=>{
-  lbl.addEventListener('mouseenter',()=>{
-    tooltip.innerText = info[lbl.id];
-    tooltip.style.display='block';
-  });
-  lbl.addEventListener('mousemove',e=>{
-    tooltip.style.left=(e.pageX+12)+'px';
-    tooltip.style.top=(e.pageY+12)+'px';
-  });
-  lbl.addEventListener('mouseleave',()=>tooltip.style.display='none');
-});
-
-function calcGamma(r){
-  const val = 1 - (G*M)/(r*c*c);
-  return val>0 ? Math.sqrt(val) : 0;
-}
-
-let mouseX=0, mouseY=0;
-document.addEventListener('mousemove', e=>{
-  mouseX = (e.clientX - cx)/w;
-  mouseY = (e.clientY - cy)/h;
-});
-
-function drawScene(){
+let gamma=calcGamma(radius);
+let hotspotAngle=0, trail=[];
+const maxTrail=80;
+function calcGamma(r){const val=1-(G*M)/(r*c*c);return val>0?Math.sqrt(val):0;}
+function drawBH(){
   ctx.clearRect(0,0,w,h);
-  // Stars
-  for(const s of stars){
-    s.tw+=0.02;
-    const bright=0.6+0.4*Math.sin(s.tw);
-    const bx=s.x+mouseX*20*s.r, by=s.y+mouseY*20*s.r;
-    ctx.beginPath();
-    ctx.arc(bx,by,s.r,0,2*Math.PI);
-    ctx.fillStyle=`rgba(255,255,255,${bright})`;
-    ctx.fill();
-  }
-
-  // Accretion disk
-  const diskGrad = ctx.createRadialGradient(cx,cy,50,cx,cy,180);
+  for(const s of stars){s.tw+=0.02;const bright=0.6+0.4*Math.sin(s.tw);
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,2*Math.PI);
+    ctx.fillStyle=`rgba(255,255,255,${bright})`;ctx.fill();}
+  const diskGrad=ctx.createRadialGradient(cx,cy,50,cx,cy,180);
   diskGrad.addColorStop(0,'rgba(255,160,60,0.2)');
   diskGrad.addColorStop(0.5,'rgba(255,100,0,0.08)');
   diskGrad.addColorStop(1,'rgba(100,0,150,0.05)');
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(0.1*Math.sin(t/100));
-  ctx.scale(1,0.6);
-  ctx.beginPath();
-  ctx.arc(0,0,160,0,2*Math.PI);
-  ctx.fillStyle=diskGrad;
-  ctx.fill();
-
-  // Rotating hotspot
-  const speed = (0.02 + (1-gamma)*0.5);
-  const xh = Math.cos(hotspotAngle)*100;
-  const yh = Math.sin(hotspotAngle)*40;
-  hotspotAngle += speed;
-  trail.push({x:xh, y:yh});
-  if(trail.length>maxTrail) trail.shift();
-
-  // Draw trail
-  for(let i=0;i<trail.length;i++){
-    const alpha = i/trail.length;
-    ctx.beginPath();
-    ctx.arc(trail[i].x, trail[i].y, 3, 0, 2*Math.PI);
-    ctx.fillStyle=`rgba(255,200,100,${alpha*0.6})`;
-    ctx.fill();
-  }
-
-  // Hotspot itself
-  ctx.beginPath();
-  ctx.arc(xh,yh,6,0,2*Math.PI);
-  ctx.fillStyle='rgba(255,220,150,0.95)';
-  ctx.shadowColor='rgba(255,180,80,0.6)';
-  ctx.shadowBlur=20;
-  ctx.fill();
-  ctx.shadowBlur=0;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(0.1*Math.sin(t/100));ctx.scale(1,0.6);
+  ctx.beginPath();ctx.arc(0,0,160,0,2*Math.PI);ctx.fillStyle=diskGrad;ctx.fill();
+  const speed=0.02+(1-gamma)*0.5;const xh=Math.cos(hotspotAngle)*100;const yh=Math.sin(hotspotAngle)*40;
+  hotspotAngle+=speed;trail.push({x:xh,y:yh});if(trail.length>maxTrail)trail.shift();
+  for(let i=0;i<trail.length;i++){const a=i/trail.length;
+    ctx.beginPath();ctx.arc(trail[i].x,trail[i].y,3,0,2*Math.PI);
+    ctx.fillStyle=`rgba(255,200,100,${a*0.6})`;ctx.fill();}
+  ctx.beginPath();ctx.arc(xh,yh,6,0,2*Math.PI);ctx.fillStyle='rgba(255,220,150,0.95)';
+  ctx.shadowColor='rgba(255,180,80,0.6)';ctx.shadowBlur=20;ctx.fill();ctx.shadowBlur=0;
   ctx.restore();
-
-  // Event horizon
-  const horizonGrad = ctx.createRadialGradient(cx,cy,10,cx,cy,80);
-  horizonGrad.addColorStop(0,'black');
-  horizonGrad.addColorStop(1,'rgba(40,0,60,0.9)');
-  ctx.beginPath();
-  ctx.arc(cx,cy,80,0,2*Math.PI);
-  ctx.fillStyle=horizonGrad;
-  ctx.fill();
-
-  // Halo based on rho
-  const glow = 3 + Math.sin(t/20)*1.5;
-  const glowAlpha = 0.4 + Math.min(rho*1e21,1)*0.5;
-  ctx.beginPath();
-  ctx.arc(cx,cy,82,0,2*Math.PI);
-  ctx.strokeStyle=`rgba(200,100,255,${glowAlpha})`;
-  ctx.lineWidth=glow;
-  ctx.stroke();
-
-  // Gravitational lens halo
-  const flareGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,300);
-  flareGrad.addColorStop(0,`rgba(120,0,255,${0.05+rho*1e21*0.1})`);
-  flareGrad.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=flareGrad;
-  ctx.fillRect(0,0,w,h);
-
-  // Label positions
-  document.getElementById('labelBH').style.left=(cx-150)+'px';
-  document.getElementById('labelBH').style.top=(cy-110)+'px';
-  document.getElementById('labelDisk').style.left=(cx+120)+'px';
-  document.getElementById('labelDisk').style.top=(cy-10)+'px';
-  document.getElementById('labelEH').style.left=(cx-60)+'px';
-  document.getElementById('labelEH').style.top=(cy+70)+'px';
-  document.getElementById('labelLens').style.left=(cx-220)+'px';
-  document.getElementById('labelLens').style.top=(cy+150)+'px';
-
-  t++;
-  requestAnimationFrame(drawScene);
+  const horizonGrad=ctx.createRadialGradient(cx,cy,10,cx,cy,80);
+  horizonGrad.addColorStop(0,'black');horizonGrad.addColorStop(1,'rgba(40,0,60,0.9)');
+  ctx.beginPath();ctx.arc(cx,cy,80,0,2*Math.PI);ctx.fillStyle=horizonGrad;ctx.fill();
+  const glowAlpha=0.4+Math.min(rho*1e21,1)*0.5;
+  ctx.beginPath();ctx.arc(cx,cy,82,0,2*Math.PI);
+  ctx.strokeStyle=`rgba(200,100,255,${glowAlpha})`;ctx.lineWidth=3;ctx.stroke();
+  t++;requestAnimationFrame(drawBH);
 }
-drawScene();
-
-// Calculator
+drawBH();
 document.getElementById('updateBtn').addEventListener('click',()=>{
   radius=parseFloat(document.getElementById('radiusInput').value);
   rho=parseFloat(document.getElementById('densityInput').value);
-  gamma = calcGamma(radius);
+  gamma=calcGamma(radius);
   const Gamma_dark=1*(1+1e21*rho);
   document.getElementById('calcResults').innerHTML=
-    `<small>γ = ${gamma.toFixed(6)}<br>Γ_dark = ${Gamma_dark.toExponential(2)}</small>`;
+  `<small>γ = ${gamma.toFixed(6)}<br>Γ_dark = ${Gamma_dark.toExponential(2)}</small>`;
 });
+
+/* ---- GW Events ---- */
+const gwEvents={
+  "GW150914":{m1:36,m2:29,spin:0.3,color:'#a64dff'},
+  "GW170104":{m1:31,m2:19,spin:0.5,color:'#00ccff'},
+  "GW190521":{m1:85,m2:66,spin:0.7,color:'#ff66ff'},
+  "Custom":{m1:30,m2:30,spin:0.5,color:'#ffffff'}
+};
+const eventSelect=document.getElementById('eventSelect');
+for(let e in gwEvents){const opt=document.createElement('option');opt.value=e;opt.text=e;eventSelect.add(opt);}
+const orbitCanvas=document.getElementById('orbitCanvas');const orbitCtx=orbitCanvas.getContext('2d');
+let orbitAngle=0, orbitAnim;
+function drawOrbit(m1,m2,spin,color){
+  cancelAnimationFrame(orbitAnim);
+  function animate(){
+    orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+    const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
+    const r1=80, r2=160;
+    const x1=cx+Math.cos(orbitAngle)*r1, y1=cy+Math.sin(orbitAngle)*r1;
+    const x2=cx-Math.cos(orbitAngle)*r2, y2=cy-Math.sin(orbitAngle)*r2;
+    orbitCtx.beginPath();orbitCtx.arc(x1,y1,10,0,2*Math.PI);
+    orbitCtx.fillStyle=color;orbitCtx.fill();
+    orbitCtx.beginPath();orbitCtx.arc(x2,y2,16,0,2*Math.PI);
+    orbitCtx.fillStyle='#ffffff';orbitCtx.fill();
+    orbitAngle+=0.02+spin*0.01;orbitAnim=requestAnimationFrame(animate);
+  } animate();
+}
+function updateSummary(m1,m2){
+  const chirpMass=Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent=chirpMass.toFixed(2)+" M☉";
+  document.getElementById('freqRange').textContent="20–400 Hz";
+  document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
+  document.getElementById('distance').textContent=`${(chirpMass*40).toFixed(0)} million ly`;
+}
+function updateEvent(key){
+  const ev=gwEvents[key];
+  drawOrbit(ev.m1,ev.m2,ev.spin,ev.color);
+  updateSummary(ev.m1,ev.m2);
+}
+eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
+document.getElementById('runCustomBtn').addEventListener('click',()=>{
+  const m1=parseFloat(document.getElementById('m1Input').value);
+  const m2=parseFloat(document.getElementById('m2Input').value);
+  const spin=parseFloat(document.getElementById('spinInput').value);
+  gwEvents.Custom={m1,m2,spin,color:'#ffffff'};
+  eventSelect.value='Custom';updateEvent('Custom');
+});
+updateEvent('GW150914');
 </script>
 </body>
 </html>
