@@ -142,11 +142,21 @@ const eventDescriptions={
 const eventSelect=document.getElementById('eventSelect');
 for(let e in gwEvents){const opt=document.createElement('option');opt.value=e;opt.text=e;eventSelect.add(opt);}
 
+// --- Orbit canvas with gravitational lensing ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
 let orbitAngle=0, animFrame;
 
-// Draw orbit with optional flash
+function lensDistortion(x, y, cx, cy, mass){
+  const dx=x-cx, dy=y-cy, r=Math.sqrt(dx*dx+dy*dy);
+  if(r<1) return {x,y};
+  const theta=0.5*mass/r; // simple lensing factor
+  return {
+    x: cx + dx*Math.cos(theta) - dy*Math.sin(theta),
+    y: cy + dx*Math.sin(theta) + dy*Math.cos(theta)
+  };
+}
+
 function drawOrbit(ev, flash=0){
   orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
   const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
@@ -160,29 +170,36 @@ function drawOrbit(ev, flash=0){
     orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height);
   }
 
+  // Background stars with lensing
+  stars.forEach(s=>{
+    let p=lensDistortion(s.x,s.y,x1,y1,10);
+    let q=lensDistortion(p.x,p.y,x2,y2,16);
+    orbitCtx.beginPath(); orbitCtx.arc(q.x,q.y,s.r,0,2*Math.PI);
+    orbitCtx.fillStyle='rgba(255,255,255,0.6)'; orbitCtx.fill();
+  });
+
+  // Draw black holes
   orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle=ev.color; orbitCtx.fill();
   orbitCtx.beginPath(); orbitCtx.arc(x2,y2,16,0,2*Math.PI); orbitCtx.fillStyle='#ffffff'; orbitCtx.fill();
 }
 
-// Animate GW & orbit with merger flash
+// Animate GW & orbit with flash
 function animateGW(ev){
   cancelAnimationFrame(animFrame);
   let t=0;
   function step(){
     t+=0.01;
-
-    // Draw graphs
     drawGraph(document.getElementById('amplitudeCanvas').getContext('2d'),ev.color,tt=>Math.pow(tt,3)*Math.sin(20*tt*Math.PI*5*t));
     drawGraph(document.getElementById('energyCanvas').getContext('2d'),ev.color,tt=>Math.pow(tt,2.5)*Math.exp(-3*tt*t));
     drawGraph(document.getElementById('freqCanvas').getContext('2d'),ev.color,tt=>tt*tt*t);
 
-    // Flash near end (t>0.95)
+    // Flash near merger
     let flash = 0;
-    if(t>0.95 && t<1.05) flash = Math.sin((t-0.95)*Math.PI*5); // quick fade
+    if(t>0.95 && t<1.05) flash = Math.sin((t-0.95)*Math.PI*5);
     drawOrbit(ev, flash);
 
     orbitAngle += 0.02 + ev.spin*0.01;
-    if(t<1.2) animFrame=requestAnimationFrame(step); // stop after flash
+    if(t<1.2) animFrame=requestAnimationFrame(step);
   }
   step();
 }
