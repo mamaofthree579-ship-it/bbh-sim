@@ -5,20 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Black Hole & Gravitational-Wave Simulator</title>
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:#05000a; color:white; overflow-x:hidden; }
-.tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
-.tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; font-weight:bold; transition:0.3s; }
-.tabButton:hover { background:#33003d; }
-.tabButton.active { background:#550066; color:white; }
-.tabContent { display:none; padding:20px; }
-canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; background:radial-gradient(circle at center, #14001a 0%, #05000a 100%); }
-button, select, input { margin:5px; padding:8px; border:none; border-radius:4px; }
-button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
-button:hover { background:#a64dff; }
-#eventInfo, #scienceSummary, #calcResults { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
-#scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
-#scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
-h2,h3,h4 { color:#e5ccff; }
+  body { margin:0; font-family:Arial,sans-serif; background:#05000a; color:white; overflow-x:hidden; }
+  .tabs { display:flex; background:#1a001f; border-bottom:2px solid #33003d; }
+  .tabButton { flex:1; padding:12px; cursor:pointer; background:#22002b; border:none; color:#e5ccff; font-weight:bold; transition:0.3s; }
+  .tabButton:hover { background:#33003d; }
+  .tabButton.active { background:#550066; color:white; }
+  .tabContent { display:none; padding:20px; }
+  canvas { border:1px solid #33003d; border-radius:8px; display:block; margin:15px auto; background:radial-gradient(circle at center, #14001a 0%, #05000a 100%); }
+  button, select, input { margin:5px; padding:8px; border:none; border-radius:4px; }
+  button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
+  button:hover { background:#a64dff; }
+  #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
+  #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
+  #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
+  h2,h3,h4 { color:#e5ccff; }
+  #calcResults { background:rgba(40,0,60,0.6); padding:10px; border-radius:8px; border:1px solid #33003d; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -30,7 +31,7 @@ h2,h3,h4 { color:#e5ccff; }
   <button class="tabButton" data-tab="calculatorsTab">Calculators</button>
 </div>
 
-!-- Overview -->
+<!-- Overview -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>🌌 Black Hole Overview</h2>
   <p>Observe a rotating black hole surrounded by a glowing accretion disk and distant stars, warped by extreme gravity.</p>
@@ -92,7 +93,18 @@ h2,h3,h4 { color:#e5ccff; }
 </div>
 
 <script>
-  
+// --- Tabs ---
+const tabButtons=document.querySelectorAll('.tabButton');
+const tabContents=document.querySelectorAll('.tabContent');
+tabButtons.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    tabButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    tabContents.forEach(tc=>tc.style.display='none');
+    document.getElementById(btn.dataset.tab).style.display='block';
+  });
+});
+
 // --- Overview animation with labels ---
 const bhCanvas = document.getElementById('bhCanvas');
 const bhCtx = bhCanvas.getContext('2d');
@@ -169,123 +181,6 @@ function drawBH(){
 }
 
 drawBH();
-  // --- Realistic GW chirp data approximation ---
-function generateChirp(t, m1, m2) {
-    const G=6.6743e-11, c=3e8;
-    const M = m1 + m2;
-    const mu = (m1*m2)/M;
-    const chirpMass = Math.pow(mu,3/5)*Math.pow(M,2/5);
-    const f = 30 + 200*t; // Simplified frequency sweep 30->230 Hz
-    const amp = Math.pow(chirpMass/30,5/3) * Math.pow(t,0.8) * Math.exp(-3*t);
-    return {y:amp, freq:f};
-}
-
-function drawWaveform(ctx, m1, m2, color) {
-    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-    ctx.beginPath();
-    for(let i=0;i<ctx.canvas.width;i++){
-        const t=i/ctx.canvas.width;
-        const val = generateChirp(t, m1, m2);
-        const y = ctx.canvas.height/2 - val.y*ctx.canvas.height/2;
-        i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);
-    }
-    ctx.strokeStyle=color;
-    ctx.lineWidth=2;
-    ctx.stroke();
-}
-
-function playEventChirp(m1, m2) {
-    try{
-        const audio = new (window.AudioContext||window.webkitAudioContext)();
-        const osc = audio.createOscillator();
-        const gain = audio.createGain();
-        osc.connect(gain); gain.connect(audio.destination);
-        const duration = 2;
-        osc.start();
-        osc.stop(audio.currentTime + duration);
-        osc.frequency.setValueAtTime(30,audio.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(230,audio.currentTime + duration);
-        gain.gain.setValueAtTime(0.2,audio.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+duration);
-    } catch(e){ console.log("Audio error:", e);}
-}
-
-// --- Override previous updateEvent function ---
-function updateEvent(eventKey){
-    const ev = gwEvents[eventKey];
-    document.getElementById('eventDescription').textContent = eventDescriptions[eventKey];
-    drawOrbit(ev.m1, ev.m2, ev.spin, ev.color);
-    updateSummary(ev.m1, ev.m2);
-    // Waveform canvases
-    drawWaveform(document.getElementById('amplitudeCanvas').getContext('2d'), ev.m1, ev.m2, ev.color);
-    drawWaveform(document.getElementById('energyCanvas').getContext('2d'), ev.m1, ev.m2, ev.color);
-    drawWaveform(document.getElementById('freqCanvas').getContext('2d'), ev.m1, ev.m2, ev.color);
-}
-
-document.getElementById('playChirpBtn').addEventListener('click',()=>{
-    const ev = gwEvents[eventSelect.value];
-    playEventChirp(ev.m1, ev.m2);
-});
-// --- Tabs ---
-const tabButtons=document.querySelectorAll('.tabButton');
-const tabContents=document.querySelectorAll('.tabContent');
-tabButtons.forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    tabButtons.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    tabContents.forEach(tc=>tc.style.display='none');
-    document.getElementById(btn.dataset.tab).style.display='block';
-  });
-});
-
-// --- Overview BH with swirling accretion disk ---
-const bhCanvas=document.getElementById('bhCanvas');
-const bhCtx=bhCanvas.getContext('2d');
-const stars=Array.from({length:150},()=>({x:Math.random()*bhCanvas.width,y:Math.random()*bhCanvas.height,r:Math.random()*1.2,tw:Math.random()*2*Math.PI}));
-let bhAngle=0, diskAngle=0;
-
-function drawBH(){
-  bhCtx.clearRect(0,0,bhCanvas.width,bhCanvas.height);
-  const cx=bhCanvas.width/2, cy=bhCanvas.height/2, rBH=70;
-
-  // Stars
-  stars.forEach(s=>{
-    s.tw+=0.05; const b=0.6+0.4*Math.sin(s.tw);
-    if(Math.hypot(s.x-cx,s.y-cy)>rBH+20){
-      bhCtx.beginPath(); bhCtx.arc(s.x,s.y,s.r,0,2*Math.PI); bhCtx.fillStyle=`rgba(255,255,255,${b})`; bhCtx.fill();
-    }
-  });
-
-  // Background gradient
-  const grad=bhCtx.createRadialGradient(cx,cy,10,cx,cy,200);
-  grad.addColorStop(0,'#000'); grad.addColorStop(1,'#220033');
-  bhCtx.fillStyle=grad; bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
-
-  // Black hole center
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH,0,2*Math.PI); bhCtx.fillStyle='black'; bhCtx.fill();
-
-  // Accretion disk with multi-color swirl
-  for(let i=0;i<200;i+=2){
-    const angle=i*0.03+diskAngle;
-    const radius= rBH + 20 + i*0.3;
-    const x = cx + radius * Math.cos(angle) * (1 + 0.2*Math.sin(diskAngle*3));
-    const y = cy + radius * Math.sin(angle) * (1 + 0.1*Math.sin(diskAngle*5));
-    bhCtx.beginPath();
-    bhCtx.arc(x,y,2,0,2*Math.PI);
-    const colorIntensity=Math.floor(150 + Math.sin(diskAngle*5+i*0.1)*50);
-    bhCtx.fillStyle=`rgba(255,${colorIntensity},50,0.5)`;
-    bhCtx.fill();
-  }
-
-  // Orbiting bright matter particle
-  const x=cx+Math.cos(bhAngle)*100, y=cy+Math.sin(bhAngle)*40;
-  bhCtx.beginPath(); bhCtx.arc(x,y,6,0,2*Math.PI); bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
-
-  bhAngle+=0.03;
-  diskAngle+=0.02;
-  requestAnimationFrame(drawBH);
-}
-drawBH();
 
 // --- GW Events ---
 const gwEvents={
@@ -303,47 +198,22 @@ const eventDescriptions={
 const eventSelect=document.getElementById('eventSelect');
 for(let e in gwEvents){const opt=document.createElement('option');opt.value=e;opt.text=e;eventSelect.add(opt);}
 
-// --- Orbit canvas with flashing merger effect ---
 const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
-let orbitAngle=0, animFrame;
-function drawOrbit(ev, flash=0){
-  orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
-  const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
-  const r1=80, r2=160;
-  const x1=cx+Math.cos(orbitAngle)*r1, y1=cy+Math.sin(orbitAngle)*r1;
-  const x2=cx-Math.cos(orbitAngle)*r2, y2=cy-Math.sin(orbitAngle)*r2;
-
-  if(flash>0){ orbitCtx.fillStyle=`rgba(255,255,200,${flash})`; orbitCtx.fillRect(0,0,orbitCanvas.width,orbitCanvas.height); }
-
-  stars.forEach(s=>{
-    let dx=s.x-cx, dy=s.y-cy, r=Math.sqrt(dx*dx+dy*dy);
-    if(r>1){
-      const theta=0.5*ev.spin/r;
-      const lx=cx+dx*Math.cos(theta)-dy*Math.sin(theta);
-      const ly=cy+dx*Math.sin(theta)+dy*Math.cos(theta);
-      orbitCtx.beginPath(); orbitCtx.arc(lx,ly,s.r,0,2*Math.PI); orbitCtx.fillStyle='rgba(255,255,255,0.6)'; orbitCtx.fill();
-    }
-  });
-
-  orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle=ev.color; orbitCtx.fill();
-  orbitCtx.beginPath(); orbitCtx.arc(x2,y2,16,0,2*Math.PI); orbitCtx.fillStyle='#ffffff'; orbitCtx.fill();
-}
-
-function animateGW(ev){
-  cancelAnimationFrame(animFrame);
-  let t=0;
-  function step(){
-    t+=0.01;
-    drawGraph(document.getElementById('amplitudeCanvas').getContext('2d'),ev.color,tt=>Math.pow(tt,3)*Math.sin(20*tt*Math.PI*5*t));
-    drawGraph(document.getElementById('energyCanvas').getContext('2d'),ev.color,tt=>Math.pow(tt,2.5)*Math.exp(-3*tt*t));
-    drawGraph(document.getElementById('freqCanvas').getContext('2d'),ev.color,tt=>tt*tt*t);
-    let flash=0; if(t>0.95&&t<1.05) flash=Math.sin((t-0.95)*Math.PI*5);
-    drawOrbit(ev,flash);
-    orbitAngle+=0.02+ev.spin*0.01;
-    if(t<1.2) animFrame=requestAnimationFrame(step);
+let orbitAngle=0, orbitAnim;
+function drawOrbit(m1,m2,spin,color){
+  cancelAnimationFrame(orbitAnim);
+  function animate(){
+    orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
+    const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2, r1=80, r2=160;
+    const x1=cx+Math.cos(orbitAngle)*r1, y1=cy+Math.sin(orbitAngle)*r1;
+    const x2=cx-Math.cos(orbitAngle)*r2, y2=cy-Math.sin(orbitAngle)*r2;
+    orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle=color; orbitCtx.fill();
+    orbitCtx.beginPath(); orbitCtx.arc(x2,y2,16,0,2*Math.PI); orbitCtx.fillStyle='#ffffff'; orbitCtx.fill();
+    orbitAngle+=0.02+spin*0.01;
+    orbitAnim=requestAnimationFrame(animate);
   }
-  step();
+  animate();
 }
 
 function drawGraph(ctx,color,func){
@@ -358,7 +228,7 @@ function drawGraph(ctx,color,func){
 }
 
 function playChirp(fStart,fEnd,duration){
-  try{
+  try {
     const audio=new (window.AudioContext||window.webkitAudioContext)();
     const osc=audio.createOscillator(), gain=audio.createGain();
     osc.connect(gain); gain.connect(audio.destination);
@@ -367,7 +237,7 @@ function playChirp(fStart,fEnd,duration){
     gain.gain.setValueAtTime(0.2,audio.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+duration);
     osc.start(); osc.stop(audio.currentTime+duration);
-  } catch(e){console.log(e);}
+  } catch(e){console.log("Audio context error:",e);}
 }
 
 function updateSummary(m1,m2){
@@ -381,8 +251,11 @@ function updateSummary(m1,m2){
 function updateEvent(eventKey){
   const ev=gwEvents[eventKey];
   document.getElementById('eventDescription').textContent=eventDescriptions[eventKey];
+  drawOrbit(ev.m1,ev.m2,ev.spin,ev.color);
   updateSummary(ev.m1,ev.m2);
-  animateGW(ev);
+  drawGraph(document.getElementById('amplitudeCanvas').getContext('2d'),ev.color,t=>Math.pow(t,3)*Math.sin(20*t*Math.PI*5));
+  drawGraph(document.getElementById('energyCanvas').getContext('2d'),ev.color,t=>Math.pow(t,2.5)*Math.exp(-3*t));
+  drawGraph(document.getElementById('freqCanvas').getContext('2d'),ev.color,t=>t*t);
 }
 
 document.getElementById('runCustomBtn').addEventListener('click',()=>{
@@ -390,18 +263,17 @@ document.getElementById('runCustomBtn').addEventListener('click',()=>{
   const m2=parseFloat(document.getElementById('m2Input').value);
   const spin=parseFloat(document.getElementById('spinInput').value);
   gwEvents["Custom"]={m1,m2,spin,color:'#ffffff'};
-  eventDescriptions["Custom"]=`Custom system: m1=${m1} M☉, m2=${m2} M☉, spin=${spin}`;
+  eventDescriptions["Custom"]= `Custom system: m1=${m1} M☉, m2=${m2} M☉, spin=${spin}`;
   eventSelect.value="Custom";
   updateEvent("Custom");
 });
-
 document.getElementById('resetBtn').addEventListener('click',()=>updateEvent(eventSelect.value));
 document.getElementById('playChirpBtn').addEventListener('click',()=>{
   const ev=gwEvents[eventSelect.value];
   const chirpMass=Math.pow((ev.m1*ev.m2)**(3/5)/(ev.m1+ev.m2)**(1/5),1);
-  playChirp(30+ev.spin*10, 300+(chirpMass/30)*300, 2);
+  const fStart=30+ev.spin*10, fEnd=300+(chirpMass/30)*300;
+  playChirp(fStart,fEnd,2);
 });
-
 eventSelect.addEventListener('change',()=>updateEvent(eventSelect.value));
 updateEvent("GW150914");
 
@@ -410,7 +282,7 @@ document.getElementById('runCalcBtn').addEventListener('click',()=>{
   const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
   const r=parseFloat(document.getElementById('radiusInput').value);
   const rho=parseFloat(document.getElementById('densityInput').value);
-  const gamma=Math.sqrt(1 - (2*G*M)/(r*c*c));
+  const gamma=Math.sqrt(1 - (G*M)/(r*c*c));
   const alpha=1e21, Gamma_dark=1*(1+alpha*rho);
   document.getElementById('calcResults').innerHTML=
     `<p>Time Dilation Factor (γ): <b>${gamma.toFixed(6)}</b></p>
@@ -419,8 +291,8 @@ document.getElementById('runCalcBtn').addEventListener('click',()=>{
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
   for(let i=0;i<ctx.canvas.width;i++){
-    const t=i/ctx.canvas.width*10, y=ctx.canvas.height/2 - Math.exp(-Gamma_dark*t)*100;
-    i===0?ctx.moveTo (i,y):ctx.lineTo(i,y);
+    const t=i/ctx.canvas.width, y=ctx.canvas.height/2 - (Math.exp(-Gamma_dark*t)*100);
+    i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);
   }
   ctx.strokeStyle="#a64dff"; ctx.lineWidth=2; ctx.stroke();
 });
