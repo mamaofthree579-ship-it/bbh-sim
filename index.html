@@ -15,11 +15,10 @@
   button, select, input { margin:5px; padding:8px; border:none; border-radius:4px; }
   button { background:#8000ff; color:white; cursor:pointer; transition:0.3s; }
   button:hover { background:#a64dff; }
-  #eventInfo, #scienceSummary { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
+  #eventInfo, #scienceSummary, #calcResults { background:rgba(30,0,40,0.7); padding:10px; border-radius:8px; margin-top:10px; border:1px solid #33003d; }
   #scienceSummary table { width:100%; border-collapse:collapse; margin-top:5px; }
   #scienceSummary th, #scienceSummary td { text-align:left; padding:6px; border-bottom:1px solid #440055; color:#e5ccff; }
   h2,h3,h4 { color:#e5ccff; }
-  #calcResults { background:rgba(40,0,60,0.6); padding:10px; border-radius:8px; border:1px solid #33003d; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -121,10 +120,6 @@ function drawBH(){
   grad.addColorStop(0,'#000'); grad.addColorStop(1,'#220033');
   bhCtx.fillStyle=grad; bhCtx.fillRect(0,0,bhCanvas.width,bhCanvas.height);
   bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH,0,2*Math.PI); bhCtx.fillStyle='black'; bhCtx.fill();
-  const ringGrad=bhCtx.createRadialGradient(cx,cy,rBH,cx,cy,rBH+60);
-  ringGrad.addColorStop(0,'rgba(255,200,100,0.2)');
-  ringGrad.addColorStop(1,'rgba(255,150,0,0.05)');
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH+30,0,2*Math.PI); bhCtx.strokeStyle='rgba(255,180,60,0.5)'; bhCtx.lineWidth=3; bhCtx.stroke();
   const x=cx+Math.cos(bhAngle)*100, y=cy+Math.sin(bhAngle)*40;
   bhCtx.beginPath(); bhCtx.arc(x,y,6,0,2*Math.PI); bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
   bhAngle+=0.03; requestAnimationFrame(drawBH);
@@ -154,7 +149,8 @@ function drawOrbit(m1,m2,spin,color){
   cancelAnimationFrame(orbitAnim);
   function animate(){
     orbitCtx.clearRect(0,0,orbitCanvas.width,orbitCanvas.height);
-    const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2, r1=80, r2=160;
+    const cx=orbitCanvas.width/2, cy=orbitCanvas.height/2;
+    const r1=80+r2Modifier(m1,m2), r2=160;
     const x1=cx+Math.cos(orbitAngle)*r1, y1=cy+Math.sin(orbitAngle)*r1;
     const x2=cx-Math.cos(orbitAngle)*r2, y2=cy-Math.sin(orbitAngle)*r2;
     orbitCtx.beginPath(); orbitCtx.arc(x1,y1,10,0,2*Math.PI); orbitCtx.fillStyle=color; orbitCtx.fill();
@@ -162,6 +158,7 @@ function drawOrbit(m1,m2,spin,color){
     orbitAngle+=0.02+spin*0.01;
     orbitAnim=requestAnimationFrame(animate);
   }
+  function r2Modifier(m1,m2){return (m1+m2-60)*0.5;}
   animate();
 }
 
@@ -231,7 +228,7 @@ document.getElementById('runCalcBtn').addEventListener('click',()=>{
   const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
   const r=parseFloat(document.getElementById('radiusInput').value);
   const rho=parseFloat(document.getElementById('densityInput').value);
-  const gamma=Math.sqrt(1 - (G*M)/(r*c*c));
+  const gamma=Math.sqrt(1 - (2*G*M)/(r*c*c)); // Schwarzschild factor
   const alpha=1e21, Gamma_dark=1*(1+alpha*rho);
   document.getElementById('calcResults').innerHTML=
     `<p>Time Dilation Factor (γ): <b>${gamma.toFixed(6)}</b></p>
@@ -240,7 +237,7 @@ document.getElementById('runCalcBtn').addEventListener('click',()=>{
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.beginPath();
   for(let i=0;i<ctx.canvas.width;i++){
-    const t=i/ctx.canvas.width, y=ctx.canvas.height/2 - (Math.exp(-Gamma_dark*t)*100);
+    const t=i/ctx.canvas.width*10, y=ctx.canvas.height/2 - Math.exp(-Gamma_dark*t)*100;
     i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);
   }
   ctx.strokeStyle="#a64dff"; ctx.lineWidth=2; ctx.stroke();
