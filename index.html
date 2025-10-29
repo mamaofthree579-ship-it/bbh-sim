@@ -255,15 +255,21 @@ document.getElementById('runCalcBtn').addEventListener('click', ()=>{
 });
 
 /* -----------------------
-   Events tab — full restored features
+   Events tab — full restored features + expanded events list
    ----------------------- */
 
-/* events DB */
+/* added confirmed/commonly-cited events for richer selection */
 const events = {
   "GW150914": { m1:36, m2:29, spin:0.3, color:'#a64dff', desc:'GW150914 — first detection (2015): 36+29 M☉ ~1.3 Gyr' },
+  "GW151226": { m1:14, m2:7.5, spin:0.12, color:'#66ff99', desc:'GW151226 — lighter BHs (14+7.5 M☉)' },
   "GW170104": { m1:31, m2:19, spin:0.45, color:'#00ccff', desc:'GW170104 — 31+19 M☉' },
+  "GW170608": { m1:12, m2:7, spin:0.25, color:'#88ee88', desc:'GW170608 — light BHs (12+7 M☉)' },
+  "GW170814": { m1:30.5, m2:25, spin:0.2, color:'#aaccff', desc:'GW170814 — 3-detector event' },
+  "GW190412": { m1:30, m2:8, spin:0.35, color:'#ffaa88', desc:'GW190412 — asymmetric masses (30+8 M☉)' },
+  "GW190425": { m1:1.9, m2:1.6, spin:0.01, color:'#99ccff', desc:'GW190425 — possible heavy BNS (1.9+1.6 M☉)' },
   "GW190521": { m1:85, m2:66, spin:0.7, color:'#ff9933', desc:'GW190521 — very massive (85+66 M☉)' },
-  "GW190814": { m1:23, m2:2.6, spin:0.05, color:'#ffcc00', desc:'GW190814 — BH+compact object (23+2.6 M☉)' },
+  "GW190814": { m1:23, m2:2.6, spin:0.05, color:'#ffcc00', desc:'GW190814 — BH + compact (23+2.6 M☉)' },
+  "GW200115": { m1:6, m2:1.5, spin:0.2, color:'#33aaff', desc:'GW200115 — NS–BH candidate' },
   "Custom": { m1:30, m2:30, spin:0.5, color:'#ffd166', desc:'Custom system' }
 };
 /* populate selector */
@@ -522,7 +528,7 @@ eventSelect.addEventListener('change', ()=> {
   const key = eventSelect.value;
   const ev = events[key];
   document.getElementById('eventDescription').textContent = ev.desc;
-  m1Input.value = ev.m1; m2Input.value = ev.m2; spinInput.value = ev.spin; spinVal.textContent = ev.spin.toFixed(2);
+  m1Input.value = ev.m1; m2Input.value = ev.m2; spinInput.value = ev.spin; spinVal.textContent = Number(ev.spin).toFixed(2);
   document.getElementById('spinOut').textContent = ev.spin;
   // regen waveform and update summary visuals
   simParams = { m1:ev.m1, m2:ev.m2, spin:ev.spin, color:ev.color, sep:12 };
@@ -530,7 +536,7 @@ eventSelect.addEventListener('change', ()=> {
   drawSummaryGraphs(ev.color, 0);
   drawChirp(-1);
   // prepare orbit (static) until Run Simulation clicked
-  startOrbitSim(ev.m1, ev.m2, ev.spin, ev.color, 12); // start orbit static-ish (it will animate but won't merger until Run)
+  startOrbitSim(ev.m1, ev.m2, ev.spin, ev.color, 12); // start orbit (it will animate; run sim will inspiral)
 });
 
 const m1Input = document.getElementById('m1Input');
@@ -547,11 +553,10 @@ document.getElementById('runSimBtn').addEventListener('click', ()=>{
   events['Custom'] = { m1, m2, spin, color, desc: `Custom: ${m1} + ${m2} M☉, spin ${spin}` };
   eventSelect.value = 'Custom';
   document.getElementById('eventDescription').textContent = events['Custom'].desc;
-  // waveform + play + orbit inspiral
+  // waveform + orbit inspiral
   generateWaveformSamples(m1,m2,spin);
   simParams = { m1,m2,spin,color,sep: Number(sepInput.value) || 12 };
   startOrbitSim(m1,m2,spin,color, simParams.sep);
-  // start audio as well for integrated demo (optional): user still must press play to comply with some browsers' autoplay policies — we won't auto-play to be safe.
   drawSummaryGraphs(color, 0);
 });
 
