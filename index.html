@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,7 +22,7 @@
   #labels { text-align:center; font-size:0.9em; color:#d0b8ff; }
   #eventLayout { display:flex; flex-wrap:wrap; gap:20px; }
   #leftColumn, #rightColumn { flex:1; min-width:360px; background:rgba(25,0,35,0.5); padding:15px; border-radius:10px; border:1px solid #33003d; }
-  #dataTable { width:100%; border-collapse:collapse; color:#e5ccff; }
+  #dataTable { width:100%; border-collapse:collapse; color:#e5ccff; margin-bottom:10px; }
   #dataTable th, #dataTable td { border-bottom:1px solid #440055; padding:4px 6px; text-align:left; }
 </style>
 </head>
@@ -76,6 +76,11 @@
         <tr><td>GW Strain (h)</td><td id="gwStrain">--</td></tr>
         <tr><td>Distance</td><td id="distance">--</td></tr>
       </table>
+
+      <h3>Event Comparison Charts</h3>
+      <canvas id="ampChart" width="380" height="100"></canvas>
+      <canvas id="energyChart" width="380" height="100"></canvas>
+      <canvas id="freqChart" width="380" height="100"></canvas>
     </div>
   </div>
 </div>
@@ -142,6 +147,9 @@ const orbitCanvas=document.getElementById('orbitCanvas');
 const orbitCtx=orbitCanvas.getContext('2d');
 const chirpCanvas=document.getElementById('chirpCanvas');
 const chirpCtx=chirpCanvas.getContext('2d');
+const ampChart=document.getElementById('ampChart').getContext('2d');
+const energyChart=document.getElementById('energyChart').getContext('2d');
+const freqChart=document.getElementById('freqChart').getContext('2d');
 let orbitAngle=0, orbitAnim;
 
 function drawOrbit(m1,m2,spin,color){
@@ -167,6 +175,7 @@ function updateSummary(m1,m2,ev){
   document.getElementById('gwStrain').textContent=(4e-21*(chirpMass/30)**(5/3)).toExponential(2);
   document.getElementById('distance').textContent=gwEvents[ev].distance;
   drawChirp(chirpCtx,gwEvents[ev].color);
+  drawCharts(ampChart,energyChart,freqChart,gwEvents[ev].color);
 }
 
 function drawChirp(ctx,color){
@@ -178,6 +187,36 @@ function drawChirp(ctx,color){
     if(i===0)ctx.moveTo(i,y); else ctx.lineTo(i,y);
   }
   ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+}
+
+function drawCharts(aCtx,eCtx,fCtx,color){
+  // Amplitude vs Time
+  aCtx.clearRect(0,0,aCtx.canvas.width,aCtx.canvas.height);
+  aCtx.beginPath();
+  for(let x=0;x<aCtx.canvas.width;x++){
+    const t=x/aCtx.canvas.width;
+    const y=aCtx.canvas.height/2 - Math.sin(2*Math.PI*t*5)*t*aCtx.canvas.height/3;
+    x===0 ? aCtx.moveTo(x,y):aCtx.lineTo(x,y);
+  }
+  aCtx.strokeStyle=color; aCtx.stroke();
+  // Energy vs Frequency
+  eCtx.clearRect(0,0,eCtx.canvas.width,eCtx.canvas.height);
+  eCtx.beginPath();
+  for(let x=0;x<eCtx.canvas.width;x++){
+    const f=x/eCtx.canvas.width;
+    const y=eCtx.canvas.height - Math.pow(f,2)*eCtx.canvas.height;
+    x===0 ? eCtx.moveTo(x,y):eCtx.lineTo(x,y);
+  }
+  eCtx.strokeStyle=color; eCtx.stroke();
+  // Frequency Evolution
+  fCtx.clearRect(0,0,fCtx.canvas.width,fCtx.canvas.height);
+  fCtx.beginPath();
+  for(let x=0;x<fCtx.canvas.width;x++){
+    const t=x/fCtx.canvas.width;
+    const y=fCtx.canvas.height - (Math.pow(t,3)*fCtx.canvas.height*0.9);
+    x===0 ? fCtx.moveTo(x,y):fCtx.lineTo(x,y);
+  }
+  fCtx.strokeStyle=color; fCtx.stroke();
 }
 
 function playChirp(fStart,fEnd,duration){
