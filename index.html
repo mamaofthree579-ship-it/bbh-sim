@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Simulator — Overview & Events (Full)</title>
+<title>Black Hole Simulator — Dynamic Horizon</title>
 <style>
   :root{
     --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --muted:#33003d; --text:#e5ccff;
@@ -15,15 +15,13 @@
   .container{padding:18px}
   h2{margin:6px 0 10px;color:var(--text)}
   canvas{display:block;margin:12px auto;border-radius:8px;background:radial-gradient(circle at center,#14001a 0%, #05000a 100%);box-shadow:0 6px 18px rgba(0,0,0,0.6);}
-  label,input,select,button,textarea{margin:6px 6px 6px 0;padding:8px;border-radius:6px;border:none}
   .panel{background:rgba(30,0,40,0.6);padding:12px;border-radius:10px;border:1px solid var(--muted);max-width:1180px;margin:12px auto}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .small{font-size:0.9rem;color:#d6c7ff}
   .muted{color:#bdaeff}
   .btn{background:var(--accent);border-radius:6px;color:white;padding:8px 12px;border:0;cursor:pointer}
-  .btn.secondary{background:#444}
   .legend{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:8px;color:var(--text);font-size:0.95rem}
-  .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;cursor:pointer; border:1px solid rgba(255,255,255,0.06)}
+  .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;border:1px solid rgba(255,255,255,0.06)}
   .tooltip { position: absolute; background: rgba(20,10,30,0.95); color: #fff; padding:8px; border-radius:6px; border:1px solid rgba(120,90,200,0.25); max-width:420px; font-size:0.95rem; display:none; z-index:1000; }
 </style>
 </head>
@@ -36,16 +34,16 @@
   <button class="tabButton" data-tab="calculatorsTab">Calculators</button>
 </div>
 
-<!-- Overview Tab -->
+<!-- Overview -->
 <div id="overviewTab" class="container tabContent" style="display:block">
-  <h2>🌌 Black Hole Overview</h2>
+  <h2>🌌 Sagittarius A* Overview</h2>
   <div class="panel">
-    <p class="small">Sagittarius A* visualization (rotating hotspot + trail + stars). Use the speed slider to adjust motion.</p>
+    <p class="small">Dynamic visualization: black hole horizon changes with hotspot speed (energy feedback).</p>
     <canvas id="bhCanvas" width="920" height="420"></canvas>
-    <div class="legend" aria-hidden="true">
-      <div data-tooltip="eh"><span class="swatch" style="background:rgba(140,80,255,0.35);"></span>Event Horizon</div>
-      <div data-tooltip="ad"><span class="swatch" style="background:rgba(255,180,80,0.22);"></span>Accretion Disk</div>
-      <div data-tooltip="jet"><span class="swatch" style="background:rgba(120,200,255,0.18);"></span>Relativistic Jet</div>
+    <div class="legend">
+      <div><span class="swatch" style="background:rgba(140,80,255,0.35)"></span>Event Horizon</div>
+      <div><span class="swatch" style="background:rgba(255,180,80,0.22)"></span>Accretion Disk</div>
+      <div><span class="swatch" style="background:rgba(120,200,255,0.18)"></span>Relativistic Jet</div>
     </div>
     <div class="row" style="margin-top:8px;">
       <label>Hotspot Speed</label>
@@ -55,19 +53,18 @@
   </div>
 </div>
 
-<!-- Events Tab (kept previous setup) -->
+<!-- Events -->
 <div id="eventsTab" class="container tabContent" style="display:none">
   <h2>💫 Gravitational-Wave Events</h2>
   <div class="panel">
-    <p class="small">Events selection, orbit & waveform visualizations restored.</p>
+    <p class="small">Event visuals and data coming soon.</p>
   </div>
 </div>
 
-<!-- Calculators Tab -->
+<!-- Calculators -->
 <div id="calculatorsTab" class="container tabContent" style="display:none">
   <h2>🧮 Calculators</h2>
   <div class="panel">
-    <p class="small">Sgr A* calculator now resides here for cleaner Overview.</p>
     <label>Radius r (m)</label><input id="radiusInput" type="number" value="7.8e17">
     <label>Dark Matter ρ_DM (kg/m³)</label><input id="densityInput" type="number" value="1e-21">
     <button id="runCalcBtn" class="btn">Run</button>
@@ -75,143 +72,114 @@
   </div>
 </div>
 
-<!-- Tooltip -->
-<div id="tooltip" class="tooltip" role="dialog" aria-hidden="true"></div>
+<div id="tooltip" class="tooltip"></div>
 
 <script>
-/* -----------------------
-   Tabs handling
------------------------ */
+// --- Tabs ---
 document.querySelectorAll('.tabButton').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tabButton').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.tabContent').forEach(c=>c.style.display='none');
     document.getElementById(btn.dataset.tab).style.display='block';
-    tooltip.style.display='none';
   });
 });
 
-/* -----------------------
-   Overview visualization
------------------------ */
+// --- Overview Canvas ---
 const bhCanvas = document.getElementById('bhCanvas');
-const bhCtx = bhCanvas.getContext('2d');
-const bhW = bhCanvas.width, bhH = bhCanvas.height;
-const cx = bhW/2, cy = bhH/2;
-const horizonR = 70;
+const ctx = bhCanvas.getContext('2d');
+const W = bhCanvas.width, H = bhCanvas.height;
+const cx = W/2, cy = H/2;
+let baseHorizon = 70;
+let speedFactor = 1;
+const stars = Array.from({length:200},()=>({x:Math.random()*W,y:Math.random()*H,r:0.5+Math.random()*1.2,phi:Math.random()*Math.PI*2}));
+let angle=0, trail=[];
 
-// stars
-const stars = Array.from({length:200},()=>({x:Math.random()*bhW, y:Math.random()*bhH, r:0.5+Math.random()*1.2, phi:Math.random()*Math.PI*2, vx:(Math.random()-0.5)*0.06}));
-
-// hotspot
-let hotspotAngle = 0;
-let hotspotTrail = [];
-let speedFactor = 1.0;
-
-const speedSlider = document.getElementById('speedSlider');
-const speedVal = document.getElementById('speedVal');
-speedSlider.addEventListener('input', ()=>{
-  speedFactor = Number(speedSlider.value);
-  speedVal.textContent = speedFactor.toFixed(2) + "×";
+const speedSlider=document.getElementById('speedSlider');
+const speedVal=document.getElementById('speedVal');
+speedSlider.addEventListener('input',()=>{
+  speedFactor=parseFloat(speedSlider.value);
+  speedVal.textContent=speedFactor.toFixed(2)+"×";
 });
 
-function drawOverview(){
-  bhCtx.clearRect(0,0,bhW,bhH);
+function drawBH(){
+  ctx.clearRect(0,0,W,H);
+  const g=ctx.createRadialGradient(cx,cy,10,cx,cy,300);
+  g.addColorStop(0,"#070012"); g.addColorStop(1,"#010006");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-  // background
-  const grad = bhCtx.createRadialGradient(cx,cy,10,cx,cy,300);
-  grad.addColorStop(0,'#070012'); grad.addColorStop(1,'#010006');
-  bhCtx.fillStyle = grad; bhCtx.fillRect(0,0,bhW,bhH);
-
-  // stars
+  // Stars
   for(const s of stars){
-    s.phi += 0.02 + Math.random()*0.01;
-    s.x += s.vx; if(s.x < -2) s.x = bhW + 2; if(s.x > bhW+2) s.x = -2;
-    bhCtx.beginPath();
-    bhCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    bhCtx.fillStyle = `rgba(255,255,255,${0.4+0.4*Math.sin(s.phi)})`;
-    bhCtx.fill();
+    s.phi += 0.01;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${0.3+0.3*Math.sin(s.phi)})`;
+    ctx.fill();
   }
 
-  // accretion disk
+  // Horizon radius grows with speed (dynamic)
+  const horizonR = baseHorizon + (speedFactor-1)*10;
+  const rimGlow = Math.min(0.35 + (speedFactor-1)*0.15, 0.65);
+
+  // Disk
   for(let i=0;i<40;i++){
-    bhCtx.beginPath();
-    bhCtx.arc(cx,cy,horizonR+8 + i*3,0,Math.PI*2);
-    bhCtx.strokeStyle = `rgba(255,180,80,${0.006 + i*0.0006})`;
-    bhCtx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx,cy,horizonR+8+i*3,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,180,80,${0.006+i*0.0006})`;
+    ctx.stroke();
   }
 
-  // event horizon
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,horizonR,0,Math.PI*2);
-  bhCtx.strokeStyle='rgba(140,80,255,0.35)'; bhCtx.lineWidth=2; bhCtx.stroke();
+  // Horizon ring
+  ctx.beginPath();
+  ctx.arc(cx,cy,horizonR,0,Math.PI*2);
+  ctx.strokeStyle=`rgba(140,80,255,${rimGlow})`;
+  ctx.lineWidth=2; ctx.stroke();
 
-  // jet
-  bhCtx.fillStyle='rgba(120,200,255,0.06)';
-  bhCtx.fillRect(cx-6,0,12,cy-120);
+  // Jet
+  ctx.fillStyle='rgba(120,200,255,0.05)';
+  ctx.fillRect(cx-5,0,10,cy-120);
 
-  // center
-  bhCtx.beginPath(); bhCtx.arc(cx,cy,horizonR,0,Math.PI*2); bhCtx.fillStyle='black'; bhCtx.fill();
+  // Center
+  ctx.beginPath();
+  ctx.arc(cx,cy,horizonR,0,Math.PI*2);
+  ctx.fillStyle='black';
+  ctx.fill();
 
-  // hotspot update
-  const r_m = 110;
-  const v = 1.0; // base angular velocity
-  const dt = 1/60;
-  hotspotAngle += v * dt * speedFactor;
+  // Hotspot motion
+  angle += 0.03 * speedFactor;
+  const rOrbit = horizonR + 50;
+  const hx = cx + Math.cos(angle)*rOrbit;
+  const hy = cy + Math.sin(angle)*rOrbit*0.7;
+  trail.unshift({x:hx,y:hy});
+  if(trail.length>25) trail.pop();
 
-  const hx = cx + Math.cos(hotspotAngle)*r_m;
-  const hy = cy + Math.sin(hotspotAngle)*r_m*0.7; // more circular
-  hotspotTrail.unshift({x:hx,y:hy,a:1.0});
-  if(hotspotTrail.length>28) hotspotTrail.pop();
-
-  // draw trail
-  for(let i=0;i<hotspotTrail.length;i++){
-    const t = hotspotTrail[i];
-    bhCtx.beginPath();
-    bhCtx.arc(t.x,t.y,4-i*0.12,0,Math.PI*2);
-    bhCtx.fillStyle = `rgba(255,220,180,${0.12*(28-i)})`;
-    bhCtx.fill();
+  // Trail
+  for(let i=0;i<trail.length;i++){
+    ctx.beginPath();
+    ctx.arc(trail[i].x,trail[i].y,4-i*0.12,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,220,180,${0.12*(25-i)})`;
+    ctx.fill();
   }
 
-  // draw hotspot
-  bhCtx.beginPath(); bhCtx.arc(hx,hy,6,0,Math.PI*2);
-  bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
+  // Hotspot
+  ctx.beginPath();
+  ctx.arc(hx,hy,6,0,Math.PI*2);
+  ctx.fillStyle='#ffcc99';
+  ctx.fill();
 
-  requestAnimationFrame(drawOverview);
+  requestAnimationFrame(drawBH);
 }
-drawOverview();
+drawBH();
 
-/* -----------------------
-   Tooltip wiring
------------------------ */
-const tooltip = document.getElementById('tooltip');
-const tooltipData = { "eh":"Event horizon — radius where escape speed = c. r_s = 2GM/c²", "ad":"Accretion disk — hot gas orbiting.", "jet":"Relativistic jet — collimated outflow."};
-document.querySelectorAll('.legend div').forEach(div=>{
-  const key = div.getAttribute('data-tooltip');
-  div.addEventListener('mouseenter', e=>{
-    tooltip.textContent = tooltipData[key] || '';
-    tooltip.style.left = (e.clientX+12)+'px';
-    tooltip.style.top = (e.clientY+12)+'px';
-    tooltip.style.display='block';
-  });
-  div.addEventListener('mousemove', e=>{
-    tooltip.style.left=(e.clientX+12)+'px'; tooltip.style.top=(e.clientY+12)+'px';
-  });
-  div.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; });
-});
-
-/* -----------------------
-   Sgr A* Calculator
------------------------ */
-document.getElementById('runCalcBtn').addEventListener('click', ()=>{
-  const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
-  const r = Number(document.getElementById('radiusInput').value) || 7.8e17;
-  const rho = Number(document.getElementById('densityInput').value) || 1e-21;
-  const val = 1 - (G*M)/(r*c*c);
-  const gamma = val>0 ? Math.sqrt(val) : 0;
-  const alpha = 1e21;
-  const Gamma_dark = 1*(1 + alpha*rho);
-  document.getElementById('calcResults').innerHTML = `<div>γ = <strong>${gamma.toFixed(6)}</strong> | Γ_dark ≈ <strong>${Gamma_dark.toExponential(2)}</strong></div>`;
+// --- Calculator ---
+document.getElementById('runCalcBtn').addEventListener('click',()=>{
+  const G=6.6743e-11,M=4.3e6*1.989e30,c=3e8;
+  const r=Number(document.getElementById('radiusInput').value)||7.8e17;
+  const rho=Number(document.getElementById('densityInput').value)||1e-21;
+  const gamma=Math.sqrt(Math.max(0,1-(G*M)/(r*c*c)));
+  const alpha=1e21;
+  const Gamma_dark=1*(1+alpha*rho);
+  document.getElementById('calcResults').innerHTML=`γ=<b>${gamma.toFixed(6)}</b> | Γ_dark≈<b>${Gamma_dark.toExponential(2)}</b>`;
 });
 </script>
 </body>
