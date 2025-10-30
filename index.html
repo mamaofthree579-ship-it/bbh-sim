@@ -3,26 +3,49 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Black Hole Simulator — Dynamic Horizon</title>
+<title>Black Hole Simulator — Dynamic Horizon + Energy Scale</title>
 <style>
-  :root{
+  :root {
     --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --muted:#33003d; --text:#e5ccff;
   }
-  body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
-  .tabs{display:flex;background:var(--panel);border-bottom:2px solid var(--muted);}
-  .tabButton{flex:1;padding:12px;cursor:pointer;background:transparent;border:0;color:var(--text);font-weight:700}
-  .tabButton.active{background:var(--accent);color:#fff}
-  .container{padding:18px}
-  h2{margin:6px 0 10px;color:var(--text)}
-  canvas{display:block;margin:12px auto;border-radius:8px;background:radial-gradient(circle at center,#14001a 0%, #05000a 100%);box-shadow:0 6px 18px rgba(0,0,0,0.6);}
-  .panel{background:rgba(30,0,40,0.6);padding:12px;border-radius:10px;border:1px solid var(--muted);max-width:1180px;margin:12px auto}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .small{font-size:0.9rem;color:#d6c7ff}
-  .muted{color:#bdaeff}
-  .btn{background:var(--accent);border-radius:6px;color:white;padding:8px 12px;border:0;cursor:pointer}
-  .legend{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:8px;color:var(--text);font-size:0.95rem}
-  .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;border:1px solid rgba(255,255,255,0.06)}
-  .tooltip { position: absolute; background: rgba(20,10,30,0.95); color: #fff; padding:8px; border-radius:6px; border:1px solid rgba(120,90,200,0.25); max-width:420px; font-size:0.95rem; display:none; z-index:1000; }
+  body {
+    margin:0; font-family:Inter,Arial,Helvetica,sans-serif;
+    background:var(--bg); color:var(--text);
+  }
+  .tabs { display:flex; background:var(--panel); border-bottom:2px solid var(--muted); }
+  .tabButton {
+    flex:1; padding:12px; cursor:pointer; background:transparent;
+    border:0; color:var(--text); font-weight:700;
+  }
+  .tabButton.active { background:var(--accent); color:#fff; }
+  .container { padding:18px; }
+  h2 { margin:6px 0 10px; color:var(--text); }
+  canvas {
+    display:block; margin:12px auto; border-radius:8px;
+    background:radial-gradient(circle at center,#14001a 0%, #05000a 100%);
+    box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  }
+  .panel {
+    background:rgba(30,0,40,0.6); padding:12px;
+    border-radius:10px; border:1px solid var(--muted);
+    max-width:1180px; margin:12px auto;
+  }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .small { font-size:0.9rem; color:#d6c7ff; }
+  .muted { color:#bdaeff; }
+  .btn { background:var(--accent); border-radius:6px; color:white;
+         padding:8px 12px; border:0; cursor:pointer; }
+  .legend { display:flex; gap:16px; align-items:center; justify-content:center; margin-top:8px; color:var(--text); font-size:0.95rem; }
+  .swatch { width:18px; height:10px; border-radius:4px; display:inline-block; margin-right:6px; vertical-align:middle; border:1px solid rgba(255,255,255,0.06); }
+  .scaleBar {
+    position:relative; height:14px; width:100%;
+    border-radius:6px; margin-top:10px;
+    background:linear-gradient(90deg, #6c00ff 0%, #ff8a00 50%, #ff0033 100%);
+    box-shadow:0 0 12px rgba(255,0,255,0.25);
+  }
+  .scaleLabels {
+    display:flex; justify-content:space-between; margin-top:4px; font-size:0.85rem; color:#d9c9ff;
+  }
 </style>
 </head>
 <body>
@@ -38,7 +61,7 @@
 <div id="overviewTab" class="container tabContent" style="display:block">
   <h2>🌌 Sagittarius A* Overview</h2>
   <div class="panel">
-    <p class="small">Dynamic visualization: black hole horizon changes with hotspot speed (energy feedback).</p>
+    <p class="small">Dynamic visualization: event horizon changes with hotspot speed (energy feedback).</p>
     <canvas id="bhCanvas" width="920" height="420"></canvas>
     <div class="legend">
       <div><span class="swatch" style="background:rgba(140,80,255,0.35)"></span>Event Horizon</div>
@@ -49,6 +72,12 @@
       <label>Hotspot Speed</label>
       <input type="range" id="speedSlider" min="0.1" max="3" step="0.05" value="1" style="flex:1">
       <span id="speedVal" class="muted">1.0×</span>
+    </div>
+    <div class="scaleBar"></div>
+    <div class="scaleLabels">
+      <span>Cool (Low Energy)</span>
+      <span>Stable (Normal)</span>
+      <span>Hot (High Energy)</span>
     </div>
   </div>
 </div>
@@ -71,8 +100,6 @@
     <div id="calcResults" style="margin-top:8px;color:#ffd;"></div>
   </div>
 </div>
-
-<div id="tooltip" class="tooltip"></div>
 
 <script>
 // --- Tabs ---
