@@ -34,7 +34,7 @@
 <!-- OVERVIEW -->
 <div id="overviewTab" class="tabContent" style="display:block;">
   <h2>🌌 Sagittarius A* Overview</h2>
-  <p>Observe the rotating black hole with a luminous accretion disk. Use the slider below to control orbital speed.</p>
+  <p>Observe the rotating black hole with a luminous accretion disk. Adjust rotation speed to simulate energy intensity.</p>
   <canvas id="bhCanvas" width="800" height="400"></canvas>
 
   <div style="text-align:center;">
@@ -122,10 +122,11 @@ function drawBH(){
   // Black Hole Core
   bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH,0,2*Math.PI); bhCtx.fillStyle='black'; bhCtx.fill();
 
-  // Accretion Disk
+  // Accretion Disk Pulsing with Speed
+  const brightness = Math.min(100, 40 + rotationSpeed * 30 + Math.abs(Math.sin(bhAngle * 2)) * 30);
   const hue=(bhAngle*10)%360;
   bhCtx.beginPath(); bhCtx.arc(cx,cy,rBH+30,0,2*Math.PI);
-  bhCtx.strokeStyle=`hsl(${hue}, 100%, 60%)`;
+  bhCtx.strokeStyle=`hsl(${hue}, 100%, ${brightness}%)`;
   bhCtx.lineWidth=3; bhCtx.stroke();
 
   // Orbiting Hotspot
@@ -146,7 +147,7 @@ speedSlider.addEventListener('input',()=>{
   speedValue.textContent=rotationSpeed.toFixed(1)+"x";
 });
 
-// --- Calculators ---
+// --- Calculator ---
 document.getElementById('runCalcBtn').addEventListener('click',()=>{
   const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
   const r=parseFloat(document.getElementById('radiusInput').value);
@@ -166,7 +167,7 @@ document.getElementById('runCalcBtn').addEventListener('click',()=>{
   ctx.strokeStyle="#a64dff"; ctx.lineWidth=2; ctx.stroke();
 });
 
-// --- GW Events (simplified retained) ---
+// --- GW Events (retained) ---
 const gwEvents={
   "GW150914":{m1:36,m2:29,spin:0.3,dist:"1.3 B ly",strain:"1e-21",freq:"35–250",type:"BBH",color:"#a64dff"},
   "GW170817":{m1:1.46,m2:1.27,spin:0.05,dist:"130 M ly",strain:"3e-23",freq:"30–500",type:"BNS",color:"#ffcc00"},
