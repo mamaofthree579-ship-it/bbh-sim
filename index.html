@@ -3,49 +3,36 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Simulator — Overview & Events (Full)</title>
+<title>BBH Simulator — Overview & Events</title>
 <style>
   :root{
     --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --muted:#33003d; --text:#e5ccff;
-    --card-bg: rgba(255,255,255,0.02);
   }
   body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
   .tabs{display:flex;background:var(--panel);border-bottom:2px solid var(--muted);}
   .tabButton{flex:1;padding:12px;cursor:pointer;background:transparent;border:0;color:var(--text);font-weight:700}
   .tabButton.active{background:var(--accent);color:#fff}
-  .container{padding:18px}
+  .container{padding:16px}
   h2{margin:6px 0 10px;color:var(--text)}
   canvas{display:block;margin:12px auto;border-radius:8px;background:radial-gradient(circle at center,#14001a 0%, #05000a 100%);box-shadow:0 6px 18px rgba(0,0,0,0.6);}
   label,input,select,button,textarea{margin:6px 6px 6px 0;padding:8px;border-radius:6px;border:none}
-  .panel{background:rgba(30,0,40,0.6);padding:12px;border-radius:10px;border:1px solid var(--muted);max-width:1180px;margin:12px auto}
+  .panel{background:rgba(30,0,40,0.6);padding:12px;border-radius:10px;border:1px solid var(--muted);max-width:1200px;margin:12px auto}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .small{font-size:0.9rem;color:#d6c7ff}
   .muted{color:#bdaeff}
   .btn{background:var(--accent);border-radius:6px;color:white;padding:8px 12px;border:0;cursor:pointer}
   .btn.secondary{background:#444}
   .legend{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:8px;color:var(--text);font-size:0.95rem}
-  .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;cursor:pointer; border:1px solid rgba(255,255,255,0.06)}
+  .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;cursor:pointer;border:1px solid rgba(255,255,255,0.06)}
   .tooltip { position: absolute; background: rgba(20,10,30,0.95); color: #fff; padding:8px; border-radius:6px; border:1px solid rgba(120,90,200,0.25); max-width:420px; font-size:0.95rem; display:none; z-index:1000; }
-  pre { background:#070018; padding:8px; border-radius:6px; overflow:auto; color:#f0f0ff; }
   table { width:100%; border-collapse:collapse; }
   table td, table th { padding:6px; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text) }
-  .smallMuted { font-size:0.85rem; color:#cfc3ff; margin-top:6px; }
-
-  /* Event cards grid (2 per row) */
-  .cardsGrid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px; max-width:1180px; margin-left:auto; margin-right:auto; }
-  .eventCard { background:var(--card-bg); border:1px solid rgba(255,255,255,0.04); padding:12px; border-radius:10px; display:flex; gap:12px; align-items:flex-start; }
-  .eventAccent { width:6px; height:60px; border-radius:4px; flex:0 0 6px; }
-  .cardBody { flex:1; }
-  .cardTitle { font-weight:700; margin-bottom:6px; color:var(--text); }
-  .cardMeta { font-size:0.9rem; color:#d6c7ff; margin-bottom:8px; }
-  .cardButtons { display:flex; gap:8px; margin-top:6px; }
-  .smallNote { font-size:0.85rem; color:#c6b9ff; }
-
-  /* responsive */
-  @media (max-width:900px){
-    .cardsGrid{ grid-template-columns:1fr; }
-    canvas{ width:95%!important; max-width:920px; }
-  }
+  .mutedSmall { font-size:0.85rem; color:#cfc3ff; }
+  /* two-column event layout */
+  .events-grid { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+  .left-col { flex:1 1 56%; min-width:420px; }
+  .right-col { flex:1 1 40%; min-width:320px; }
+  .small-note { font-size:0.88rem; color:#d6c7ff; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -57,41 +44,32 @@
   <button class="tabButton" data-tab="calculatorsTab">Calculators</button>
 </div>
 
-<!-- Overview Tab (kept as you liked it) -->
+<!-- Overview -->
 <div id="overviewTab" class="container tabContent" style="display:block">
   <h2>🌌 Black Hole Overview</h2>
   <div class="panel">
-    <p class="small">Sagittarius A* visualization (rotating hotspot + trail). Click legend swatches for quick info.</p>
+    <p class="small">Sagittarius A* style visualization. Use the slider to control hotspot speed (subtle motion).</p>
     <canvas id="bhCanvas" width="920" height="420"></canvas>
+
     <div class="legend" aria-hidden="true">
       <div data-tooltip="eh"><span class="swatch" style="background:rgba(140,80,255,0.35);"></span>Event Horizon</div>
       <div data-tooltip="ad"><span class="swatch" style="background:rgba(255,180,80,0.22);"></span>Accretion Disk</div>
       <div data-tooltip="jet"><span class="swatch" style="background:rgba(120,200,255,0.18);"></span>Relativistic Jet</div>
     </div>
-  </div>
 
-  <!-- Calculator moved below visual (kept minimal; you can move later) -->
-  <div class="panel" id="sgrCalcPanel" style="margin-top:12px">
-    <strong>Sagittarius A* — quick calculator</strong>
-    <div class="row" style="margin-top:8px">
-      <label>Radius r (m)</label>
-      <input id="radiusInput" type="number" value="7.8e17" style="width:260px">
-      <label>Dark Matter ρ_DM (kg/m³)</label>
-      <input id="densityInput" type="number" value="1e-21" style="width:220px">
-      <button id="runCalcBtn" class="btn">Run</button>
+    <div class="row" style="margin-top:10px">
+      <label>Hotspot speed</label>
+      <input id="hotSpeed" type="range" min="0" max="0.06" step="0.002" value="0.026" style="width:300px">
+      <span id="hotSpeedVal" class="mutedSmall">0.026</span>
+      <button id="toggleTrails" class="btn secondary" title="Toggle hotspot trail">Toggle Trail</button>
     </div>
-    <div id="calcResults" style="margin-top:8px;color:#ffd;"></div>
   </div>
 </div>
 
-<!-- Events Tab -->
+<!-- Events -->
 <div id="eventsTab" class="container tabContent" style="display:none">
   <h2>💫 Gravitational-Wave Events</h2>
 
-  <!-- Event cards grid (2 per row) -->
-  <div class="cardsGrid" id="cardsGrid"></div>
-
-  <!-- Rest of Events UI -->
   <div class="panel">
     <div class="row">
       <label for="eventSelect">Event</label>
@@ -106,26 +84,27 @@
 
     <div class="row" style="margin-top:8px">
       <label>M₁ (M☉)</label><input id="m1Input" type="number" value="30" step="0.1" min="1">
-      <label>M₂ (M☉)</label><input id="m2Input" type="number" value="30" step="0.1" min="1">
-      <label>Spin a*</label><input id="spinInput" type="range" min="0" max="1" step="0.01" value="0.5" style="width:160px">
-      <span id="spinVal" class="muted">0.50</span>
+      <label>M₂ (M☉)</label><input id="m2Input" type="number" value="30" step="0.1" min="0.1">
+      <label>Spin a*</label><input id="spinInput" type="range" min="0" max="1" step="0.01" value="0.5" style="width:180px">
+      <span id="spinVal" class="mutedSmall">0.50</span>
       <label style="margin-left:8px">Separation (M)</label><input id="sepInput" type="number" value="12" step="1" style="width:70px">
     </div>
 
-    <canvas id="orbitCanvas" width="920" height="360"></canvas>
+    <div class="events-grid" style="margin-top:10px">
+      <div class="left-col">
+        <canvas id="orbitCanvas" width="920" height="360"></canvas>
+        <div class="small-note">Orbit shows inspiral (toy model) and trails. Trails are intentionally subtle for clarity.</div>
+      </div>
 
-    <div class="row" style="margin-top:8px">
-      <div style="flex:1">
+      <div class="right-col">
         <canvas id="chirpCanvas" width="920" height="180"></canvas>
         <div style="margin-top:6px">
           <button id="playChirpBtn" class="btn">🔊 Play Chirp</button>
           <button id="stopChirpBtn" class="btn secondary">⏹ Stop</button>
-          <span class="muted" style="margin-left:12px">Playhead shown on chirp canvas when audio playing.</span>
+          <span class="mutedSmall" style="margin-left:12px">Playhead shown on waveform when playing.</span>
         </div>
-      </div>
 
-      <div style="width:360px;margin-left:16px">
-        <div style="background:rgba(10,0,20,0.6);padding:10px;border-radius:8px;border:1px solid var(--muted)">
+        <div style="background:rgba(10,0,20,0.6);padding:10px;border-radius:8px;border:1px solid var(--muted);margin-top:10px">
           <strong>Event Info</strong>
           <p id="eventDescription" class="small muted">—</p>
           <table>
@@ -137,6 +116,7 @@
             <tr><td class="small muted">Energy rad.</td><td id="energyOut" style="text-align:right">—</td></tr>
           </table>
         </div>
+
       </div>
     </div>
 
@@ -151,14 +131,23 @@
         <canvas id="freqCanvas" width="920" height="110"></canvas>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- Calculators Tab (kept simple; SgrA* calc moved back to Overview) -->
+<!-- Calculators -->
 <div id="calculatorsTab" class="container tabContent" style="display:none">
   <h2>🧮 Calculators</h2>
   <div class="panel">
-    <p class="small">Advanced calculators will go here. (Quick Sgr A* calc is on the Overview tab.)</p>
+    <p class="small">Sgr A* time-dilation / dark-matter quick calculator (moved here from Overview on request available).</p>
+    <div class="row">
+      <label>Radius r (m)</label>
+      <input id="radiusInputCalc" type="number" value="7.8e17" style="width:260px">
+      <label>Dark Matter ρ_DM (kg/m³)</label>
+      <input id="densityInputCalc" type="number" value="1e-21" style="width:220px">
+      <button id="runCalcBtnMain" class="btn">Run</button>
+    </div>
+    <div id="calcResultsMain" style="margin-top:8px;color:#ffd;"></div>
   </div>
 </div>
 
@@ -167,7 +156,7 @@
 
 <script>
 /* -----------------------
-   Tabs handling
+   Tabs
    ----------------------- */
 document.querySelectorAll('.tabButton').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -180,22 +169,33 @@ document.querySelectorAll('.tabButton').forEach(btn=>{
 });
 
 /* -----------------------
-   Overview drawing (kept from your preferred version)
+   Overview drawing (stars + hotspot + small trail)
    ----------------------- */
-const bhCanvas=document.getElementById('bhCanvas');
-const bhCtx=bhCanvas.getContext('2d');
-const bhW=bhCanvas.width, bhH=bhCanvas.height;
-const bhCx=bhW/2, bhCy=bhH/2;
-const horizonR=70;
-const stars=Array.from({length:160}, ()=>({x:Math.random()*bhW,y:Math.random()*bhH,r:0.5+Math.random()*1.1,phi:Math.random()*Math.PI*2,vx:(Math.random()-0.5)*0.06}));
-let bhHotAngle=0;
+const bhCanvas = document.getElementById('bhCanvas');
+const bhCtx = bhCanvas.getContext('2d');
+const bhW = bhCanvas.width, bhH = bhCanvas.height;
+const bhCx = bhW/2, bhCy = bhH/2;
+const horizonR = 70;
+const stars = Array.from({length:160}, ()=>({
+  x: Math.random()*bhW, y: Math.random()*bhH,
+  r: 0.5+Math.random()*1.1, phi: Math.random()*Math.PI*2, vx:(Math.random()-0.5)*0.06
+}));
+let bhHotAngle = 0;
+let hotspotSpeed = Number(document.getElementById('hotSpeed').value) || 0.026;
+let showTrail = true;
+document.getElementById('hotSpeed').addEventListener('input', (e)=>{
+  hotspotSpeed = Number(e.target.value);
+  document.getElementById('hotSpeedVal').textContent = hotspotSpeed.toFixed(3);
+});
+document.getElementById('toggleTrails').addEventListener('click', ()=> { showTrail = !showTrail; });
+
 function drawOverview(){
   bhCtx.clearRect(0,0,bhW,bhH);
   const g = bhCtx.createRadialGradient(bhCx,bhCy,10,bhCx,bhCy,300);
   g.addColorStop(0,'#070012'); g.addColorStop(1,'#010006');
-  bhCtx.fillStyle=g; bhCtx.fillRect(0,0,bhW,bhH);
+  bhCtx.fillStyle = g; bhCtx.fillRect(0,0,bhW,bhH);
 
-  // stars not inside horizon
+  // stars (avoid inside horizon)
   for(const s of stars){
     s.phi += 0.02 + Math.random()*0.01;
     s.x += s.vx; if(s.x < -2) s.x = bhW + 2; if(s.x > bhW+2) s.x = -2;
@@ -207,7 +207,7 @@ function drawOverview(){
     }
   }
 
-  // accretion disk
+  // accretion disk rings
   for(let i=0;i<40;i++){
     bhCtx.beginPath();
     bhCtx.arc(bhCx,bhCy,horizonR+8 + i*3,0,Math.PI*2);
@@ -215,172 +215,95 @@ function drawOverview(){
     bhCtx.stroke();
   }
 
-  // event horizon outline
+  // horizon outline
   bhCtx.beginPath(); bhCtx.arc(bhCx,bhCy,horizonR,0,Math.PI*2);
   bhCtx.strokeStyle='rgba(140,80,255,0.35)'; bhCtx.lineWidth=2; bhCtx.stroke();
 
-  // jet (soft)
-  bhCtx.fillStyle='rgba(120,200,255,0.06)';
-  bhCtx.fillRect(bhCx-6, 0, 12, bhCy-120);
+  // jet
+  bhCtx.fillStyle='rgba(120,200,255,0.06)'; bhCtx.fillRect(bhCx-6, 0, 12, bhCy-120);
 
-  // center
+  // center fill
   bhCtx.beginPath(); bhCtx.arc(bhCx,bhCy,horizonR,0,Math.PI*2); bhCtx.fillStyle='black'; bhCtx.fill();
 
-  // hotspot and trail (smaller trail)
+  // hotspot + trail
   const hx = bhCx + Math.cos(bhHotAngle) * 110;
   const hy = bhCy + Math.sin(bhHotAngle) * 34;
-  // trail (short, subtle)
-  for(let k=0;k<6;k++){
-    const t = bhHotAngle - k*0.08;
-    const tx = bhCx + Math.cos(t)* (110 - k*5);
-    const ty = bhCy + Math.sin(t)* (34 - k*1.8);
-    bhCtx.beginPath(); bhCtx.arc(tx,ty,3.8-k*0.4,0,Math.PI*2);
-    bhCtx.fillStyle = `rgba(255,220,180,${0.11*(6-k)})`; bhCtx.fill();
+
+  if(showTrail){
+    for(let k=0;k<8;k++){
+      const t = bhHotAngle - k*0.09;
+      const tx = bhCx + Math.cos(t)*(110 - k*6);
+      const ty = bhCy + Math.sin(t)*(34 - k*1.8);
+      bhCtx.beginPath(); bhCtx.arc(tx,ty, Math.max(0.8,4-k*0.36),0,Math.PI*2);
+      bhCtx.fillStyle = `rgba(255,220,180,${0.12*(8-k)})`; bhCtx.fill();
+    }
   }
+
   bhCtx.beginPath(); bhCtx.arc(hx,hy,6,0,Math.PI*2); bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
 
-  bhHotAngle += 0.026;
+  bhHotAngle += hotspotSpeed;
   requestAnimationFrame(drawOverview);
 }
 drawOverview();
 
-/* legend tooltip wiring */
+/* legend tooltip */
 const tooltip = document.getElementById('tooltip');
-const tooltipData = {
-  "eh":"Event horizon — radius where escape speed = c. r_s = 2GM/c²",
-  "ad":"Accretion disk — hot gas orbiting and radiating; viscous processes drive accretion.",
-  "jet":"Relativistic jet — collimated outflow sometimes powered by BH spin."
-};
+const tipMap = { eh:'Event horizon — r_s = 2GM/c²', ad:'Accretion disk — hot orbiting gas', jet:'Relativistic jet — collimated outflow' };
 document.querySelectorAll('.legend div').forEach(div=>{
-  const key = div.getAttribute('data-tooltip');
-  div.addEventListener('mouseenter', (e)=>{
-    tooltip.textContent = tooltipData[key] || '';
-    tooltip.style.left = (e.clientX + 12) + 'px';
-    tooltip.style.top = (e.clientY + 12) + 'px';
-    tooltip.style.display='block';
-  });
-  div.addEventListener('mousemove', (e)=>{ tooltip.style.left=(e.clientX+12)+'px'; tooltip.style.top=(e.clientY+12)+'px';});
-  div.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; });
-});
-
-/* Sgr A* calculator (overview) */
-document.getElementById('runCalcBtn').addEventListener('click', ()=>{
-  const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
-  const r = Number(document.getElementById('radiusInput').value) || 7.8e17;
-  const rho = Number(document.getElementById('densityInput').value) || 1e-21;
-  const val = 1 - (G*M)/(r*c*c);
-  const gamma = val>0 ? Math.sqrt(val) : 0;
-  const alpha = 1e21;
-  const Gamma_dark = 1*(1 + alpha*rho);
-  document.getElementById('calcResults').innerHTML = `<div>γ = <strong>${gamma.toFixed(6)}</strong> &nbsp; | &nbsp; Γ_dark ≈ <strong>${Gamma_dark.toExponential(2)}</strong></div>`;
+  const k = div.getAttribute('data-tooltip');
+  div.addEventListener('mouseenter',(e)=>{ tooltip.textContent = tipMap[k]||''; tooltip.style.left=(e.clientX+12)+'px'; tooltip.style.top=(e.clientY+12)+'px'; tooltip.style.display='block'; });
+  div.addEventListener('mousemove',(e)=>{ tooltip.style.left=(e.clientX+12)+'px'; tooltip.style.top=(e.clientY+12)+'px'; });
+  div.addEventListener('mouseleave',()=>{ tooltip.style.display='none'; });
 });
 
 /* -----------------------
-   Events data + cards
+   Events tab: data + UI wiring
    ----------------------- */
 const events = {
-  "GW150914": { m1:36, m2:29, spin:0.3, color:'#a64dff', year:2015, dist:'1.3 Gly', desc:'GW150914 — first detection (2015): 36 + 29 M☉.' },
-  "GW170104": { m1:31, m2:19, spin:0.45, color:'#00ccff', year:2017, dist:'~3 G ly', desc:'GW170104 — 31 + 19 M☉ (2017).' },
-  "GW170608": { m1:12, m2:7, spin:0.25, color:'#66ff99', year:2017, dist:'~300 M ly', desc:'GW170608 — lighter system, 12 + 7 M☉.' },
-  "GW190521": { m1:85, m2:66, spin:0.7, color:'#ff9933', year:2019, dist:'~5 G ly', desc:'GW190521 — very massive (85 + 66 M☉).' },
-  "GW190814": { m1:23, m2:2.6, spin:0.05, color:'#ffcc00', year:2019, dist:'~800 M ly', desc:'GW190814 — asymmetric (possible BH+NS).' },
-  "GW200115": { m1:6, m2:1.5, spin:0.2, color:'#33aaff', year:2020, dist:'~1 G ly', desc:'GW200115 — NS–BH candidate.' },
-  "Custom":    { m1:30, m2:30, spin:0.5, color:'#ffd166', year:'—', dist:'—', desc:'Custom system.' }
+  "GW150914": { m1:36, m2:29, spin:0.3, color:'#a64dff', desc:'GW150914 — first detection (2015): 36 + 29 M☉, ≈410 Mpc' },
+  "GW170104": { m1:31, m2:19, spin:0.45, color:'#00ccff', desc:'GW170104 — 31 + 19 M☉' },
+  "GW170608": { m1:12, m2:7, spin:0.25, color:'#66ff99', desc:'GW170608 — 12 + 7 M☉ (lighter system)' },
+  "GW190521": { m1:85, m2:66, spin:0.7, color:'#ff9933', desc:'GW190521 — very massive (85 + 66 M☉)' },
+  "GW190814": { m1:23, m2:2.6, spin:0.05, color:'#ffcc00', desc:'GW190814 — asymmetric (23 + 2.6 M☉), possible BH+NS' },
+  "GW200115": { m1:6, m2:1.5, spin:0.2, color:'#33aaff', desc:'GW200115 — NS–BH candidate' },
+  "Custom":    { m1:30, m2:30, spin:0.5, color:'#ffd166', desc:'Custom system (edit parameters).' }
 };
+const eventSelect = document.getElementById('eventSelect');
+for(const k in events){ const o=document.createElement('option'); o.value=k; o.textContent=k; eventSelect.appendChild(o); }
 
-/* build cards grid (2 per row) */
-const cardsGrid = document.getElementById('cardsGrid');
-for(const key of Object.keys(events)){
-  const e = events[key];
-  const card = document.createElement('div'); card.className='eventCard';
-  const accent = document.createElement('div'); accent.className='eventAccent'; accent.style.background = e.color;
-  const body = document.createElement('div'); body.className='cardBody';
-  const title = document.createElement('div'); title.className='cardTitle'; title.textContent = key;
-  const meta = document.createElement('div'); meta.className='cardMeta'; meta.innerHTML = `${e.m1} + ${e.m2} M☉ • ${e.year} • ${e.dist}`;
-  const desc = document.createElement('div'); desc.className='smallNote'; desc.textContent = e.desc;
-  const btnRow = document.createElement('div'); btnRow.className='cardButtons';
-  const simBtn = document.createElement('button'); simBtn.className='btn'; simBtn.textContent='Simulate Event';
-  simBtn.addEventListener('click', ()=> {
-    // load parameters and run simulation for this event
-    eventSelect.value = key;
-    m1Input.value = e.m1; m2Input.value = e.m2; spinInput.value = e.spin; spinVal.textContent = Number(e.spin).toFixed(2);
-    document.getElementById('eventDescription').textContent = e.desc;
-    // regenerate waveform and start orbit sim (but do not auto play audio)
-    generateWaveformSamples(e.m1, e.m2, e.spin);
-    simParams = { m1:e.m1, m2:e.m2, spin:e.spin, color:e.color, sep:12 };
-    startOrbitSim(e.m1, e.m2, e.spin, e.color, 12);
-    drawSummaryGraphs(e.color, 0);
-    // switch to Events tab visually
-    document.querySelectorAll('.tabButton').forEach(b=>b.classList.remove('active'));
-    document.querySelector('[data-tab="eventsTab"]').classList.add('active');
-    document.querySelectorAll('.tabContent').forEach(c=>c.style.display='none');
-    document.getElementById('eventsTab').style.display='block';
-  });
-  btnRow.appendChild(simBtn);
-  const loadBtn = document.createElement('button'); loadBtn.className='btn secondary'; loadBtn.textContent='Load Params';
-  loadBtn.addEventListener('click', ()=> {
-    eventSelect.value = key;
-    m1Input.value = e.m1; m2Input.value = e.m2; spinInput.value = e.spin; spinVal.textContent = Number(e.spin).toFixed(2);
-    document.getElementById('eventDescription').textContent = e.desc;
-    generateWaveformSamples(e.m1, e.m2, e.spin);
-    simParams = { m1:e.m1, m2:e.m2, spin:e.spin, color:e.color, sep:12 };
-    drawSummaryGraphs(e.color,0); drawChirp(-1);
-    // switch to Events tab visually
-    document.querySelectorAll('.tabButton').forEach(b=>b.classList.remove('active'));
-    document.querySelector('[data-tab="eventsTab"]').classList.add('active');
-    document.querySelectorAll('.tabContent').forEach(c=>c.style.display='none');
-    document.getElementById('eventsTab').style.display='block';
-  });
-  btnRow.appendChild(loadBtn);
-
-  body.appendChild(title); body.appendChild(meta); body.appendChild(desc); body.appendChild(btnRow);
-  card.appendChild(accent); card.appendChild(body);
-  cardsGrid.appendChild(card);
-}
-
-/* -----------------------
-   Orbit + waveform logic (copied & restored)
-   ----------------------- */
+/* orbit canvas + inspiral simulation */
 const orbitCanvas = document.getElementById('orbitCanvas');
 const ox = orbitCanvas.getContext('2d');
 const orbitW = orbitCanvas.width, orbitH = orbitCanvas.height;
 let orbitAnimHandle = null;
-
-/* simulation state */
 let simRunning = false;
-let simStart = 0;
-let simDuration = 3000; // ms
-let inspiralProgress = 0; // 0..1
+let simStartMs = 0, simDurationMs = 3000;
+let inspiralProgress = 0;
 let simParams = null;
 
-function startOrbitSim(m1,m2,spin,color, separationM=12){
+function startOrbitSim(m1,m2,spin,color,separationM=12){
   if(orbitAnimHandle) cancelAnimationFrame(orbitAnimHandle);
-  simRunning = true;
-  simStart = performance.now();
+  simRunning = true; simStartMs = performance.now();
   const baseR = 80 + (separationM-12) * 6;
-  const startR_A = baseR * (m2/(m1+m2)); // scaled
-  const startR_B = baseR * (m1/(m1+m2)) * 2;
-  const rA0 = Math.max(30, startR_A);
-  const rB0 = Math.max(60, startR_B);
-  const duration = Math.max(1800, 2500 - (Math.min(m1+m2,200)/200)*1200);
-  simDuration = duration;
-  simParams = {m1,m2,spin,color,rA0,rB0};
-
+  const rA0 = Math.max(30, baseR * (m2/(m1+m2)));
+  const rB0 = Math.max(60, baseR * (m1/(m1+m2)) * 1.9);
+  simDurationMs = Math.max(1800, 2500 - (Math.min(m1+m2,300)/300)*1200);
+  simParams = { m1,m2,spin,color,rA0,rB0 };
+  inspiralProgress = 0;
   let angle = 0;
   let trailsA = [], trailsB = [];
-  const TRAIL_MAX = 220;
+  const TRAIL_MAX = 180;
 
   function frame(){
     const now = performance.now();
-    const elapsed = now - simStart;
-    inspiralProgress = Math.min(1, elapsed/simDuration);
+    inspiralProgress = Math.min(1, (now - simStartMs) / simDurationMs);
     const shrink = 1 - Math.pow(inspiralProgress, 1.6);
-    const rA = rA0 * shrink + 12*(1-inspiralProgress);
+    const rA = rA0 * shrink + 8*(1-inspiralProgress);
     const rB = rB0 * shrink + 6*(1-inspiralProgress);
 
     ox.clearRect(0,0,orbitW,orbitH);
     const bg = ox.createLinearGradient(0,0,orbitW,orbitH);
-    bg.addColorStop(0,'rgba(10,0,20,0.8)'); bg.addColorStop(1,'rgba(0,0,0,1)');
+    bg.addColorStop(0,'rgba(6,0,18,0.9)'); bg.addColorStop(1,'rgba(0,0,0,1)');
     ox.fillStyle = bg; ox.fillRect(0,0,orbitW,orbitH);
 
     const cx = orbitW/2, cy = orbitH/2;
@@ -390,26 +313,27 @@ function startOrbitSim(m1,m2,spin,color, separationM=12){
     trailsA.push({x:xA,y:yA}); trailsB.push({x:xB,y:yB});
     if(trailsA.length>TRAIL_MAX) trailsA.shift(); if(trailsB.length>TRAIL_MAX) trailsB.shift();
 
+    // draw trails - subtle and smaller
     for(let i=0;i<trailsA.length;i++){
       const a = i/trailsA.length;
       ox.fillStyle = hexToRgba(color, 0.12 * a);
-      ox.fillRect(trailsA[i].x-1, trailsA[i].y-1, 3, 3);
+      ox.fillRect(trailsA[i].x-1, trailsA[i].y-1, 2, 2);
     }
     for(let i=0;i<trailsB.length;i++){
       const a = i/trailsB.length;
-      ox.fillStyle = hexToRgba(color, 0.16 * a);
-      ox.fillRect(trailsB[i].x-1, trailsB[i].y-1, 4, 4);
+      ox.fillStyle = hexToRgba(color, 0.14 * a);
+      ox.fillRect(trailsB[i].x-1, trailsB[i].y-1, 3, 3);
     }
 
-    ox.beginPath(); ox.arc(xA,yA,12,0,Math.PI*2); ox.fillStyle = color; ox.fill();
-    ox.beginPath(); ox.arc(xB,yB,18,0,Math.PI*2); ox.fillStyle = shadeColor(color,-20); ox.fill();
+    // bodies
+    ox.beginPath(); ox.arc(xA,yA,10,0,Math.PI*2); ox.fillStyle = color; ox.fill();
+    ox.beginPath(); ox.arc(xB,yB,14,0,Math.PI*2); ox.fillStyle = shadeColor(color,-18); ox.fill();
 
-    const rippleRadius = 40 + inspiralProgress * 250;
-    ox.beginPath();
-    ox.arc(cx,cy,rippleRadius,0,Math.PI*2);
+    // soft ripple
+    const rippleRadius = 30 + inspiralProgress * 220;
+    ox.beginPath(); ox.arc(cx,cy,rippleRadius,0,Math.PI*2);
     ox.strokeStyle = hexToRgba(color, 0.02 + 0.08*inspiralProgress);
-    ox.lineWidth = 1 + 2*inspiralProgress;
-    ox.stroke();
+    ox.lineWidth = 1 + 2*inspiralProgress; ox.stroke();
 
     angle += 0.02 + (spin*0.02) + 0.03*inspiralProgress;
 
@@ -417,25 +341,26 @@ function startOrbitSim(m1,m2,spin,color, separationM=12){
       orbitAnimHandle = requestAnimationFrame(frame);
     } else {
       simRunning = false;
-      // leave final frame
+      // final frame remains
     }
   }
   frame();
 }
 
 /* -----------------------
-   Waveform generation & chirp drawing + audio
+   Chirp waveform generation + drawing + audio
    ----------------------- */
 const waveform = new Float32Array(2400);
-let waveformSampleRate = 4096;
-let audioCtx = null, osc=null, oscHarm=null, gainNode=null, gainHarm=null;
-let playRAF = null, playStartTime = 0, playDurMs = 0;
+const chirpCanvas = document.getElementById('chirpCanvas');
+const cctx = chirpCanvas.getContext('2d');
+let audioCtx=null, osc=null, oscHarm=null, gainNode=null, gainHarm=null;
+let playRAF = null, playStart=0, playDur=0;
 
 function generateWaveformSamples(m1,m2,spin){
   const N = waveform.length;
   const Mc = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
   const f0 = 20 + spin*15;
-  const f1 = 400 + (Mc/30)*200;
+  const f1 = 300 + (Mc/30)*300;
   for(let i=0;i<N;i++){
     const t = i/(N-1);
     const env = Math.pow(t,1.8) * Math.exp(-1.2*(1-t));
@@ -444,9 +369,6 @@ function generateWaveformSamples(m1,m2,spin){
   }
   drawChirp(-1);
 }
-
-const chirpCanvas = document.getElementById('chirpCanvas');
-const cctx = chirpCanvas.getContext('2d');
 
 function drawChirp(playIdx=-1){
   const W = chirpCanvas.width, H = chirpCanvas.height;
@@ -457,8 +379,7 @@ function drawChirp(playIdx=-1){
     const y = H/2 - waveform[i] * (H/2) * 0.9;
     if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
   }
-  cctx.strokeStyle = simParams ? simParams.color : '#a64dff';
-  cctx.lineWidth = 2; cctx.stroke();
+  cctx.strokeStyle = simParams ? simParams.color : '#a64dff'; cctx.lineWidth = 2; cctx.stroke();
 
   if(playIdx >= 0){
     const px = playIdx / waveform.length * W;
@@ -467,7 +388,7 @@ function drawChirp(playIdx=-1){
   }
 }
 
-/* audio play (two oscillators) and sync visuals */
+/* Play chirp (main + harmonic) and sync visuals */
 async function playChirpAudio(m1,m2,spin,color){
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if(audioCtx.state === 'suspended') await audioCtx.resume().catch(()=>{});
@@ -476,54 +397,46 @@ async function playChirpAudio(m1,m2,spin,color){
   const Mc = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
   const fStart = 20 + spin*12;
   const fEnd = 400 + (Mc/30)*220;
-  const duration = Math.max(0.8, 3.0 - (Mc/60)); // seconds
-  playDurMs = duration * 1000;
+  const duration = Math.max(0.8, 3.0 - (Mc/60));
+  playDur = duration * 1000;
 
-  osc = audioCtx.createOscillator();
-  gainNode = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+  osc = audioCtx.createOscillator(); gainNode = audioCtx.createGain();
+  osc.type='sine'; osc.connect(gainNode); gainNode.connect(audioCtx.destination);
 
-  oscHarm = audioCtx.createOscillator();
-  gainHarm = audioCtx.createGain();
-  oscHarm.type = 'sine';
-  oscHarm.connect(gainHarm); gainHarm.connect(audioCtx.destination);
+  oscHarm = audioCtx.createOscillator(); gainHarm = audioCtx.createGain();
+  oscHarm.type='sine'; oscHarm.connect(gainHarm); gainHarm.connect(audioCtx.destination);
 
   const now = audioCtx.currentTime;
   osc.frequency.setValueAtTime(Math.max(1,fStart), now);
   osc.frequency.exponentialRampToValueAtTime(Math.max(2,fEnd), now + duration);
-
   oscHarm.frequency.setValueAtTime(Math.max(2,fStart*2), now);
-  oscHarm.frequency.exponentialRampToValueAtTime(Math.max(2, fEnd*2), now + duration);
+  oscHarm.frequency.exponentialRampToValueAtTime(Math.max(3, fEnd*2), now + duration);
 
-  gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.linearRampToValueAtTime(0.28, now + 0.03);
+  gainNode.gain.setValueAtTime(0.0001, now); gainNode.gain.linearRampToValueAtTime(0.28, now + 0.03);
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-  gainHarm.gain.setValueAtTime(0.0001, now);
-  gainHarm.gain.linearRampToValueAtTime(0.06, now + 0.03);
+  gainHarm.gain.setValueAtTime(0.0001, now); gainHarm.gain.linearRampToValueAtTime(0.06, now + 0.03);
   gainHarm.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
   osc.start(now); osc.stop(now + duration + 0.05);
   oscHarm.start(now); oscHarm.stop(now + duration + 0.05);
 
-  playStartTime = performance.now();
-  function animatePlay(){
-    const elapsed = performance.now() - playStartTime;
-    if(elapsed >= playDurMs){
-      drawChirp(-1);
-      document.getElementById('audioState').textContent = 'idle';
-      playRAF = null;
-      return;
-    }
-    const prog = elapsed / playDurMs;
+  playStart = performance.now();
+  syncPlayVisuals(color);
+}
+
+function syncPlayVisuals(color){
+  function step(){
+    const elapsed = performance.now() - playStart;
+    if(elapsed >= playDur){ stopChirpAudio(); return; }
+    const prog = elapsed / playDur;
     const idx = Math.floor(prog * waveform.length);
     drawChirp(idx);
-    drawSummaryGraphs(simParams ? simParams.color : '#a64dff', prog);
+    drawSummaryGraphs(color, prog);
     document.getElementById('audioState').textContent = 'playing';
-    playRAF = requestAnimationFrame(animatePlay);
+    playRAF = requestAnimationFrame(step);
   }
-  animatePlay();
+  step();
 }
 
 function stopChirpAudio(){
@@ -533,14 +446,14 @@ function stopChirpAudio(){
   try{ if(gainHarm) gainHarm.disconnect(); }catch(e){}
   try{ if(osc) osc.disconnect(); }catch(e){}
   try{ if(oscHarm) oscHarm.disconnect(); }catch(e){}
-  osc = null; oscHarm = null; gainNode = null; gainHarm = null;
-  if(playRAF) { cancelAnimationFrame(playRAF); playRAF = null; }
+  osc=oscHarm=gainNode=gainHarm=null;
+  if(playRAF){ cancelAnimationFrame(playRAF); playRAF=null; }
   drawChirp(-1);
   drawSummaryGraphs(simParams ? simParams.color : '#a64dff', 0);
   document.getElementById('audioState').textContent = 'idle';
 }
 
-/* summary graphs */
+/* Summary graphs */
 function drawSummaryGraphs(accent, progress=0){
   drawGraph(document.getElementById('amplitudeCanvas').getContext('2d'), accent, t => Math.pow(t*(0.3+0.7*progress+0.5), 3) * Math.sin(40*t*Math.PI));
   drawGraph(document.getElementById('energyCanvas').getContext('2d'), accent, t => Math.pow(t*(0.2+0.8*progress+0.4), 2.5) * Math.exp(-3*t*(1 - 0.4*(1-progress))));
@@ -550,91 +463,118 @@ function drawGraph(ctx,color,fn){
   const W=ctx.canvas.width, H=ctx.canvas.height; ctx.clearRect(0,0,W,H);
   ctx.beginPath();
   for(let i=0;i<W;i++){
-    const t=i/W; const y=H/2 - fn(t) * H/3;
+    const t=i/W; const y=H/2 - fn(t)*H/3;
     if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);
   }
   ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
 }
 
 /* -----------------------
-   UI wiring
+   UI wiring for Events
    ----------------------- */
-const eventSelect = document.getElementById('eventSelect');
-for(const k in events){
-  const o = document.createElement('option'); o.value=k; o.textContent=k; eventSelect.appendChild(o);
-}
-
-const spinInputElem = document.getElementById('spinInput');
-const spinValElem = document.getElementById('spinVal');
-spinInputElem.addEventListener('input', ()=> spinValElem.textContent = Number(spinInputElem.value).toFixed(2));
-
-const m1Input = document.getElementById('m1Input');
-const m2Input = document.getElementById('m2Input');
-const sepInput = document.getElementById('sepInput');
+const spinInputEl = document.getElementById('spinInput');
+const spinValEl = document.getElementById('spinVal');
+spinInputEl.addEventListener('input', ()=> spinValEl.textContent = Number(spinInputEl.value).toFixed(2));
 
 eventSelect.addEventListener('change', ()=> {
   const key = eventSelect.value;
   const ev = events[key];
+  if(!ev) return;
   document.getElementById('eventDescription').textContent = ev.desc;
-  m1Input.value = ev.m1; m2Input.value = ev.m2; spinInputElem.value = ev.spin; spinValElem.textContent = ev.spin.toFixed(2);
   document.getElementById('spinOut').textContent = ev.spin;
+  document.getElementById('spinVal').textContent = ev.spin.toFixed(2);
+  document.getElementById('m1Input').value = ev.m1;
+  document.getElementById('m2Input').value = ev.m2;
+  document.getElementById('sepInput').value = 12;
+  // generate waveform and visuals
   simParams = { m1:ev.m1, m2:ev.m2, spin:ev.spin, color:ev.color, sep:12 };
   generateWaveformSamples(ev.m1, ev.m2, ev.spin);
   drawSummaryGraphs(ev.color, 0);
   drawChirp(-1);
-  // prepare orbit (staticish)
+  // prepare orbit (start but it will inspiral when Run Simulation clicked)
   startOrbitSim(ev.m1, ev.m2, ev.spin, ev.color, 12);
+  updateSummaryTable(ev.m1, ev.m2, ev.spin, ev.color);
 });
 
+/* Run sim using inputs (custom or selected) */
 document.getElementById('runSimBtn').addEventListener('click', ()=>{
   const key = eventSelect.value;
-  const m1 = clamp(parseFloat(m1Input.value) || 30, 1, 1e6);
-  const m2 = clamp(parseFloat(m2Input.value) || 30, 1, 1e6);
-  const spin = clamp(parseFloat(spinInputElem.value) || 0.5, 0, 1);
+  const m1 = clamp(parseFloat(document.getElementById('m1Input').value) || 30, 0.1, 1e7);
+  const m2 = clamp(parseFloat(document.getElementById('m2Input').value) || 30, 0.01, 1e7);
+  const spin = clamp(parseFloat(document.getElementById('spinInput').value) || 0.5, 0, 1);
+  const sep = clamp(parseFloat(document.getElementById('sepInput').value) || 12, 4, 500);
   const color = (events[key] && events[key].color) ? events[key].color : '#a64dff';
-  events['Custom'] = { m1, m2, spin, color, desc: `Custom: ${m1} + ${m2} M☉, spin ${spin}` };
+  // set/update Custom
+  events['Custom'] = { m1,m2,spin,color, desc:`Custom: ${m1} + ${m2} M☉, spin ${spin}` };
   eventSelect.value = 'Custom';
-  document.getElementById('eventDescription').textContent = events['Custom'].desc;
+  simParams = { m1,m2,spin,color,sep };
   generateWaveformSamples(m1,m2,spin);
-  simParams = { m1,m2,spin,color,sep: Number(sepInput.value) || 12 };
-  startOrbitSim(m1,m2,spin,color, simParams.sep);
+  startOrbitSim(m1,m2,spin,color, sep);
   drawSummaryGraphs(color, 0);
+  updateSummaryTable(m1,m2,spin,color);
 });
 
+/* reset to GW150914 */
 document.getElementById('resetBtn').addEventListener('click', ()=>{
   eventSelect.value = 'GW150914';
   eventSelect.dispatchEvent(new Event('change'));
   stopChirpAudio();
 });
 
+/* play/stop chirp */
 document.getElementById('playChirpBtn').addEventListener('click', async ()=>{
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if(audioCtx.state === 'suspended') await audioCtx.resume().catch(()=>{});
   if(!simParams){
-    const ev = events[eventSelect.value];
-    simParams = { m1:ev.m1, m2:ev.m2, spin:ev.spin, color:ev.color };
+    const ev = events[eventSelect.value]; simParams = { m1:ev.m1, m2:ev.m2, spin:ev.spin, color:ev.color };
   }
+  generateWaveformSamples(simParams.m1, simParams.m2, simParams.spin);
   playChirpAudio(simParams.m1, simParams.m2, simParams.spin, simParams.color);
 });
 document.getElementById('stopChirpBtn').addEventListener('click', ()=> stopChirpAudio());
 
+/* export JSON */
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   const ev = simParams || events[eventSelect.value];
   const params = { simulation_name: eventSelect.value, m1:ev.m1, m2:ev.m2, spin:ev.spin, color:ev.color, timestamp: new Date().toISOString() };
   const samples = Array.from(waveform).map(v => Math.round(v*1e6)/1e6);
-  const payload = { params, samples, sample_rate: waveformSampleRate };
+  const payload = { params, samples, sample_rate: waveform.length / 3.0 };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `${eventSelect.value}_waveform.json`; a.click();
-  URL.revokeObjectURL(url);
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `${eventSelect.value}_waveform.json`; a.click(); URL.revokeObjectURL(url);
 });
 
-/* initial load */
+/* utility: fill event summary table */
+function updateSummaryTable(m1,m2,spin,color){
+  const chirpMass = Math.pow((m1*m2)**(3/5)/(m1+m2)**(1/5),1);
+  document.getElementById('chirpMass').textContent = chirpMass.toFixed(2) + " M☉";
+  document.getElementById('freqRange').textContent = "20–400 Hz";
+  document.getElementById('gwStrain').textContent = (4e-21*(chirpMass/30)**(5/3)).toExponential(2);
+  document.getElementById('distance').textContent = `${Math.round(chirpMass*40)} million ly`;
+  document.getElementById('spinOut').textContent = spin;
+  document.getElementById('energyOut').textContent = `${(0.01*(m1+m2)).toFixed(2)} M☉c² (toy)`;
+}
+
+/* initialize default selection */
 eventSelect.value = 'GW150914';
 eventSelect.dispatchEvent(new Event('change'));
 
 /* -----------------------
-   Helpers
+   Calculators tab (moved)
+   ----------------------- */
+document.getElementById('runCalcBtnMain').addEventListener('click', ()=>{
+  const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
+  const r = Number(document.getElementById('radiusInputCalc').value) || 7.8e17;
+  const rho = Number(document.getElementById('densityInputCalc').value) || 1e-21;
+  const val = 1 - (G*M)/(r*c*c);
+  const gamma = val>0 ? Math.sqrt(val) : 0;
+  const alpha = 1e21;
+  const Gamma_dark = 1*(1 + alpha*rho);
+  document.getElementById('calcResultsMain').innerHTML = `<div>γ = <strong>${gamma.toFixed(6)}</strong> &nbsp; | &nbsp; Γ_dark ≈ <strong>${Gamma_dark.toExponential(2)}</strong></div>`;
+});
+
+/* -----------------------
+   Helper functions
    ----------------------- */
 function hexToRgba(hex, alpha=1.0){
   if(!hex) return `rgba(200,200,200,${alpha})`;
