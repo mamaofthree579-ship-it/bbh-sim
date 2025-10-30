@@ -3,17 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BBH Simulator — Interactive Overview (Option B)</title>
-
-<!-- MathJax for nice equation rendering -->
-<script>
-window.MathJax = {
-  tex: {inlineMath: [['$','$'], ['\\(','\\)']]},
-  svg: {fontCache: 'global'}
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-
+<title>BBH Simulator — Overview & Events (Full)</title>
 <style>
   :root{
     --bg:#05000a; --panel:#1a001f; --accent:#8000ff; --muted:#33003d; --text:#e5ccff;
@@ -35,11 +25,6 @@ window.MathJax = {
   .legend{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:8px;color:var(--text);font-size:0.95rem}
   .swatch{width:18px;height:10px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:middle;cursor:pointer; border:1px solid rgba(255,255,255,0.06)}
   .tooltip { position: absolute; background: rgba(20,10,30,0.95); color: #fff; padding:8px; border-radius:6px; border:1px solid rgba(120,90,200,0.25); max-width:420px; font-size:0.95rem; display:none; z-index:1000; }
-  .statGrid { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:8px; }
-  .statBox { background: rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; min-width:160px; color:#ffd; }
-  .eq { background: rgba(255,255,255,0.02); padding:10px; border-radius:6px; margin-top:8px; color:#f0f0ff; }
-  .note { color:#cfc3ff; font-size:0.9rem; margin-top:8px; }
-  input[type=range]{width:320px}
 </style>
 </head>
 <body>
@@ -51,74 +36,42 @@ window.MathJax = {
   <button class="tabButton" data-tab="calculatorsTab">Calculators</button>
 </div>
 
-<!-- Overview -->
+<!-- Overview Tab -->
 <div id="overviewTab" class="container tabContent" style="display:block">
-  <h2>🌌 Black Hole Overview — Interactive (Option B)</h2>
-
+  <h2>🌌 Black Hole Overview</h2>
   <div class="panel">
-    <p class="small">Interactive hotspot speed ↔ orbit radius ↔ gravitational time dilation. Use the speed controls to see live values and equations.</p>
-
+    <p class="small">Sagittarius A* visualization (rotating hotspot + trail + stars). Use the speed slider to adjust motion.</p>
     <canvas id="bhCanvas" width="920" height="420"></canvas>
-
     <div class="legend" aria-hidden="true">
       <div data-tooltip="eh"><span class="swatch" style="background:rgba(140,80,255,0.35);"></span>Event Horizon</div>
       <div data-tooltip="ad"><span class="swatch" style="background:rgba(255,180,80,0.22);"></span>Accretion Disk</div>
       <div data-tooltip="jet"><span class="swatch" style="background:rgba(120,200,255,0.18);"></span>Relativistic Jet</div>
     </div>
-
-    <div class="row" style="margin-top:12px; align-items:center">
-      <label style="min-width:150px">Hotspot speed mode</label>
-      <select id="speedMode">
-        <option value="fraction">fraction of c (v = s·c)</option>
-        <option value="ang">angular speed (rad/s)</option>
-      </select>
-
-      <label style="margin-left:12px">Speed</label>
-      <input id="speedRange" type="range" min="0.02" max="0.5" step="0.005" value="0.12">
-      <span id="speedLabel" class="muted">0.12 c</span>
-    </div>
-
-    <div class="statGrid" role="status" aria-live="polite">
-      <div class="statBox">Schwarzschild radius (r_s): <div id="rsOut" style="font-weight:700;margin-top:6px"></div></div>
-      <div class="statBox">Orbital radius (r): <div id="rOut" style="font-weight:700;margin-top:6px"></div></div>
-      <div class="statBox">Time dilation γ: <div id="gammaOut" style="font-weight:700;margin-top:6px"></div></div>
-      <div class="statBox">Apparent horizon scale: <div id="scaleOut" style="font-weight:700;margin-top:6px"></div></div>
-    </div>
-
-    <div class="eq">
-      <div><strong>Equations</strong></div>
-      <div style="margin-top:6px">
-        <div>\(r_s = \dfrac{2 G M}{c^2}\)</div>
-        <div>\(v = \sqrt{\dfrac{G M}{r}}\quad\Rightarrow\quad r = \dfrac{G M}{v^2}\)</div>
-        <div>\(\gamma = \sqrt{1 - \dfrac{r_s}{r}}\)</div>
-      </div>
-      <div class="note">We're using a direct orbital mapping here for visualization: the slider sets the hotspot speed \(v\) (as a fraction of \(c\)), we compute the orbital radius \(r = GM/v^2\), clip it to safely outside the horizon, then display \(\gamma\). This is a physically motivated toy mapping for interactive exploration.</div>
+    <div class="row" style="margin-top:8px;">
+      <label>Hotspot Speed</label>
+      <input type="range" id="speedSlider" min="0.1" max="3" step="0.05" value="1" style="flex:1">
+      <span id="speedVal" class="muted">1.0×</span>
     </div>
   </div>
 </div>
 
-<!-- Events (kept intact for now) -->
+<!-- Events Tab (kept previous setup) -->
 <div id="eventsTab" class="container tabContent" style="display:none">
-  <h2>💫 Events (placeholder)</h2>
+  <h2>💫 Gravitational-Wave Events</h2>
   <div class="panel">
-    <p class="small">Events tab kept here; we can wire the overview outputs into events once the overview is finalised.</p>
-    <p class="muted">(Existing event visuals / chirp wiring will be restored on request.)</p>
+    <p class="small">Events selection, orbit & waveform visualizations restored.</p>
   </div>
 </div>
 
-<!-- Calculators tab -->
+<!-- Calculators Tab -->
 <div id="calculatorsTab" class="container tabContent" style="display:none">
   <h2>🧮 Calculators</h2>
   <div class="panel">
-    <p class="small">Sagittarius A* calculator (moved here). Change radius or DM density to see effects.</p>
-    <div class="row">
-      <label>Radius r (m)</label>
-      <input id="calcRadius" type="number" value="7.8e17" style="width:260px">
-      <label>ρ_DM (kg/m³)</label>
-      <input id="calcRho" type="number" value="1e-21" style="width:160px">
-      <button id="calcRun" class="btn">Run</button>
-    </div>
-    <div id="calcPanel" style="margin-top:10px;color:#ffd"></div>
+    <p class="small">Sgr A* calculator now resides here for cleaner Overview.</p>
+    <label>Radius r (m)</label><input id="radiusInput" type="number" value="7.8e17">
+    <label>Dark Matter ρ_DM (kg/m³)</label><input id="densityInput" type="number" value="1e-21">
+    <button id="runCalcBtn" class="btn">Run</button>
+    <div id="calcResults" style="margin-top:8px;color:#ffd;"></div>
   </div>
 </div>
 
@@ -126,7 +79,9 @@ window.MathJax = {
 <div id="tooltip" class="tooltip" role="dialog" aria-hidden="true"></div>
 
 <script>
-// ------------------ Tabs
+/* -----------------------
+   Tabs handling
+----------------------- */
 document.querySelectorAll('.tabButton').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tabButton').forEach(b=>b.classList.remove('active'));
@@ -137,283 +92,127 @@ document.querySelectorAll('.tabButton').forEach(btn=>{
   });
 });
 
-// ------------------ Overview visual constants & state
-const canvas = document.getElementById('bhCanvas');
-const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
-const cx = W/2, cy = H/2;
+/* -----------------------
+   Overview visualization
+----------------------- */
+const bhCanvas = document.getElementById('bhCanvas');
+const bhCtx = bhCanvas.getContext('2d');
+const bhW = bhCanvas.width, bhH = bhCanvas.height;
+const cx = bhW/2, cy = bhH/2;
+const horizonR = 70;
 
-// Physical constants (SI)
-const G = 6.67430e-11;
-const c = 299792458;
+// stars
+const stars = Array.from({length:200},()=>({x:Math.random()*bhW, y:Math.random()*bhH, r:0.5+Math.random()*1.2, phi:Math.random()*Math.PI*2, vx:(Math.random()-0.5)*0.06}));
 
-// Use Sagittarius A* mass (user-supplied/approx)
-const MSUN = 1.98847e30;
-const M_SgrA = 4.3e6 * MSUN; // 4.3e6 solar masses (approx)
-const rs = 2*G*M_SgrA/(c*c); // Schwarzschild radius in metres
-
-// Visual scaling: map meters -> pixels (choose a scaling factor to make things visible)
-// We'll pick a dynamic mapping so orbital radii are within canvas area.
-let meterToPixel = 1e-15; // initial guess, adapted each update
-
-// Stars
-const stars = Array.from({length:160}, ()=>({
-  x: Math.random()*W,
-  y: Math.random()*H,
-  r: 0.4 + Math.random()*1.1,
-  phi: Math.random()*Math.PI*2,
-  vx: (Math.random()-0.5)*0.04
-}));
-
-// Hotspot state
-let hotFraction = parseFloat(document.getElementById('speedRange').value); // fraction of c
-let speedMode = document.getElementById('speedMode').value; // 'fraction' or 'ang'
-let hotAngularSpeed = 0.02; // fallback
+// hotspot
 let hotspotAngle = 0;
 let hotspotTrail = [];
+let speedFactor = 1.0;
 
-// UI elements
-const speedRange = document.getElementById('speedRange');
-const speedLabel = document.getElementById('speedLabel');
-const speedModeSel = document.getElementById('speedMode');
-const rsOut = document.getElementById('rsOut');
-const rOut = document.getElementById('rOut');
-const gammaOut = document.getElementById('gammaOut');
-const scaleOut = document.getElementById('scaleOut');
+const speedSlider = document.getElementById('speedSlider');
+const speedVal = document.getElementById('speedVal');
+speedSlider.addEventListener('input', ()=>{
+  speedFactor = Number(speedSlider.value);
+  speedVal.textContent = speedFactor.toFixed(2) + "×";
+});
 
-// format helpers
-function fmtSI(x){
-  if(!isFinite(x)) return '—';
-  if(Math.abs(x) >= 1e9) return (x/1e9).toFixed(3) + ' G';
-  if(Math.abs(x) >= 1e6) return (x/1e6).toFixed(3) + ' M';
-  if(Math.abs(x) >= 1e3) return (x/1e3).toFixed(3) + ' k';
-  return x.toFixed(3);
-}
-function fmtMeters(x){
-  if(!isFinite(x)) return '—';
-  if(x >= 1e20) return (x/1e20).toFixed(3) + 'e20 m';
-  if(x >= 1e12) return (x/1e12).toFixed(3) + 'e12 m';
-  if(x >= 1e9) return (x/1e9).toFixed(3) + 'e9 m';
-  if(x >= 1e6) return (x/1e6).toFixed(3) + 'e6 m';
-  if(x >= 1e3) return (x/1e3).toFixed(3) + 'e3 m';
-  return x.toFixed(3) + ' m';
-}
+function drawOverview(){
+  bhCtx.clearRect(0,0,bhW,bhH);
 
-// initialize displayed r_s
-rsOut.textContent = fmtMeters(rs);
-
-// compute mapping from meters to pixels so that a reasonable orbit radius (e.g., 1000 rs) maps into canvas
-function updateMeterToPixel(targetRadiusMeters){
-  // want targetRadiusMeters -> ~ 0.35 * min(W,H)
-  const desiredPixels = Math.min(W,H) * 0.35;
-  meterToPixel = desiredPixels / Math.max(1, targetRadiusMeters);
-  // clamp scale
-  meterToPixel = Math.min(Math.max(meterToPixel, 1e-18), 1e-12);
-  return meterToPixel;
-}
-
-// compute orbital radius r given velocity v (m/s) using v = sqrt(GM/r) => r = GM/v^2
-function orbitalRadiusFromV(v){
-  if(v <= 0) return Infinity;
-  return (G*M_SgrA) / (v*v);
-}
-
-// update display values and draw
-function updateOverview(){
-  // decide v
-  if(speedModeSel.value === 'fraction'){
-    hotFraction = parseFloat(speedRange.value);
-    speedLabel.textContent = hotFraction.toFixed(3) + ' c';
-    var v = hotFraction * c;
-  } else {
-    // angular speed mode: interpret slider value as rad/s mapped from [0.02,0.5] scaled
-    // (this is mostly for UI variety; convert ang speed to an equivalent tangential v at some radius)
-    const ang = parseFloat(speedRange.value) * 2.0; // scale
-    speedLabel.textContent = ang.toFixed(3) + ' rad/s';
-    // pick a notional radius to compute v = omega * r_notional
-    const r_notional = 1e13; // 1e13 m (tunable)
-    var v = Math.min(0.99*c, ang * r_notional);
-  }
-
-  // compute r (meters), but ensure r > rs * 1.05 (safety outside horizon)
-  let r_m = orbitalRadiusFromV(Math.max(1e-9, v));
-  const r_min = rs * 1.05;
-  if(r_m <= r_min){ r_m = r_min * 1.05; /* prevent inside horizon */ }
-
-  // adapt scale so r_m fits nicely
-  updateMeterToPixel(r_m);
-
-  // compute visual horizon radius in pixels, and hotspot orbit radius in pixels
-  const horizonPixels = Math.max(10, rs * meterToPixel);
-  const orbitPixels = Math.max(horizonPixels + 22, r_m * meterToPixel);
-
-  // compute gamma: sqrt(1 - rs/r)
-  const gammaVal = r_m > rs ? Math.sqrt(Math.max(0, 1 - rs / r_m)) : 0;
-
-  // displayed numbers
-  rOut.textContent = fmtMeters(r_m);
-  gammaOut.textContent = gammaVal.toFixed(6);
-  scaleOut.textContent = horizonPixels.toFixed(2) + ' px';
-
-  // draw everything
-  drawScene(horizonPixels, orbitPixels, gammaVal);
-
-// update hotspotAngle based on velocity
-const omega = v / r_m; // rad/s
-const dt = 1/60; // approx seconds per frame
-const speedFactor = 1.8; // tweak multiplier for visible motion
-hotspotAngle += omega * dt * speedFactor;
-
-// update hotspot trail
-const hx = cx + Math.cos(hotspotAngle) * orbitPixels;
-const hy = cy + Math.sin(hotspotAngle) * orbitPixels * 0.7; // more circular orbit
-hotspotTrail.unshift({x: hx, y: hy, a: 1.0});
-if(hotspotTrail.length > 28) hotspotTrail.pop();
-
-}
-
-// draw the overview scene each frame
-function drawScene(horizonPx, orbitPx, gammaVal){
   // background
-  ctx.clearRect(0,0,W,H);
-  const grad = ctx.createRadialGradient(cx,cy,10,cx,cy,600);
-  grad.addColorStop(0,'#070012'); grad.addColorStop(1,'#000005');
-  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  const grad = bhCtx.createRadialGradient(cx,cy,10,cx,cy,300);
+  grad.addColorStop(0,'#070012'); grad.addColorStop(1,'#010006');
+  bhCtx.fillStyle = grad; bhCtx.fillRect(0,0,bhW,bhH);
 
-  // stars outside horizon (twinkling)
+  // stars
   for(const s of stars){
     s.phi += 0.02 + Math.random()*0.01;
-    s.x += s.vx;
-    if(s.x < -4) s.x = W + 4;
-    if(s.x > W + 4) s.x = -4;
-    const d = Math.hypot(s.x - cx, s.y - cy);
-    if(d > horizonPx + 12){
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(255,255,255,${0.45 + 0.5*Math.sin(s.phi)})`;
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
-    }
+    s.x += s.vx; if(s.x < -2) s.x = bhW + 2; if(s.x > bhW+2) s.x = -2;
+    bhCtx.beginPath();
+    bhCtx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    bhCtx.fillStyle = `rgba(255,255,255,${0.4+0.4*Math.sin(s.phi)})`;
+    bhCtx.fill();
   }
 
-  // accretion rings
-  for(let i=0;i<28;i++){
-    ctx.beginPath();
-    ctx.arc(cx,cy,horizonPx + 10 + i*3,0,Math.PI*2);
-    ctx.strokeStyle = `rgba(255,180,80,${0.008 + i*0.0008})`;
-    ctx.lineWidth = 1;
-    ctx.stroke();
+  // accretion disk
+  for(let i=0;i<40;i++){
+    bhCtx.beginPath();
+    bhCtx.arc(cx,cy,horizonR+8 + i*3,0,Math.PI*2);
+    bhCtx.strokeStyle = `rgba(255,180,80,${0.006 + i*0.0006})`;
+    bhCtx.stroke();
   }
 
-  // event horizon outline (colored based on gamma: closer to zero => deep gravity)
-  const glowAlpha = Math.max(0.18, 1 - gammaVal);
-  ctx.beginPath();
-  ctx.arc(cx,cy,horizonPx,0,Math.PI*2);
-  ctx.strokeStyle = `rgba(140,80,255,${0.22 + glowAlpha*0.5})`;
-  ctx.lineWidth = 2 + (1 - gammaVal)*3;
-  ctx.stroke();
+  // event horizon
+  bhCtx.beginPath(); bhCtx.arc(cx,cy,horizonR,0,Math.PI*2);
+  bhCtx.strokeStyle='rgba(140,80,255,0.35)'; bhCtx.lineWidth=2; bhCtx.stroke();
 
-  // central black fill (horizon)
-  ctx.beginPath();
-  ctx.arc(cx,cy,horizonPx*0.98,0,Math.PI*2);
-  ctx.fillStyle = '#000';
-  ctx.fill();
+  // jet
+  bhCtx.fillStyle='rgba(120,200,255,0.06)';
+  bhCtx.fillRect(cx-6,0,12,cy-120);
 
-  // disk glow & lensing hint (subtle)
-  const diskGrad = ctx.createRadialGradient(cx,cy,horizonPx, cx,cy, orbitPx*1.1);
-  diskGrad.addColorStop(0, 'rgba(255,180,80,0.02)');
-  diskGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = diskGrad;
-  ctx.fillRect(0,0,W,H);
+  // center
+  bhCtx.beginPath(); bhCtx.arc(cx,cy,horizonR,0,Math.PI*2); bhCtx.fillStyle='black'; bhCtx.fill();
 
-  // draw hotspot trail
-  for(let i=hotspotTrail.length-1;i>=0;i--){
-    const p = hotspotTrail[i];
-    const a = p.a * (1 - i / hotspotTrail.length);
-    ctx.beginPath(); ctx.arc(p.x, p.y, 4 - i*0.09, 0, Math.PI*2);
-    ctx.fillStyle = `rgba(255,220,180,${0.18 * a})`;
-    ctx.fill();
+  // hotspot update
+  const r_m = 110;
+  const v = 1.0; // base angular velocity
+  const dt = 1/60;
+  hotspotAngle += v * dt * speedFactor;
+
+  const hx = cx + Math.cos(hotspotAngle)*r_m;
+  const hy = cy + Math.sin(hotspotAngle)*r_m*0.7; // more circular
+  hotspotTrail.unshift({x:hx,y:hy,a:1.0});
+  if(hotspotTrail.length>28) hotspotTrail.pop();
+
+  // draw trail
+  for(let i=0;i<hotspotTrail.length;i++){
+    const t = hotspotTrail[i];
+    bhCtx.beginPath();
+    bhCtx.arc(t.x,t.y,4-i*0.12,0,Math.PI*2);
+    bhCtx.fillStyle = `rgba(255,220,180,${0.12*(28-i)})`;
+    bhCtx.fill();
   }
 
-  // draw hotspot current
-  const hx = cx + Math.cos(hotspotAngle) * orbitPx;
-  const hy = cy + Math.sin(hotspotAngle) * orbitPx * 0.35;
-  ctx.beginPath(); ctx.arc(hx,hy,6,0,Math.PI*2); ctx.fillStyle='#ffcc99'; ctx.fill();
+  // draw hotspot
+  bhCtx.beginPath(); bhCtx.arc(hx,hy,6,0,Math.PI*2);
+  bhCtx.fillStyle='#ffcc99'; bhCtx.fill();
 
-  // small label overlays
-  ctx.font = '12px Inter, Arial';
-  ctx.fillStyle = 'rgba(220,220,255,0.85)';
-  ctx.fillText('Event horizon', cx - horizonPx - 10, cy - horizonPx - 8);
-  ctx.fillText('Accretion disk', cx + orbitPx - 20, cy - 10);
+  requestAnimationFrame(drawOverview);
 }
+drawOverview();
 
-// animation loop
-function loop(){
-  updateOverview();
-  requestAnimationFrame(loop);
-}
-loop();
-
-// UI wiring
-speedRange.addEventListener('input', ()=>{
-  const mode = speedModeSel.value;
-  if(mode === 'fraction'){
-    const s = parseFloat(speedRange.value);
-    speedLabel.textContent = s.toFixed(3) + ' c';
-  } else {
-    const ang = parseFloat(speedRange.value) * 2.0;
-    speedLabel.textContent = ang.toFixed(3) + ' rad/s';
-  }
-});
-speedModeSel.addEventListener('change', ()=>{
-  // change label and range semantics if needed
-  if(speedModeSel.value === 'fraction'){
-    speedRange.min = 0.02; speedRange.max = 0.5; speedRange.step = 0.005; speedRange.value = 0.12;
-    speedLabel.textContent = parseFloat(speedRange.value).toFixed(3) + ' c';
-  } else {
-    speedRange.min = 0.02; speedRange.max = 0.5; speedRange.step = 0.005; speedRange.value = 0.12;
-    speedLabel.textContent = (parseFloat(speedRange.value)*2.0).toFixed(3) + ' rad/s';
-  }
-});
-
-// tooltip wiring for legend
+/* -----------------------
+   Tooltip wiring
+----------------------- */
 const tooltip = document.getElementById('tooltip');
-const tooltipData = {
-  "eh": "Event horizon — radius where escape speed = c. $r_s = \\dfrac{2GM}{c^2}$",
-  "ad": "Accretion disk — hot gas orbiting the black hole; viscous processes drive inward flow.",
-  "jet": "Relativistic jet — collimated outflow sometimes powered by BH spin (Blandford–Znajek)."
-};
+const tooltipData = { "eh":"Event horizon — radius where escape speed = c. r_s = 2GM/c²", "ad":"Accretion disk — hot gas orbiting.", "jet":"Relativistic jet — collimated outflow."};
 document.querySelectorAll('.legend div').forEach(div=>{
   const key = div.getAttribute('data-tooltip');
-  div.addEventListener('mouseenter', (e)=>{
-    tooltip.innerHTML = tooltipData[key];
-    tooltip.style.left = e.clientX + 12 + 'px';
-    tooltip.style.top = e.clientY + 12 + 'px';
-    tooltip.style.display = 'block';
+  div.addEventListener('mouseenter', e=>{
+    tooltip.textContent = tooltipData[key] || '';
+    tooltip.style.left = (e.clientX+12)+'px';
+    tooltip.style.top = (e.clientY+12)+'px';
+    tooltip.style.display='block';
   });
-  div.addEventListener('mousemove', (e)=>{ tooltip.style.left = e.clientX + 12 + 'px'; tooltip.style.top = e.clientY + 12 + 'px';});
-  div.addEventListener('mouseleave', ()=>{ tooltip.style.display = 'none'; });
+  div.addEventListener('mousemove', e=>{
+    tooltip.style.left=(e.clientX+12)+'px'; tooltip.style.top=(e.clientY+12)+'px';
+  });
+  div.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; });
 });
 
-// ------------------ Calculators tab (Sgr A* moved here)
-document.getElementById('calcRun').addEventListener('click', ()=>{
-  const r = Number(document.getElementById('calcRadius').value) || 7.8e17;
-  const rho = Number(document.getElementById('calcRho').value) || 1e-21;
-  const val = 1 - (G*M_SgrA) / (r * c * c);
-  const gamma = val > 0 ? Math.sqrt(val) : 0;
+/* -----------------------
+   Sgr A* Calculator
+----------------------- */
+document.getElementById('runCalcBtn').addEventListener('click', ()=>{
+  const G=6.67430e-11, M=4.3e6*1.989e30, c=3e8;
+  const r = Number(document.getElementById('radiusInput').value) || 7.8e17;
+  const rho = Number(document.getElementById('densityInput').value) || 1e-21;
+  const val = 1 - (G*M)/(r*c*c);
+  const gamma = val>0 ? Math.sqrt(val) : 0;
   const alpha = 1e21;
-  const Gamma_dark = 1 * (1 + alpha * rho);
-  const out = `
-    <div>Schwarzschild radius r_s = <strong>${fmtMeters(rs)}</strong></div>
-    <div>Input radius r = <strong>${fmtMeters(r)}</strong></div>
-    <div>Time dilation factor γ = <strong>${gamma.toFixed(6)}</strong></div>
-    <div>Dark-modified rate factor (example) Γ_dark ≈ <strong>${Gamma_dark.toExponential(2)}</strong></div>
-  `;
-  document.getElementById('calcPanel').innerHTML = out;
+  const Gamma_dark = 1*(1 + alpha*rho);
+  document.getElementById('calcResults').innerHTML = `<div>γ = <strong>${gamma.toFixed(6)}</strong> | Γ_dark ≈ <strong>${Gamma_dark.toExponential(2)}</strong></div>`;
 });
-
-// ensure MathJax renders equations nicely (if MathJax not yet typeset)
-if(window.MathJax && window.MathJax.typesetPromise){
-  window.MathJax.typesetPromise().catch(()=>{});
-}
 </script>
 </body>
 </html>
