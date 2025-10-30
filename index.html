@@ -258,18 +258,18 @@ function updateOverview(){
   // draw everything
   drawScene(horizonPixels, orbitPixels, gammaVal);
 
-  // keep hotspotAngle updated speed-proportional (so faster v => faster rotation)
-  // Derive a plausible angular increment: omega = v/r => deltaAngle = omega * dt
-  // approximate dt in seconds per frame ~ 1/60 s
-  const omega = v / r_m; // rad/s
-  const dt = 1/60;
-  hotspotAngle += omega * dt * 0.9; // small damping to keep speed visually pleasing
+// update hotspotAngle based on velocity
+const omega = v / r_m; // rad/s
+const dt = 1/60; // approx seconds per frame
+const speedFactor = 1.8; // tweak multiplier for visible motion
+hotspotAngle += omega * dt * speedFactor;
 
-  // update hotspot trail
-  const hx = cx + Math.cos(hotspotAngle) * orbitPixels;
-  const hy = cy + Math.sin(hotspotAngle) * orbitPixels * 0.35; // slightly elliptical look
-  hotspotTrail.unshift({x: hx, y: hy, a: 1.0});
-  if(hotspotTrail.length > 28) hotspotTrail.pop();
+// update hotspot trail
+const hx = cx + Math.cos(hotspotAngle) * orbitPixels;
+const hy = cy + Math.sin(hotspotAngle) * orbitPixels * 0.7; // more circular orbit
+hotspotTrail.unshift({x: hx, y: hy, a: 1.0});
+if(hotspotTrail.length > 28) hotspotTrail.pop();
+
 }
 
 // draw the overview scene each frame
