@@ -274,7 +274,13 @@ const gwEvents = {
 };
 
 const eventSelect = document.getElementById('eventSelect');
-for(const k in events){ const o=document.createElement('option'); o.value=k; o.textContent=k; eventSelect.appendChild(o); }
+eventSelect.innerHTML = ''; // Clear any old options
+for (let e in gwEvents) {
+  const opt = document.createElement('option');
+  opt.value = e;
+  opt.text = e;
+  eventSelect.add(opt);
+}
 
 /* orbit canvas + inspiral simulation */
 const orbitCanvas = document.getElementById('orbitCanvas');
