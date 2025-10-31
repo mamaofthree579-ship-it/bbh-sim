@@ -259,15 +259,21 @@ document.querySelectorAll('.legend div').forEach(div=>{
 /* -----------------------
    Events tab: data + UI wiring
    ----------------------- */
-const events = {
-  "GW150914": { m1:36, m2:29, spin:0.3, color:'#a64dff', desc:'GW150914 — first detection (2015): 36 + 29 M☉, ≈410 Mpc' },
-  "GW170104": { m1:31, m2:19, spin:0.45, color:'#00ccff', desc:'GW170104 — 31 + 19 M☉' },
-  "GW170608": { m1:12, m2:7, spin:0.25, color:'#66ff99', desc:'GW170608 — 12 + 7 M☉ (lighter system)' },
-  "GW190521": { m1:85, m2:66, spin:0.7, color:'#ff9933', desc:'GW190521 — very massive (85 + 66 M☉)' },
-  "GW190814": { m1:23, m2:2.6, spin:0.05, color:'#ffcc00', desc:'GW190814 — asymmetric (23 + 2.6 M☉), possible BH+NS' },
-  "GW200115": { m1:6, m2:1.5, spin:0.2, color:'#33aaff', desc:'GW200115 — NS–BH candidate' },
-  "Custom":    { m1:30, m2:30, spin:0.5, color:'#ffd166', desc:'Custom system (edit parameters).' }
+const eventData = {
+  GW150914: { m1: 36, m2: 29, distance: 410, year: 2015 },
+  GW151226: { m1: 14, m2: 7.5, distance: 440, year: 2015 },
+  GW170104: { m1: 31, m2: 19, distance: 880, year: 2017 },
+  GW170608: { m1: 12, m2: 7, distance: 320, year: 2017 },
+  GW170814: { m1: 30, m2: 25, distance: 540, year: 2017 },
+  GW170817: { m1: 1.46, m2: 1.26, distance: 40, year: 2017 },
+  GW190412: { m1: 30, m2: 8, distance: 740, year: 2019 },
+  GW190521: { m1: 85, m2: 66, distance: 5300, year: 2019 },
+  GW190814: { m1: 23, m2: 2.6, distance: 240, year: 2019 },
+  GW200105: { m1: 8.9, m2: 1.9, distance: 320, year: 2020 },
+  GW200115: { m1: 5.7, m2: 1.5, distance: 300, year: 2020 },
+  GW230307: { m1: 45, m2: 38, distance: 680, year: 2023 }
 };
+
 const eventSelect = document.getElementById('eventSelect');
 for(const k in events){ const o=document.createElement('option'); o.value=k; o.textContent=k; eventSelect.appendChild(o); }
 
