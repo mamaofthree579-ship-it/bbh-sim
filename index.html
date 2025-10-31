@@ -503,6 +503,51 @@ const spinInputEl = document.getElementById('spinInput');
 const spinValEl = document.getElementById('spinVal');
 spinInputEl.addEventListener('input', ()=> spinValEl.textContent = Number(spinInputEl.value).toFixed(2));
 
+// --- Update Event Visualization ---
+function updateEvent(eventName) {
+  const event = gwEvents[eventName];
+  const descBox = document.getElementById("eventDescription");
+  const canvas = document.getElementById("waveformCanvas");
+  const ctx = canvas.getContext("2d");
+
+  // Update description text
+  descBox.textContent = eventDescriptions[eventName] || "No description available.";
+
+  // Clear previous waveform
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Set style
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = event.color || "#ffffff";
+  ctx.beginPath();
+
+  // Draw new chirp waveform
+  const numPoints = 1000;
+  const baseFreq = 0.005 + 0.001 * (event.m1 + event.m2) / 100;
+  for (let i = 0; i < numPoints; i++) {
+    const t = i / numPoints;
+    const amplitude = Math.pow(t, 4) * Math.sin(2 * Math.PI * baseFreq * Math.pow(t, 3));
+    const y = canvas.height / 2 - amplitude * 300;
+    if (i === 0) ctx.moveTo(i, y);
+    else ctx.lineTo(i, y);
+  }
+  ctx.stroke();
+
+  // Draw label for the event
+  ctx.fillStyle = "#fff";
+  ctx.font = "16px sans-serif";
+  ctx.fillText(`Event: ${eventName}`, 20, 25);
+
+  // Add glowing effect for active waveform
+  canvas.style.boxShadow = `0 0 20px ${event.color || "#ffffff"}`;
+  setTimeout(() => (canvas.style.boxShadow = ""), 600);
+
+  // (Optional) Trigger any linked visual simulation, if exists
+  if (typeof updateOrbitVisual === "function") {
+    updateOrbitVisual(event);
+  }
+}
+  
 eventSelect.addEventListener('change', ()=> {
   const key = eventSelect.value;
   const ev = events[key];
