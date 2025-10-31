@@ -21,7 +21,7 @@ WORKDIR /work
 COPY scripts/ ./scripts/
 COPY tools/ ./tools/
 COPY params/ ./params/
-COPY examples/ ./examples/
+# COPY examples/ ./examples/
 
 # --- Environment ---
 ENV PATH="/work/scripts:${PATH}"
