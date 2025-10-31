@@ -259,18 +259,18 @@ document.querySelectorAll('.legend div').forEach(div=>{
 /* -----------------------
    Events tab: data + UI wiring
    ----------------------- */
-const gwEvents = {
-  "GW150914": { m1: 36, m2: 29, spin: 0.3, color: "#a64dff" },
-  "GW151226": { m1: 14.2, m2: 7.5, spin: 0.2, color: "#ffcc66" },
-  "GW170104": { m1: 31, m2: 19, spin: 0.5, color: "#00ccff" },
-  "GW170608": { m1: 12, m2: 7, spin: 0.1, color: "#99ffcc" },
-  "GW170729": { m1: 50.6, m2: 34.3, spin: 0.8, color: "#ff99cc" },
-  "GW190412": { m1: 30, m2: 8, spin: 0.4, color: "#66ff99" },
-  "GW190521": { m1: 85, m2: 66, spin: 0.7, color: "#ff66ff" },
-  "GW190814": { m1: 23, m2: 2.6, spin: 0.2, color: "#66ccff" },
-  "GW200105": { m1: 8.9, m2: 1.9, spin: 0.1, color: "#ffaa33" },
-  "GW200115": { m1: 5.7, m2: 1.5, spin: 0.05, color: "#cc99ff" },
-  "Custom": { m1: 30, m2: 30, spin: 0.5, color: "#ffffff" }
+const eventDescriptions = {
+  "GW150914": "First detection (2015): two black holes of 36 & 29 M☉ merged 1.3B ly away — LIGO’s first gravitational wave discovery.",
+  "GW151226": "Detected on December 26, 2015: a lighter binary system (14.2 & 7.5 M☉) merging ~1.4B ly away, producing a long-duration signal.",
+  "GW170104": "Observed January 4, 2017: 31 & 19 M☉ black holes merged about 3B ly away, confirming further binary-BH systems.",
+  "GW170608": "Detected June 8, 2017: the lightest stellar-mass BH merger yet, with 12 & 7 M☉ components ~1B ly away.",
+  "GW170729": "Observed July 29, 2017: one of the most massive mergers (50.6 & 34.3 M☉), producing a strong gravitational wave signal.",
+  "GW190412": "Detected April 12, 2019: asymmetric merger (30 & 8 M☉), allowing tests of higher-order GW modes for the first time.",
+  "GW190521": "Massive black holes (85 & 66 M☉) merged ~7B ly away, the most energetic GW detected — possibly forming an intermediate-mass BH.",
+  "GW190814": "Observed August 14, 2019: 23 M☉ black hole merged with a 2.6 M☉ compact object, possibly the first BH–NS merger detected.",
+  "GW200105": "Detected January 5, 2020: 8.9 M☉ black hole merged with a 1.9 M☉ neutron star — confirming mixed compact-object binaries.",
+  "GW200115": "Observed January 15, 2020: 5.7 M☉ black hole merged with a 1.5 M☉ neutron star, another mixed system at ~1B ly distance.",
+  "Custom": "Custom system defined by user parameters (mass, spin, and orbital configuration)."
 };
 
 const eventSelect = document.getElementById('eventSelect');
