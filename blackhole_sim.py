@@ -131,27 +131,33 @@ with col2:
     ))
 
     # Optional starfield
-    if show_stars:
-        # Generate a spherical shell of points outside the photon sphere
-        rng = np.random.default_rng(seed=42)
-        # points distributed in a sphere shell
-        n_stars = 400
-        r_min = vis_r_ph * 2.2
-        r_max = vis_r_ph * 6.5
-        phi = np.arccos(1 - 2 * rng.random(n_stars))
-        theta = 2 * np.pi * rng.random(n_stars)
-        r_stars = rng.random(n_stars) * (r_max - r_min) + r_min
-        xs = r_stars * np.sin(phi) * np.cos(theta)
-        ys = r_stars * np.sin(phi) * np.sin(theta)
-        zs = r_stars * np.cos(phi)
-        star_sizes = rng.random(n_stars) * 2 + 1
-        star_brightness = rng.random(n_stars) * 0.8 + 0.2
-        fig.add_trace(go.Scatter3d(x=xs, y=ys, z=zs,
-                                   mode='markers',
-                                   marker=dict(size=star_sizes, color='white',
-                                               opacity=star_brightness),
-                                   hoverinfo='skip',
-                                   name='Stars'))
+if show_stars:
+    # Generate a spherical shell of points outside the photon sphere
+    rng = np.random.default_rng(seed=42)
+    n_stars = 400
+    r_min = vis_r_ph * 2.2
+    r_max = vis_r_ph * 6.5
+    phi = np.arccos(1 - 2 * rng.random(n_stars))
+    theta = 2 * np.pi * rng.random(n_stars)
+    r_stars = rng.random(n_stars) * (r_max - r_min) + r_min
+    xs = r_stars * np.sin(phi) * np.cos(theta)
+    ys = r_stars * np.sin(phi) * np.sin(theta)
+    zs = r_stars * np.cos(phi)
+
+    # Random brightness for visual variety, but map that to greyscale color instead of opacity array
+    star_brightness = rng.random(n_stars)
+    star_colors = [
+        f"rgba({int(200+55*b)}, {int(200+55*b)}, 255, 0.9)" for b in star_brightness
+    ]
+    star_sizes = 1.5 + 2.5 * rng.random(n_stars)
+
+    fig.add_trace(go.Scatter3d(
+        x=xs, y=ys, z=zs,
+        mode="markers",
+        marker=dict(size=star_sizes, color=star_colors, opacity=0.9),
+        hoverinfo="skip",
+        name="Stars"
+    ))
 
     # Add an annotation (text) in 3D using layout annotations projected
     phys_r_s_km = r_s / METERS_PER_KM
