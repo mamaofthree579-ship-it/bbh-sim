@@ -415,6 +415,94 @@ function startOrbitSim(m1,m2,spin,color,separationM=12){
   frame();
 }
 
+  /* -----------------------
+   Chirp Audio Playback
+----------------------- */
+let audioCtx = null, osc = null, oscHarm = null, gainNode = null, gainHarm = null;
+let playRAF = null, playStartTime = 0, playDurMs = 0;
+
+function playChirp(ev){
+    stopChirp(); // stop any existing playback
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+
+    const Mc = Math.pow((ev.m1*ev.m2)**(3/5)/(ev.m1+ev.m2)**(1/5),1);
+    const fStart = 20 + ev.spin*12;
+    const fEnd = 400 + (Mc/30)*220;
+    const duration = Math.max(1.5,3.0 - (Mc/60)); // seconds
+    playDurMs = duration*1000;
+
+    // create base oscillator
+    osc = audioCtx.createOscillator();
+    gainNode = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+
+    // create harmonic
+    oscHarm = audioCtx.createOscillator();
+    gainHarm = audioCtx.createGain();
+    oscHarm.type = 'sine';
+    oscHarm.connect(gainHarm); gainHarm.connect(audioCtx.destination);
+
+    const now = audioCtx.currentTime;
+    osc.frequency.setValueAtTime(fStart, now);
+    osc.frequency.exponentialRampToValueAtTime(fEnd, now + duration);
+
+    oscHarm.frequency.setValueAtTime(fStart*2, now);
+    oscHarm.frequency.exponentialRampToValueAtTime(fEnd*2, now + duration);
+
+    gainNode.gain.setValueAtTime(0.0001, now);
+    gainNode.gain.linearRampToValueAtTime(0.28, now + 0.03);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    gainHarm.gain.setValueAtTime(0.0001, now);
+    gainHarm.gain.linearRampToValueAtTime(0.06, now + 0.03);
+    gainHarm.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.start(now); osc.stop(now + duration + 0.05);
+    oscHarm.start(now); oscHarm.stop(now + duration + 0.05);
+
+    // sync waveform visual
+    const waveform = generateWaveform(ev);
+    playStartTime = performance.now();
+
+    function animatePlay(){
+        const elapsed = performance.now() - playStartTime;
+        if(elapsed >= playDurMs){
+            drawChirp(waveform);
+            document.getElementById('audioState').textContent = 'idle';
+            playRAF = null;
+            return;
+        }
+        const prog = elapsed/playDurMs;
+        const idx = Math.floor(prog * waveform.length);
+        drawChirp(waveform, idx);
+        document.getElementById('audioState').textContent = 'playing';
+        playRAF = requestAnimationFrame(animatePlay);
+    }
+    animatePlay();
+}
+
+function stopChirp(){
+    try{ if(osc) osc.stop(); }catch(e){}
+    try{ if(oscHarm) oscHarm.stop(); }catch(e){}
+    try{ if(gainNode) gainNode.disconnect(); }catch(e){}
+    try{ if(gainHarm) gainHarm.disconnect(); }catch(e){}
+    try{ if(osc) osc.disconnect(); }catch(e){}
+    try{ if(oscHarm) oscHarm.disconnect(); }catch(e){}
+    osc = null; oscHarm = null; gainNode = null; gainHarm = null;
+    if(playRAF){ cancelAnimationFrame(playRAF); playRAF = null; }
+    drawChirp(generateWaveform(currentEvent));
+    document.getElementById('audioState').textContent = 'idle';
+}
+
+/* -----------------------
+   Wire buttons
+----------------------- */
+document.getElementById('playChirpBtn').addEventListener('click', ()=> playChirp(currentEvent));
+document.getElementById('stopChirpBtn').addEventListener('click', ()=> stopChirp());
+  }
+  
 /* -----------------------
    Chirp generation & audio (events tab)
    ----------------------- */
