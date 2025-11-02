@@ -96,7 +96,8 @@ if trail_trace: data.append(trail_trace)
 
 fig = go.Figure(data=data)
 fig.update_layout(
-    scene=camera | scene,
+    scene=scene,
+    scene_camera=camera,
     paper_bgcolor='black',
     margin=dict(l=0, r=0, t=0, b=0),
 )
