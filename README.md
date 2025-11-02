@@ -156,7 +156,7 @@ Attribution is encouraged.
 ## 📫 Contact
 For suggestions or collaboration:
 - Email: *yourname@domain.com*
-- GitHub: [yourusername](https://github.com/yourusername)
+- GitHub: [mamaofthree579-ship-it](https://github.com/mamaofthree579-ship-it)
 
 ---
 
