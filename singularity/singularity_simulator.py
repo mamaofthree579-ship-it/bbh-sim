@@ -95,13 +95,96 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # === Chirp sound toggle ===
-st.sidebar.markdown("---")
-st.sidebar.subheader("🎧 Sound Options")
+st.markdown("### 🎧 Black Hole Rumble — Immersive Mode")
+st.markdown("*(Best experienced with headphones or good speakers)*")
 
-if st.sidebar.button("Play Chirp Sound"):
-    chirp_file = "chirp.mp3"  # must exist in your project root
-    st.audio(chirp_file, format="audio/mp3")
-else:
-    st.sidebar.caption("Press the button to hear the gravitational chirp")
+audio_html = """
+<script>
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const ctx = new AudioContext();
+
+function startBlackHoleSound() {
+    const base = ctx.createOscillator();
+    const turbulence = ctx.createOscillator();
+    const noise = ctx.createBufferSource();
+
+    // White noise for plasma texture
+    const bufferSize = 2 * ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * 0.4; // mild turbulence
+    }
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    // Base rumble oscillator
+    base.type = "sine";
+    base.frequency.setValueAtTime(28, ctx.currentTime); // deep fundamental tone
+    base.frequency.linearRampToValueAtTime(42, ctx.currentTime + 30); // slow rising swirl
+
+    // Modulate amplitude
+    const baseGain = ctx.createGain();
+    baseGain.gain.setValueAtTime(0.3, ctx.currentTime);
+
+    // Turbulence oscillator to modulate gain
+    turbulence.type = "sine";
+    turbulence.frequency.value = 0.4; // slow pulsing modulation
+    const turbGain = ctx.createGain();
+    turbGain.gain.value = 0.2;
+    turbulence.connect(turbGain);
+    turbGain.connect(baseGain.gain);
+
+    // Noise gain
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.25;
+
+    // Combine sources
+    base.connect(baseGain);
+    noise.connect(noiseGain);
+
+    // Merge and filter to add depth
+    const merger = ctx.createGain();
+    baseGain.connect(merger);
+    noiseGain.connect(merger);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(300, ctx.currentTime);
+    merger.connect(filter);
+
+    const outGain = ctx.createGain();
+    outGain.gain.value = 0.6;
+    filter.connect(outGain);
+    outGain.connect(ctx.destination);
+
+    // Start
+    base.start();
+    turbulence.start();
+    noise.start();
+
+    window.activeNodes = {base, turbulence, noise, ctx};
+}
+
+function stopBlackHoleSound() {
+    if (window.activeNodes) {
+        const {base, turbulence, noise, ctx} = window.activeNodes;
+        try {
+            base.stop();
+            turbulence.stop();
+            noise.stop();
+            ctx.close();
+        } catch {}
+    }
+}
+
+</script>
+
+<button onclick="startBlackHoleSound()">🌌 Start Black Hole Rumble</button>
+<button onclick="stopBlackHoleSound()">⛔ Stop</button>
+"""
+
+st.components.v1.html(audio_html, height=120)
+
 
 st.caption("Visualization © 2025 • Interactive Crystalline Singularity Simulator")
