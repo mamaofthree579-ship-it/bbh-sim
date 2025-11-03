@@ -1,20 +1,23 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+from scipy.io.wavfile import write
+import tempfile
+import io
 
 # --- Constants ---
 G = 6.67430e-11
 c = 2.99792458e8
 M_sun = 1.98847e30
-AU = 1.496e11
 
-st.set_page_config(page_title="Black Hole Anatomy — Step 2", layout="wide")
+st.set_page_config(page_title="Black Hole Anatomy — Step 3", layout="wide")
 
-st.title("🌌 Black Hole Anatomy — Step 2: Accretion Disk & Hotspot")
+st.title("🌌 Black Hole Anatomy — Step 3: Relativistic Disk & Chirp")
+
 st.markdown("""
-In this step we add an **accretion disk** and an **orbiting plasma hotspot**.  
-The black hole is shown with its **event horizon** (purple), **photon sphere** (gold),  
-and a bright **inner disk** glowing from gravitational heating.
+Now we add **relativistic Doppler effects** and an **optional audio chirp**.  
+The disk brightens on the approaching side (blueshift) and dims on the receding side (redshift).  
+Use the time slider to watch the motion and optionally listen to a chirp tone.
 """)
 
 # --- Mass selection ---
@@ -23,83 +26,79 @@ mass = mass_solar * M_sun
 
 # --- Physical radii ---
 r_s = 2 * G * mass / c**2
-r_ph = 1.5 * r_s
-r_isco = 3 * r_s   # inner stable circular orbit (for Schwarzschild)
-
-# --- Normalized scale ---
+r_isco = 3 * r_s
 scale = 1.0
-r_s_vis = 1.0 * scale
-r_ph_vis = (r_ph / r_s) * scale
+r_s_vis = scale
 r_disk_inner = (r_isco / r_s) * scale
 r_disk_outer = 6 * scale
 
-# --- 3D sphere builder ---
-def make_sphere(radius, color, opacity, name):
-    u = np.linspace(0, 2*np.pi, 80)
-    v = np.linspace(0, np.pi, 40)
-    x = radius * np.outer(np.cos(u), np.sin(v))
-    y = radius * np.outer(np.sin(u), np.sin(v))
-    z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
-    return go.Surface(
-        x=x, y=y, z=z,
-        surfacecolor=np.ones_like(x),
-        colorscale=[[0, color], [1, color]],
-        showscale=False,
-        opacity=opacity,
-        name=name,
-        hoverinfo="skip"
-    )
+# --- Hotspot and Doppler ---
+st.sidebar.header("🌀 Hotspot & Disk Controls")
+speed_factor = st.sidebar.slider("Orbital speed (fraction of c)", 0.01, 0.5, 0.1)
+t = st.slider("Orbital phase", 0.0, 1.0, 0.0, step=0.01)
 
-# --- Disk mesh ---
-def make_disk(r_inner, r_outer, color, opacity, name):
-    theta = np.linspace(0, 2*np.pi, 200)
-    r = np.linspace(r_inner, r_outer, 2)
-    R, T = np.meshgrid(r, theta)
-    X = R * np.cos(T)
-    Y = R * np.sin(T)
-    Z = np.zeros_like(X)
-    return go.Surface(
-        x=X, y=Y, z=Z,
-        surfacecolor=np.ones_like(X),
-        colorscale=[[0, color], [1, color]],
-        showscale=False,
-        opacity=opacity,
-        name=name,
-        hoverinfo="skip"
-    )
-
-# --- Build 3D components ---
-horizon = make_sphere(r_s_vis, "#7d2ae8", 1.0, "Event Horizon")
-photon = make_sphere(r_ph_vis, "gold", 0.25, "Photon Sphere")
-disk = make_disk(r_disk_inner, r_disk_outer, "orangered", 0.3, "Accretion Disk")
-
-# --- Hotspot (animated) ---
-st.sidebar.header("🌀 Hotspot Controls")
-speed_factor = st.sidebar.slider("Orbital speed (fraction of light speed)", 0.01, 0.5, 0.1)
-t = st.slider("Time (orbital phase)", 0.0, 1.0, 0.0, step=0.01)
-radius_hotspot = 1.2 * r_disk_inner
-omega = speed_factor * c / radius_hotspot
-
-x_hot = radius_hotspot * np.cos(2 * np.pi * t)
-y_hot = radius_hotspot * np.sin(2 * np.pi * t)
+# Orbital position
+theta = 2 * np.pi * t
+x_hot = 1.2 * r_disk_inner * np.cos(theta)
+y_hot = 1.2 * r_disk_inner * np.sin(theta)
 z_hot = 0
 
+# --- Doppler intensity map ---
+theta_disk = np.linspace(0, 2*np.pi, 300)
+radii = np.linspace(r_disk_inner, r_disk_outer, 2)
+R, T = np.meshgrid(radii, theta_disk)
+X = R * np.cos(T)
+Y = R * np.sin(T)
+Z = np.zeros_like(X)
+
+# Relativistic beaming intensity
+v_over_c = speed_factor * np.cos(T - theta)
+doppler_intensity = (1 + v_over_c) / (1 - v_over_c + 1e-8)
+doppler_intensity = np.clip(doppler_intensity, 0.5, 2.0)
+colorscale = [[0, "darkred"], [0.5, "orangered"], [1, "gold"]]
+
+# --- Plot surfaces ---
+disk = go.Surface(
+    x=X, y=Y, z=Z,
+    surfacecolor=doppler_intensity,
+    colorscale=colorscale,
+    cmin=0.5, cmax=2.0,
+    showscale=False,
+    opacity=0.85,
+    name="Accretion Disk"
+)
+
+# Horizon
+u = np.linspace(0, 2*np.pi, 60)
+v = np.linspace(0, np.pi, 30)
+xh = r_s_vis * np.outer(np.cos(u), np.sin(v))
+yh = r_s_vis * np.outer(np.sin(u), np.sin(v))
+zh = r_s_vis * np.outer(np.ones_like(u), np.cos(v))
+horizon = go.Surface(
+    x=xh, y=yh, z=zh,
+    colorscale=[[0, "#8e2de2"], [1, "#8e2de2"]],
+    showscale=False,
+    opacity=1.0,
+    name="Event Horizon"
+)
+
+# Hotspot
 hotspot = go.Scatter3d(
     x=[x_hot], y=[y_hot], z=[z_hot],
     mode="markers",
-    marker=dict(size=6, color="yellow", opacity=0.9),
+    marker=dict(size=8, color="yellow", opacity=0.95),
     name="Hotspot"
 )
 
-# --- Figure layout ---
-fig = go.Figure(data=[disk, photon, horizon, hotspot])
+# --- Layout ---
+fig = go.Figure(data=[disk, horizon, hotspot])
 fig.update_layout(
     scene=dict(
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
         zaxis=dict(visible=False),
         aspectmode="data",
-        camera=dict(eye=dict(x=1.6, y=1.6, z=0.9))
+        camera=dict(eye=dict(x=1.5, y=1.5, z=0.9))
     ),
     paper_bgcolor="black",
     margin=dict(l=0, r=0, t=0, b=0),
@@ -107,21 +106,35 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Info summary ---
+# --- Optional chirp sound ---
+st.sidebar.header("🎵 Chirp Audio Generator")
+if st.sidebar.checkbox("Generate chirp audio"):
+    duration = 2.0  # seconds
+    fs = 44100
+    t_audio = np.linspace(0, duration, int(fs * duration))
+    freq_start = 200
+    freq_end = 800
+    freq = freq_start + (freq_end - freq_start) * (t_audio / duration)
+    waveform = 0.2 * np.sin(2 * np.pi * freq * t_audio)
+    waveform = np.int16(waveform / np.max(np.abs(waveform)) * 32767)
+
+    temp_wav = io.BytesIO()
+    write(temp_wav, fs, waveform)
+    st.audio(temp_wav, format="audio/wav")
+
+# --- Info box ---
 st.markdown(f"""
 ### ⚙️ Physical parameters
 
 **Mass:** {mass_solar:,.0f} M☉  
 **Schwarzschild radius (rₛ):** {r_s:.3e} m  
-**Photon sphere (1.5 rₛ):** {r_ph:.3e} m  
 **ISCO (3 rₛ):** {r_isco:.3e} m  
-
-**Hotspot:** Orbit radius ≈ {radius_hotspot/r_s:.2f} rₛ, velocity ≈ {speed_factor:.2f} c  
+**Hotspot speed:** {speed_factor:.2f} c  
 
 ---
 
-🟣 **Event Horizon** — gravitational boundary of no return  
-🟡 **Photon Sphere** — unstable light orbits  
-🔴 **Accretion Disk** — ionized gas spiraling inward, emitting X-rays  
-✨ **Hotspot** — simulated plasma knot orbiting near ISCO  
+🟣 **Event Horizon** — boundary of no return  
+🟠 **Accretion Disk** — Doppler brightened on approach  
+✨ **Hotspot** — simulated plasma knot, orbital phase = {t:.2f}  
+🎧 **Audio Chirp** — simplified inspiral tone (optional)
 """)
