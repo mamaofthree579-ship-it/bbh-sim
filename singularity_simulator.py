@@ -16,18 +16,23 @@ mode = st.sidebar.selectbox("Audio mode", ["breathing", "chime", "silent"])
 play_audio = st.sidebar.button("▶ Play Hum")
 pause_audio = st.sidebar.button("⏸ Pause Audio")
 
-# Optional crystal upload
-uploaded_file = st.sidebar.file_uploader("Upload crystal image (optional)", type=["png", "jpg", "jpeg", "webp", "svg"])
+import os
+import base64
+
+# Determine the absolute path of singularity.png
+root_dir = os.path.dirname(os.path.abspath(__file__))
+local_image_path = os.path.join(root_dir, "singularity.png")
 
 if uploaded_file:
     data = uploaded_file.read()
     encoded = base64.b64encode(data).decode()
     crystal_src = f"data:image/png;base64,{encoded}"
-elif os.path.exists(".../singularity.png"):
-    # Use your local singularity.png
-    with open("singularity.png", "rb") as f:
+
+elif os.path.exists(local_image_path):
+    with open(local_image_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
     crystal_src = f"data:image/png;base64,{encoded}"
+
 else:
     # Fallback placeholder
     crystal_src = "https://placehold.co/600x600/1b0033/FFFFFF?text=Singularity"
