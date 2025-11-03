@@ -1,4 +1,4 @@
-<!-- Start: Crystalline singularity widget (paste into your Overview tab panel) -->
+## Start: Crystalline singularity widget (paste into your Overview tab panel) -->
 <div id="crystalWidget" style="max-width:920px;margin:12px auto;padding:12px;background:rgba(10,0,20,0.6);border-radius:10px;border:1px solid rgba(120,60,160,0.15);">
   <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
     <div style="flex:1;min-width:320px">
