@@ -32,7 +32,7 @@ def load_image_as_base64(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
-texture_b64 = load_image_as_base64("singularity/singularity.png")
+texture_b64 = load_image_as_base64("/mount/bbh/bbh-sim/singularity/singularity.png")
 
 # === Create figure ===
 fig = go.Figure()
