@@ -1,12 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
+# HTML + JS code as a string
 html_code = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fractal Conscious Cosmos Simulator</title>
+<title>Conscious Cosmos Simulator</title>
 <style>
 body { margin: 0; overflow: hidden; background-color: #000; }
 #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }
@@ -22,58 +23,34 @@ label { display: block; margin-top: 5px; }
 <script>
 
 // --- PARAMETERS ---
-const NODE_COUNT = 20;
-const SUB_NODE_COUNT = 5;
+const NODE_COUNT = 100;
 const GRID_SIZE = 50;
 const DT = 0.01;
 let K = parseFloat(document.getElementById("kSlider").value);
 let FREQ_SCALE = parseFloat(document.getElementById("freqSlider").value);
 
-// --- NODE CLASSES ---
-class SubNode {
-    constructor(parent) {
-        this.parent = parent;
+// --- NODE CLASS ---
+class Node {
+    constructor(id) {
+        this.id = id;
         this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
         this.A = Math.random() * 0.5 + 0.5;
         this.phi = Math.random() * 2 * Math.PI;
+        this.neighbors = [];
+        this.K = K;
         this.mesh = null;
     }
 
     updatePhase(dt) {
-        this.phi += this.omega * dt;
+        let dphi = 0;
+        for (let n of this.neighbors) {
+            dphi += n.K * Math.sin(n.phi - this.phi);
+        }
+        this.phi += (this.omega + dphi) * dt;
     }
 
     amplitudeAt(t) {
         return this.A * Math.cos(this.omega * t + this.phi);
-    }
-}
-
-class Node {
-    constructor(id) {
-        this.id = id;
-        this.K = K;
-        this.mesh = null;
-        this.subNodes = [];
-        for (let i=0; i<SUB_NODE_COUNT; i++){
-            this.subNodes.push(new SubNode(this));
-        }
-        this.neighbors = [];
-    }
-
-    update(dt) {
-        // Update sub-nodes
-        this.subNodes.forEach(sn => sn.updatePhase(dt));
-
-        // Horizontal coupling
-        let dphi = 0;
-        for (let n of this.neighbors) {
-            dphi += n.K * Math.sin(n.subNodes[0].phi - this.subNodes[0].phi);
-        }
-        this.subNodes.forEach(sn => sn.phi += dphi * dt);
-    }
-
-    amplitudeAt(t) {
-        return this.subNodes.reduce((sum, sn) => sum + sn.amplitudeAt(t), 0)/this.subNodes.length;
     }
 }
 
@@ -98,80 +75,64 @@ class DarkMatterGrid {
     }
 }
 
-// Scene Setup
+// --- SCENE SETUP ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.z = 60;
+
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // --- CREATE NODES ---
 const nodes = [];
-for (let i=0; i<NODE_COUNT; i++){
+for (let i=0; i<NODE_COUNT; i++) {
     const node = new Node(i);
-    const geometry = new THREE.SphereGeometry(1, 8, 8);
-    const material = new THREE.MeshBasicMaterial({color:0x00ffff});
+    const geometry = new THREE.SphereGeometry(0.5, 8, 8);
+    const material = new THREE.MeshBasicMaterial({color: 0x00ffff});
     const mesh = new THREE.Mesh(geometry, material);
     node.mesh = mesh;
     mesh.position.x = (Math.random() - 0.5) * 50;
     mesh.position.y = (Math.random() - 0.5) * 50;
     scene.add(mesh);
-
-    // Create sub-node meshes
-    node.subNodes.forEach((sn, idx) => {
-        const g = new THREE.SphereGeometry(0.3, 6, 6);
-        const m = new THREE.MeshBasicMaterial({color: 0xff00ff});
-        const meshSN = new THREE.Mesh(g, m);
-        meshSN.position.x = mesh.position.x + (Math.random()-0.5)*3;
-        meshSN.position.y = mesh.position.y + (Math.random()-0.5)*3;
-        scene.add(meshSN);
-        sn.mesh = meshSN;
-    });
-
     nodes.push(node);
 }
 
-// Randomly assign neighbors for horizontal coupling
+// Randomly assign neighbors for coupling
 nodes.forEach(node => {
     node.neighbors = nodes.sort(() => Math.random()-0.5).slice(0, 3);
 });
 
-// Dark matter grid
+// --- DARK MATTER GRID ---
 const dmGrid = new DarkMatterGrid(GRID_SIZE, GRID_SIZE);
 
-// --- ANIMATION LOOP ---
-let t=0;
+// --- RENDER LOOP ---
+let t = 0;
 function animate() {
     requestAnimationFrame(animate);
 
     nodes.forEach(node => {
-        node.update(DT);
+        node.updatePhase(DT);
         const amp = node.amplitudeAt(t);
-        node.mesh.scale.set(amp+0.5, amp+0.5, amp+0.5);
+        node.mesh.scale.set(amp + 0.5, amp + 0.5, amp + 0.5);
         node.mesh.material.color.setHSL((amp+1)/2, 1, 0.5);
-
-        node.subNodes.forEach(sn => {
-            const ampSN = sn.amplitudeAt(t);
-            sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
-            sn.mesh.material.color.setHSL((ampSN+1)/2, 1, 0.5);
-        });
     });
 
     dmGrid.diffuse();
+
     renderer.render(scene, camera);
     t += DT;
 }
 animate();
 
 // --- UI INTERACTIONS ---
-document.getElementById("kSlider").addEventListener("input", e => {
+document.getElementById("kSlider").addEventListener("input", (e) => {
     K = parseFloat(e.target.value);
     nodes.forEach(node => node.K = K);
 });
-document.getElementById("freqSlider").addEventListener("input", e => {
+document.getElementById("freqSlider").addEventListener("input", (e) => {
     FREQ_SCALE = parseFloat(e.target.value);
-    nodes.forEach(node => node.subNodes.forEach(sn => sn.omega = Math.random() * 2 * Math.PI * FREQ_SCALE));
+    nodes.forEach(node => node.omega = Math.random() * 2 * Math.PI * FREQ_SCALE);
 });
 
 </script>
@@ -179,4 +140,5 @@ document.getElementById("freqSlider").addEventListener("input", e => {
 </html>
 """
 
-components.html(html_code, height=800, width=1200)
+# Render in Streamlit
+components.html(html_code, height=700, width=1000)
