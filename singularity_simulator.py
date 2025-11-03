@@ -23,7 +23,7 @@ import base64
 root_dir = os.path.dirname(os.path.abspath(__file__))
 local_image_path = os.path.join(root_dir, "singularity.png")
 
-if uploaded_file:
+uploaded_file:
     data = uploaded_file.read()
     encoded = base64.b64encode(data).decode()
     crystal_src = f"data:image/png;base64,{encoded}"
