@@ -17,7 +17,7 @@ st.sidebar.header("🧭 Visualization Controls")
 horizon_radius = st.sidebar.slider("Event Horizon Radius", 5, 50, 20)
 disk_radius = st.sidebar.slider("Accretion Disk Radius", 30, 120, 60)
 disk_thickness = st.sidebar.slider("Disk Thickness", 0.5, 5.0, 1.5)
-brightness = st.sidebar.slider("Singularity Brightness", 0.1, 2.0, 1.0)
+brightness = st.sidebar.slider("Singularity Brightness", 0.1, 1.0, 0.5)
 rotation_speed = st.sidebar.slider("Disk Rotation Speed", 0.1, 3.0, 1.0)
 
 # === 3D coordinates ===
