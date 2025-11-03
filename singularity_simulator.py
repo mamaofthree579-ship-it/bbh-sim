@@ -23,8 +23,15 @@ if uploaded_file:
     data = uploaded_file.read()
     encoded = base64.b64encode(data).decode()
     crystal_src = f"data:image/png;base64,{encoded}"
+elif os.path.exists("singularity.png"):
+    # Use your local singularity.png
+    with open("singularity.png", "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    crystal_src = f"data:image/png;base64,{encoded}"
 else:
-    crystal_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Crystal.svg/512px-Blue_Crystal.svg.png"
+    # Fallback placeholder
+    crystal_src = "https://placehold.co/600x600/1b0033/FFFFFF?text=Singularity"
+
 
 # Use a regular triple-quoted string (not f-string) and insert Python vars via .format()
 html_code = """
