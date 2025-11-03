@@ -1,4 +1,5 @@
 import streamlit as st
+import base64
 
 st.set_page_config(page_title="Crystalline Singularity Simulator", layout="wide")
 
@@ -19,16 +20,14 @@ pause_audio = st.sidebar.button("⏸ Pause Audio")
 uploaded_file = st.sidebar.file_uploader("Upload crystal image (optional)", type=["png", "jpg", "jpeg", "webp", "svg"])
 
 if uploaded_file:
-    import base64
     data = uploaded_file.read()
     encoded = base64.b64encode(data).decode()
     crystal_src = f"data:image/png;base64,{encoded}"
 else:
-    # Fallback placeholder
     crystal_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Crystal.svg/512px-Blue_Crystal.svg.png"
 
-# ---- HTML + JS block for visualization ----
-html_code = f"""
+# Use a regular triple-quoted string (not f-string) and insert Python vars via .format()
+html_code = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -54,7 +53,7 @@ html_code = f"""
     width: 60%;
     mix-blend-mode: screen;
     filter: drop-shadow(0 0 30px rgba(150,100,255,0.4));
-    animation: spin {5/max(spin_speed,0.01)}s linear infinite;
+    animation: spin {spin_time}s linear infinite;
   }}
   @keyframes spin {{
     from {{ transform: translate(-50%,-50%) rotate(0deg) scale({visual_size}); }}
@@ -70,7 +69,7 @@ html_code = f"""
     border-radius: 50%;
     background: radial-gradient(circle at center, rgba(150,80,255,0.3), rgba(0,0,0,0));
     filter: blur(60px);
-    animation: pulse {3/(output_strength+0.2)}s ease-in-out infinite;
+    animation: pulse {pulse_time}s ease-in-out infinite;
   }}
   @keyframes pulse {{
     0%,100% {{ opacity: 0.6; transform: translate(-50%,-50%) scale(1.0); }}
@@ -100,7 +99,7 @@ html_code = f"""
         const r = 80 + i * 8 + Math.sin(t * 0.002 + i) * 2;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255,160,60,${0.004 + 0.001 * i})`;
+        ctx.strokeStyle = `rgba(255,160,60,${{0.004 + 0.001 * i}})`;
         ctx.lineWidth = 1;
         ctx.stroke();
       }}
@@ -108,10 +107,10 @@ html_code = f"""
     }}
     requestAnimationFrame(drawRings);
 
-    // WebAudio hum simulation (optional)
-    let audioCtx, osc1, osc2, gain1, gain2;
+    // WebAudio hum simulation
+    let audioCtx, osc1, gain1;
     function startAudio() {{
-      if ({'true' if play_audio else 'false'}) {{
+      if ({play_audio}) {{
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         osc1 = audioCtx.createOscillator();
         gain1 = audioCtx.createGain();
@@ -123,7 +122,7 @@ html_code = f"""
       }}
     }}
     function stopAudio() {{
-      if ({'true' if pause_audio else 'false'}) {{
+      if ({pause_audio}) {{
         try {{ osc1.stop(); audioCtx.close(); }} catch(e) {{}}
       }}
     }}
@@ -132,7 +131,16 @@ html_code = f"""
   </script>
 </body>
 </html>
-"""
+""".format(
+    visual_size=visual_size,
+    spin_time=5 / max(spin_speed, 0.01),
+    pulse_time=3 / (output_strength + 0.2),
+    crystal_src=crystal_src,
+    play_audio=str(play_audio).lower(),
+    pause_audio=str(pause_audio).lower(),
+    spin_speed=spin_speed,
+    output_strength=output_strength
+)
 
-# Render the visualization in Streamlit
+# Render to Streamlit
 st.components.v1.html(html_code, height=700, scrolling=False)
