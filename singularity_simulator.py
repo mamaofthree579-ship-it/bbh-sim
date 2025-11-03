@@ -23,7 +23,7 @@ if uploaded_file:
     data = uploaded_file.read()
     encoded = base64.b64encode(data).decode()
     crystal_src = f"data:image/png;base64,{encoded}"
-elif os.path.exists("singularity.png"):
+elif os.path.exists(".../singularity.png"):
     # Use your local singularity.png
     with open("singularity.png", "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
