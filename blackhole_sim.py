@@ -1,20 +1,21 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
+from scipy.io.wavfile import write
+import io
 
 # --- Constants ---
 G = 6.67430e-11
 c = 2.99792458e8
 M_sun = 1.98847e30
 
-st.set_page_config(page_title="Black Hole Anatomy — Chirp & Disk", layout="wide")
+st.set_page_config(page_title="Black Hole & Chirp Simulator", layout="wide")
 
-st.title("🌀 Black Hole Anatomy — Event Horizon, Disk & Chirp")
+st.title("🌌 Black Hole Simulator — 3D Horizon, Disk & Chirp")
 
 st.markdown("""
-A dynamic visualization of a **black hole system** showing its **event horizon**,  
-**accretion disk motion**, and a corresponding **gravitational wave chirp**.
+Explore a **3D black hole** and listen to the corresponding **gravitational-wave chirp**.  
+The chirp pitch and amplitude dynamically react to the orbital motion of the plasma hotspot.
 """)
 
 # --- Fixed mass reference (Sagittarius A*) ---
@@ -25,17 +26,19 @@ r_s = 2 * G * mass / c**2
 # --- Sidebar controls ---
 st.sidebar.header("🎛️ Controls")
 speed_factor = st.sidebar.slider("Hotspot orbital speed (fraction of c)", 0.01, 0.5, 0.1)
-t = st.sidebar.slider("Orbital phase", 0.0, 1.0, 0.0, step=0.01)
+t_phase = st.sidebar.slider("Orbital phase", 0.0, 1.0, 0.0, step=0.01)
 tilt_angle = st.sidebar.slider("View tilt (degrees)", 0, 80, 25)
 trail_length = st.sidebar.slider("Trail length", 0.1, 1.0, 0.5)
+chirp_duration = st.sidebar.slider("Chirp duration (seconds)", 2.0, 10.0, 5.0)
+audio_volume = st.sidebar.slider("Audio volume", 0.2, 1.0, 0.7)
 
-# --- Normalized visual scales ---
+# --- Visual scales ---
 r_s_vis = 0.5
 r_disk_inner = 1.5 * r_s_vis
 r_disk_outer = 6 * r_s_vis
 
 # --- Orbital math ---
-theta = 2 * np.pi * t
+theta = 2 * np.pi * t_phase
 x_hot = 1.2 * r_disk_inner * np.cos(theta)
 y_hot = 1.2 * r_disk_inner * np.sin(theta)
 z_hot = 0
@@ -113,23 +116,24 @@ fig3d.update_layout(
     paper_bgcolor="black",
     margin=dict(l=0, r=0, t=0, b=0),
 )
-
 st.plotly_chart(fig3d, use_container_width=True)
 
 # --- Gravitational Wave Chirp ---
 st.markdown("### 🌊 Gravitational Wave Chirp")
 
-# Chirp simulation
-t_chirp = np.linspace(0, 1, 1000)
-freq = 20 * (1 + 15 * t_chirp**3)
-amp = 1.0 * t_chirp**2
+# Chirp parameters — dynamic with hotspot speed and phase
+t_chirp = np.linspace(0, 1, 2000)
+base_freq = 30 + 20 * np.sin(2 * np.pi * t_phase)
+freq = base_freq * (1 + 15 * t_chirp**3) * (1 + speed_factor)
+amp = t_chirp**2 * (0.6 + 0.4 * np.sin(2 * np.pi * t_phase))
 chirp_signal = amp * np.sin(2 * np.pi * freq * t_chirp)
 
+# --- Plot chirp ---
 fig_chirp = go.Figure()
 fig_chirp.add_trace(go.Scatter(
     x=t_chirp, y=chirp_signal,
-    mode="lines", line=dict(width=2),
-    name="GW Chirp", fill="tozeroy"
+    mode="lines", line=dict(width=2, color="aqua"),
+    fill="tozeroy", name="GW Chirp"
 ))
 fig_chirp.update_layout(
     paper_bgcolor="black",
@@ -139,22 +143,36 @@ fig_chirp.update_layout(
     yaxis=dict(title="Strain (a.u.)", showgrid=False),
     margin=dict(l=30, r=30, t=30, b=30)
 )
-
 st.plotly_chart(fig_chirp, use_container_width=True)
+
+# --- Generate chirp audio ---
+sample_rate = 44100
+time_audio = np.linspace(0, chirp_duration, int(sample_rate * chirp_duration))
+audio_freq = np.interp(time_audio, np.linspace(0, chirp_duration, len(freq)), freq)
+audio_amp = np.interp(time_audio, np.linspace(0, chirp_duration, len(amp)), amp)
+audio_wave = np.sin(2 * np.pi * audio_freq * time_audio) * audio_amp
+audio_wave = (audio_wave / np.max(np.abs(audio_wave))) * audio_volume
+
+# Convert to 16-bit PCM
+audio_int16 = np.int16(audio_wave * 32767)
+wav_bytes = io.BytesIO()
+write(wav_bytes, sample_rate, audio_int16)
+st.audio(wav_bytes.getvalue(), format="audio/wav")
 
 # --- Info box ---
 st.markdown(f"""
 ### ⚙️ Parameters
-
 **Black Hole Mass:** {mass_solar:,.0f} M☉  
 **Schwarzschild radius (rₛ):** {r_s:.3e} m  
 **Hotspot speed:** {speed_factor:.2f} c  
 **Tilt angle:** {tilt_angle}°  
+**Chirp duration:** {chirp_duration:.1f} s  
+**Audio volume:** {audio_volume:.2f}
 
 ---
 
-🟣 **Event Horizon** — visualized in purple for clarity  
-🟠 **Accretion Disk** — Doppler-brightened  
-💫 **Hotspot Trail** — orbital plasma motion  
-🌊 **Chirp** — gravitational wave amplitude increasing as merger nears
+💜 **Event Horizon:** purple visualization  
+🔥 **Accretion Disk:** Doppler brightened  
+💫 **Hotspot:** plasma trail orbiting near ISCO  
+🎵 **Chirp:** GW strain growing with orbital frequency
 """)
