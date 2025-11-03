@@ -1,15 +1,13 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-from scipy.io.wavfile import write
-import io
 
 # --- Constants ---
 G = 6.67430e-11
 c = 2.99792458e8
 M_sun = 1.98847e30
 
-st.set_page_config(page_title="Black Hole Anatomy — Step 4", layout="wide")
+st.set_page_config(page_title="Black Hole Anatomy ", layout="wide")
 
 st.title("🪐 Black Hole Anatomy — Mass Scaling, Lensing & Tilt")
 
@@ -29,7 +27,7 @@ r_s_vis = 0.2 + 0.8 * visual_scale  # 0.2–1.0 range for display
 r_disk_inner = 1.5 * r_s_vis
 r_disk_outer = 6 * r_s_vis
 
-# --- Hotspot & Rotation ---
+# --- Sidebar controls ---
 st.sidebar.header("🌠 Motion & View Controls")
 speed_factor = st.sidebar.slider("Hotspot speed (fraction of c)", 0.01, 0.5, 0.1)
 t = st.sidebar.slider("Orbital phase", 0.0, 1.0, 0.0, step=0.01)
@@ -85,24 +83,30 @@ hotspot = go.Scatter3d(
     name="Hotspot"
 )
 
-# --- Background lensing illusion (star arcs) ---
+# --- Background lensing arcs ---
 phi = np.linspace(0, 2*np.pi, 80)
 r_arc = r_disk_outer * 3
+arc_traces = []
 for k in range(6):
     bend = 0.05 * np.sin(3 * phi + k)
     x_arc = r_arc * np.cos(phi)
     y_arc = r_arc * np.sin(phi)
     z_arc = bend
-    color = f"rgba(255,255,255,{0.2 + 0.1*k})"
-    if k == 0:
-        stars = go.Scatter3d(x=x_arc, y=y_arc, z=z_arc, mode="lines",
-                             line=dict(color=color, width=1.5), name="Lensed Stars")
-    else:
-        stars.add_trace(go.Scatter3d(x=x_arc, y=y_arc, z=z_arc, mode="lines",
-                                     line=dict(color=color, width=1.5), name=""))
+    color = f"rgba(255,255,255,{0.15 + 0.1*k})"
+    arc_traces.append(
+        go.Scatter3d(
+            x=x_arc, y=y_arc, z=z_arc,
+            mode="lines",
+            line=dict(color=color, width=1.5),
+            hoverinfo="skip",
+            showlegend=False
+        )
+    )
 
-# --- Assemble figure ---
-fig = go.Figure(data=[disk, horizon, hotspot, stars])
+# --- Assemble all traces ---
+traces = [disk, horizon, hotspot] + arc_traces
+fig = go.Figure(data=traces)
+
 fig.update_layout(
     scene=dict(
         xaxis=dict(visible=False),
