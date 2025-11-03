@@ -97,7 +97,7 @@
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     // base deep hum (low freq)
     baseOsc = audioCtx.createOscillator(); baseGain = audioCtx.createGain();
-    baseOsc.type = 'sine'; baseOsc.frequency.value = 16 + hum*30; // 16–46 Hz
+    baseOsc.type = 'sine'; baseOsc.frequency.value = 16 + hum*30; # 16–46 Hz
     baseGain.gain.value = 0.12 * (0.5 + hum*0.8); // amplitude controlled by hum
     baseOsc.connect(baseGain); baseGain.connect(audioCtx.destination);
 
