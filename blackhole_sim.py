@@ -1,37 +1,38 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 
 # --- Constants ---
 G = 6.67430e-11
 c = 2.99792458e8
 M_sun = 1.98847e30
 
-st.set_page_config(page_title="Black Hole Anatomy ", layout="wide")
+st.set_page_config(page_title="Black Hole Anatomy — Chirp & Disk", layout="wide")
 
-st.title("🪐 Black Hole Anatomy — Mass Scaling, Lensing & Tilt")
+st.title("🌀 Black Hole Anatomy — Event Horizon, Disk & Chirp")
 
 st.markdown("""
-Now the **mass slider** affects the apparent size of the event horizon and disk.  
-We’ve also added a **gravitational lensing illusion** and a **tilt control** to view the black hole from any angle.
+A dynamic visualization of a **black hole system** showing its **event horizon**,  
+**accretion disk motion**, and a corresponding **gravitational wave chirp**.
 """)
 
-# --- Mass & Controls ---
-mass_solar = st.slider("Black Hole Mass (M☉)", 10, 10_000_000, 4_300_000, step=10_000)
+# --- Fixed mass reference (Sagittarius A*) ---
+mass_solar = 4_300_000
 mass = mass_solar * M_sun
 r_s = 2 * G * mass / c**2
 
-# Logarithmic visual normalization (so scale stays visible)
-visual_scale = np.log10(mass_solar) / np.log10(10_000_000)
-r_s_vis = 0.2 + 0.8 * visual_scale  # 0.2–1.0 range for display
-r_disk_inner = 1.5 * r_s_vis
-r_disk_outer = 6 * r_s_vis
-
 # --- Sidebar controls ---
-st.sidebar.header("🌠 Motion & View Controls")
-speed_factor = st.sidebar.slider("Hotspot speed (fraction of c)", 0.01, 0.5, 0.1)
+st.sidebar.header("🎛️ Controls")
+speed_factor = st.sidebar.slider("Hotspot orbital speed (fraction of c)", 0.01, 0.5, 0.1)
 t = st.sidebar.slider("Orbital phase", 0.0, 1.0, 0.0, step=0.01)
 tilt_angle = st.sidebar.slider("View tilt (degrees)", 0, 80, 25)
+trail_length = st.sidebar.slider("Trail length", 0.1, 1.0, 0.5)
+
+# --- Normalized visual scales ---
+r_s_vis = 0.5
+r_disk_inner = 1.5 * r_s_vis
+r_disk_outer = 6 * r_s_vis
 
 # --- Orbital math ---
 theta = 2 * np.pi * t
@@ -75,7 +76,12 @@ horizon = go.Surface(
     name="Event Horizon"
 )
 
-# --- Hotspot ---
+# --- Hotspot + trail ---
+trail_thetas = np.linspace(theta - 2*np.pi*trail_length, theta, 50)
+x_trail = 1.2 * r_disk_inner * np.cos(trail_thetas)
+y_trail = 1.2 * r_disk_inner * np.sin(trail_thetas)
+z_trail = np.zeros_like(x_trail)
+
 hotspot = go.Scatter3d(
     x=[x_hot], y=[y_hot], z=[z_hot],
     mode="markers",
@@ -83,60 +89,72 @@ hotspot = go.Scatter3d(
     name="Hotspot"
 )
 
-# --- Background lensing arcs ---
-phi = np.linspace(0, 2*np.pi, 80)
-r_arc = r_disk_outer * 3
-arc_traces = []
-for k in range(6):
-    bend = 0.05 * np.sin(3 * phi + k)
-    x_arc = r_arc * np.cos(phi)
-    y_arc = r_arc * np.sin(phi)
-    z_arc = bend
-    color = f"rgba(255,255,255,{0.15 + 0.1*k})"
-    arc_traces.append(
-        go.Scatter3d(
-            x=x_arc, y=y_arc, z=z_arc,
-            mode="lines",
-            line=dict(color=color, width=1.5),
-            hoverinfo="skip",
-            showlegend=False
-        )
-    )
+trail = go.Scatter3d(
+    x=x_trail, y=y_trail, z=z_trail,
+    mode="lines",
+    line=dict(color="yellow", width=3),
+    name="Trail"
+)
 
-# --- Assemble all traces ---
-traces = [disk, horizon, hotspot] + arc_traces
-fig = go.Figure(data=traces)
-
-fig.update_layout(
+# --- Combine 3D scene ---
+fig3d = go.Figure(data=[disk, horizon, trail, hotspot])
+fig3d.update_layout(
     scene=dict(
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
         zaxis=dict(visible=False),
         aspectmode="data",
-        camera=dict(eye=dict(x=1.5*np.cos(np.radians(tilt_angle)),
-                             y=1.5*np.sin(np.radians(tilt_angle)),
-                             z=0.9))
+        camera=dict(eye=dict(
+            x=1.5*np.cos(np.radians(tilt_angle)),
+            y=1.5*np.sin(np.radians(tilt_angle)),
+            z=0.9
+        )),
     ),
     paper_bgcolor="black",
     margin=dict(l=0, r=0, t=0, b=0),
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig3d, use_container_width=True)
+
+# --- Gravitational Wave Chirp ---
+st.markdown("### 🌊 Gravitational Wave Chirp")
+
+# Chirp simulation
+t_chirp = np.linspace(0, 1, 1000)
+freq = 20 * (1 + 15 * t_chirp**3)
+amp = 1.0 * t_chirp**2
+chirp_signal = amp * np.sin(2 * np.pi * freq * t_chirp)
+
+fig_chirp = go.Figure()
+fig_chirp.add_trace(go.Scatter(
+    x=t_chirp, y=chirp_signal,
+    mode="lines", line=dict(width=2),
+    name="GW Chirp", fill="tozeroy"
+))
+fig_chirp.update_layout(
+    paper_bgcolor="black",
+    plot_bgcolor="black",
+    font=dict(color="white"),
+    xaxis=dict(title="Time (normalized)", showgrid=False),
+    yaxis=dict(title="Strain (a.u.)", showgrid=False),
+    margin=dict(l=30, r=30, t=30, b=30)
+)
+
+st.plotly_chart(fig_chirp, use_container_width=True)
 
 # --- Info box ---
 st.markdown(f"""
-### ⚙️ Physical Parameters
+### ⚙️ Parameters
 
-**Mass:** {mass_solar:,.0f} M☉  
+**Black Hole Mass:** {mass_solar:,.0f} M☉  
 **Schwarzschild radius (rₛ):** {r_s:.3e} m  
-**Visible radius scaling:** {r_s_vis:.2f} (normalized)  
-**Hotspot velocity:** {speed_factor:.2f} c  
+**Hotspot speed:** {speed_factor:.2f} c  
 **Tilt angle:** {tilt_angle}°  
 
 ---
 
-🟣 **Event Horizon** — visualized in purple for contrast  
-🟠 **Accretion Disk** — Doppler brightened on approach  
-✨ **Star Arcs** — background light bent by spacetime curvature  
-🌌 **Hotspot Motion** — orbiting plasma feature
+🟣 **Event Horizon** — visualized in purple for clarity  
+🟠 **Accretion Disk** — Doppler-brightened  
+💫 **Hotspot Trail** — orbital plasma motion  
+🌊 **Chirp** — gravitational wave amplitude increasing as merger nears
 """)
