@@ -157,7 +157,7 @@
     rg.addColorStop(1, 'rgba(2,0,6,1)');
     ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
 
-    // a faint horizon ring (deep purple gradient) — slightly responsive to spin
+    // a faint horizon ring (deep purple gradient) slightly responsive to spin
     const horizonR = Math.min(W,H) * 0.095 * (1 + 0.03*spin);
     ctx.beginPath();
     ctx.arc(cx, cy, horizonR, 0, Math.PI*2);
