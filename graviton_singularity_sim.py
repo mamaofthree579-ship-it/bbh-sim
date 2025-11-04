@@ -213,6 +213,67 @@ if show_3D_dual:
     """)
 
 # ─────────────────────────────────────────────────────────────
+# 8c. 3D animation of quantum pulse through the singularity bridge
+# ─────────────────────────────────────────────────────────────
+animate_3D_pulse = st.checkbox("Animate 3D Quantum Pulse Through Bridge", False)
+
+if animate_3D_pulse:
+    st.subheader("3D Animation: Quantum Pulse Traversing the Singularity Bridge")
+
+    anim_placeholder_3D = st.empty()
+    frames = 80
+
+    # Set up coordinate grids (same as before)
+    r = np.linspace(0.1, 1.0, 100)
+    theta = np.linspace(0, 2 * np.pi, 200)
+    R, Θ = np.meshgrid(r, theta)
+
+    # Define wells and bridge
+    z_input = -np.exp(-R) - 1.0
+    z_output = np.exp(-R) + 1.0
+    X = R * np.cos(Θ)
+    Y = R * np.sin(Θ)
+
+    z_bridge = np.linspace(-0.2, 0.2, 30)
+    θ_bridge = np.linspace(0, 2 * np.pi, 40)
+    Θb, Zb = np.meshgrid(θ_bridge, z_bridge)
+    Rb = np.full_like(Θb, 0.1)
+    Xb = Rb * np.cos(Θb)
+    Yb = Rb * np.sin(Θb)
+
+    # Animate frame by frame
+    for i in range(frames):
+        fig3d = plt.figure(figsize=(8, 6))
+        ax3d = fig3d.add_subplot(111, projection="3d")
+
+        # Plot wells and bridge
+        ax3d.plot_surface(X, Y, z_input, alpha=0.7, linewidth=0, cmap="viridis")
+        ax3d.plot_surface(X, Y, z_output, alpha=0.7, linewidth=0, cmap="plasma")
+        ax3d.plot_surface(Xb, Yb, Zb, color="red", alpha=0.5)
+
+        # Pulse motion (through bridge)
+        t = i / frames
+        z_pulse = -1.0 + 2.0 * t  # moves from bottom to top
+        x_pulse, y_pulse = 0.0, 0.0  # centered at singularity axis
+
+        ax3d.scatter(x_pulse, y_pulse, z_pulse, color="cyan", s=60, label="Quantum Pulse")
+
+        ax3d.set_title(f"Quantum Pulse Traversing Singularity (Frame {i+1}/{frames})")
+        ax3d.set_xlabel("X-axis")
+        ax3d.set_ylabel("Y-axis")
+        ax3d.set_zlabel("Energy Potential")
+        ax3d.set_xlim(-1, 1)
+        ax3d.set_ylim(-1, 1)
+        ax3d.set_zlim(-1.5, 1.5)
+        ax3d.view_init(elev=25, azim=45)
+        ax3d.legend(loc="upper right")
+
+        anim_placeholder_3D.pyplot(fig3d)
+        tm.sleep(0.05)
+
+    st.success("Quantum pulse successfully traversed from input well through the singularity to the output well.")
+
+# ─────────────────────────────────────────────────────────────
 # 9. Summary
 # ─────────────────────────────────────────────────────────────
 st.subheader("Simulation Summary")
