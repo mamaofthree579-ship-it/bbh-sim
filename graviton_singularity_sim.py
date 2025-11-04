@@ -184,17 +184,17 @@ if show_3D_dual:
     Y = R * np.sin(Θ)
 
     # Plot both wells
-    ax3d.plot_surface(X, Y, z_input, alpha=0.8, linewidth=0, antialiased=False)
-    ax3d.plot_surface(X, Y, z_output, alpha=0.8, linewidth=0, antialiased=False)
+    ax3d.plot_surface(X, Y, z_input, alpha=0.8, linewidth=0, antialiased=False, cmap='viridis')
+    ax3d.plot_surface(X, Y, z_output, alpha=0.8, linewidth=0, antialiased=False, cmap='plasma')
 
     # Singularity bridge (center tube)
     z_bridge = np.linspace(-0.2, 0.2, 30)
     θ_bridge = np.linspace(0, 2 * np.pi, 40)
-    Rb, Θb = np.meshgrid(np.full_like(θ_bridge, 0.1), θ_bridge)
+    Θb, Zb = np.meshgrid(θ_bridge, z_bridge)
+    Rb = np.full_like(Θb, 0.1)
     Xb = Rb * np.cos(Θb)
     Yb = Rb * np.sin(Θb)
-    Zb = np.outer(np.ones_like(θ_bridge), z_bridge)
-    ax3d.plot_surface(Xb, Yb, Zb.T, color="red", alpha=0.6)
+    ax3d.plot_surface(Xb, Yb, Zb, color="red", alpha=0.6)
 
     # Styling
     ax3d.set_title("3D Representation of Input/Output Wells Connected by Singularity")
