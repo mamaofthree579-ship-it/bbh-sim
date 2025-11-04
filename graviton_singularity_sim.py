@@ -118,28 +118,47 @@ if show_3D:
     st.pyplot(fig)
 
 # ─────────────────────────────────────────────────────────────
-# 8. Optional tunnelling animation
+# 8. Improved tunnelling animation (smooth + dual wells)
 # ─────────────────────────────────────────────────────────────
 if show_anim:
-    st.subheader("Quantum-Tunnelling Pulse")
-    fig_anim, ax_anim = plt.subplots()
-    ax_anim.set_xlim(-1, 1)
-    ax_anim.set_ylim(-1.5, 1.5)
-    x = np.linspace(-1, 1, 400)
-    potential = -np.exp(-np.abs(x) / 0.2)
-    line_pot, = ax_anim.plot(x, potential, 'k--')
-    pulse, = ax_anim.plot([], [], 'ro', markersize=6)
+    st.subheader("Quantum-Tunnelling Pulse Across Dual Wells")
 
-    for frame in range(80):
-        x_pulse = -0.9 + 0.0225 * frame
-        y_pulse = -np.exp(-abs(x_pulse) / 0.2)
+    # Create placeholder for animation
+    anim_placeholder = st.empty()
+
+    # Define x-space and potential
+    x = np.linspace(-2, 2, 600)
+    potential = -np.exp(-np.abs(x + 0.8) / 0.3) - np.exp(-np.abs(x - 0.8) / 0.3)
+    # central singularity line (x=0)
+    singularity_x = 0
+
+    # Create initial figure
+    fig_anim, ax_anim = plt.subplots(figsize=(6, 3))
+    ax_anim.set_xlim(-2, 2)
+    ax_anim.set_ylim(-1.5, 0.2)
+    line_pot, = ax_anim.plot(x, potential, 'k-', lw=1)
+    ax_anim.axvline(singularity_x, color='red', linestyle='--', lw=1, label="Singularity")
+    pulse, = ax_anim.plot([], [], 'ro', markersize=8)
+    ax_anim.legend(loc='upper right')
+    ax_anim.set_xlabel("Position (arbitrary units)")
+    ax_anim.set_ylabel("Potential / Energy")
+    ax_anim.set_title("Quantum Tunnelling Through Connected Wells")
+
+    # Animate the pulse
+    for frame in range(100):
+        x_pulse = -1.6 + 0.032 * frame
+        y_pulse = -np.exp(-abs(x_pulse + 0.8) / 0.3) - np.exp(-abs(x_pulse - 0.8) / 0.3)
         pulse.set_data([x_pulse], [y_pulse])
-        ax_anim.set_title(f"Frame {frame}")
-        st.pyplot(fig_anim)
+
+        # Clear and re-draw each frame in same placeholder
+        anim_placeholder.pyplot(fig_anim)
         tm.sleep(0.04)
-        if S < 0 and x_pulse > 0:
+
+        # Once the pulse has crossed to the right side and S < 0 → transition complete
+        if S < 0 and x_pulse > 0.8:
             break
-    st.success("Pulse traversed the singularity boundary.")
+
+    st.success("Pulse successfully traversed from input to output well (singularity transition).")
 
 # ─────────────────────────────────────────────────────────────
 # 9. Summary
