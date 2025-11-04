@@ -1,59 +1,67 @@
+# graviton_singularity_app.py
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import time as tm
 
-# --------------------------------------
+st.set_page_config(page_title="Graviton Well–Singularity Simulator", layout="wide")
+
+# ─────────────────────────────────────────────────────────────
 # 1. Constants
-# --------------------------------------
-G = 6.67430e-11     # gravitational constant
-c = 3.0e8            # speed of light
-ħ = 1.0545718e-34    # reduced Planck constant
-π = np.pi
+# ─────────────────────────────────────────────────────────────
+G  = 6.67430e-11
+c  = 3.0e8
+ħ  = 1.0545718e-34
+π  = np.pi
 
-# --------------------------------------
-# 2. Streamlit UI
-# --------------------------------------
-st.title("🌀 Graviton Well–Singularity Dynamics Simulator")
-st.write("Explore transitions between gravitational input (black hole) and output (white hole) wells.")
+# ─────────────────────────────────────────────────────────────
+# 2. UI controls
+# ─────────────────────────────────────────────────────────────
+st.title("🌀 Graviton Input/Output Well Simulation")
+st.write("Visualize transitions between compressive (black-hole) and expansive (white-hole) phases.")
 
-# Simulation controls
-M0 = st.sidebar.number_input("Initial Mass (kg)", 1e3, 1e8, 1e5, format="%.2e")
-r_Q = st.sidebar.number_input("Quantum Radius (m)", 1e-40, 1e-20, 1e-35, format="%.2e")
-λ = st.sidebar.slider("Singularity Coupling Constant (λ)", 0.01, 2.0, 0.1, 0.01)
-Δt = st.sidebar.number_input("Time Step (s)", 1e-5, 1.0, 1e-3, format="%.1e")
-T_max = st.sidebar.number_input("Total Simulation Time (s)", 1.0, 1000.0, 10.0)
-N_r = st.sidebar.slider("Spatial Resolution (steps)", 100, 2000, 500)
+col1, col2 = st.columns(2)
+with col1:
+    # log-scale sliders so you can explore wide numeric ranges
+    M0_exp = st.slider("log₁₀(Initial Mass [kg])", 2.0, 10.0, 5.0, 0.1)
+    rQ_exp = st.slider("log₁₀(Quantum Radius [m])", -40.0, -20.0, -35.0, 0.5)
+    M0 = 10 ** M0_exp
+    r_Q = 10 ** rQ_exp
 
-# --------------------------------------
-# 3. Helper functions
-# --------------------------------------
-def F_QG(r, m, r_Q):
-    return (G * m / r**2) * np.exp(-r / r_Q)
+    λ = st.slider("Singularity Coupling Constant λ", 0.001, 2.0, 0.1, 0.001)
+    N_r = st.slider("Spatial Resolution (steps)", 200, 1500, 500, 50)
 
-def dM_dt(M):
-    return - (ħ * c**2 / G) * (1 / M**2)
+with col2:
+    Δt = float(st.text_input("Time Step (s)", "1e-3"))
+    T_max = float(st.text_input("Total Simulation Time (s)", "10.0"))
+    show_3D = st.checkbox("Show 3-D Graviton-Well Surface", True)
+    show_anim = st.checkbox("Show Quantum-Tunnelling Animation", True)
 
+# ─────────────────────────────────────────────────────────────
+# 3. Helper equations
+# ─────────────────────────────────────────────────────────────
+def F_QG(r, m, r_Q): return (G * m / r**2) * np.exp(-r / r_Q)
+def dM_dt(M):        return - (ħ * c**2 / G) * (1 / M**2)
 def S_trans(rho_QG, R_curv, λ):
     integral_rho = np.trapz(rho_QG)
     dR_dt = np.gradient(R_curv).mean()
     return integral_rho - λ * dR_dt
 
-# --------------------------------------
+# ─────────────────────────────────────────────────────────────
 # 4. Initialize arrays
-# --------------------------------------
+# ─────────────────────────────────────────────────────────────
 r_min, r_max = 1e-6, 1.0
 r = np.linspace(r_min, r_max, N_r)
 rho_QG = (M0 / r_max**3) * np.exp(-r / r_Q)
 R_curv = (2 * G * M0) / (r**3 * c**2)
 
 M = M0
-time_points = []
-S_values = []
-M_values = []
+time_points, S_values, M_values = [], [], []
 
-# --------------------------------------
+# ─────────────────────────────────────────────────────────────
 # 5. Simulation loop
-# --------------------------------------
+# ─────────────────────────────────────────────────────────────
 time = 0
 while time < T_max and M > 0:
     F = F_QG(r, M, r_Q)
@@ -67,45 +75,81 @@ while time < T_max and M > 0:
     M_values.append(M)
 
     if S < 0:
-        st.warning(f"Transition triggered at t = {time:.3f}s → Output Well Phase")
+        st.warning(f"Transition triggered at t = {time:.3f}s → Output-well phase")
         break
-
     time += Δt
 
-# --------------------------------------
-# 6. Visualization
-# --------------------------------------
+# ─────────────────────────────────────────────────────────────
+# 6. 2-D Plots
+# ─────────────────────────────────────────────────────────────
 fig1, ax1 = plt.subplots()
 ax1.plot(time_points, S_values)
 ax1.set_xlabel("Time (s)")
-ax1.set_ylabel("Singularity Transition Function S(t)")
-ax1.set_title("Evolution of Singularity Transition State")
+ax1.set_ylabel("Singularity Transition S(t)")
+ax1.set_title("Transition Function Evolution")
 
 fig2, ax2 = plt.subplots()
 ax2.plot(r, rho_QG)
 ax2.set_xlabel("Radius (m)")
-ax2.set_ylabel("Quantum Gravity Density ρ_QG")
+ax2.set_ylabel("Quantum Density ρ_QG")
 ax2.set_title("Final Density Distribution")
 
 fig3, ax3 = plt.subplots()
 ax3.plot(time_points, M_values)
 ax3.set_xlabel("Time (s)")
 ax3.set_ylabel("Mass (kg)")
-ax3.set_title("Mass Evolution (Quantum Evaporation)")
+ax3.set_title("Mass Evolution")
 
 st.pyplot(fig1)
 st.pyplot(fig2)
 st.pyplot(fig3)
 
-# --------------------------------------
-# 7. Results Summary
-# --------------------------------------
+# ─────────────────────────────────────────────────────────────
+# 7. Optional 3-D potential surface
+# ─────────────────────────────────────────────────────────────
+if show_3D:
+    R, θ = np.meshgrid(np.linspace(0, 1, 100), np.linspace(0, 2*π, 200))
+    Z = -np.exp(-R / r_Q) * (M / M0)  # simple potential depth
+    X, Y = R*np.cos(θ), R*np.sin(θ)
+    fig = plt.figure(figsize=(6,6))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(X, Y, Z, cmap='viridis')
+    ax.set_title("Graviton-Well Surface")
+    st.pyplot(fig)
+
+# ─────────────────────────────────────────────────────────────
+# 8. Optional tunnelling animation
+# ─────────────────────────────────────────────────────────────
+if show_anim:
+    st.subheader("Quantum-Tunnelling Pulse")
+    fig_anim, ax_anim = plt.subplots()
+    ax_anim.set_xlim(-1, 1)
+    ax_anim.set_ylim(-1.5, 1.5)
+    x = np.linspace(-1, 1, 400)
+    potential = -np.exp(-np.abs(x) / 0.2)
+    line_pot, = ax_anim.plot(x, potential, 'k--')
+    pulse, = ax_anim.plot([], [], 'ro', markersize=6)
+
+    for frame in range(80):
+        x_pulse = -0.9 + 0.0225 * frame
+        y_pulse = -np.exp(-abs(x_pulse) / 0.2)
+        pulse.set_data([x_pulse], [y_pulse])
+        ax_anim.set_title(f"Frame {frame}")
+        st.pyplot(fig_anim)
+        tm.sleep(0.04)
+        if S < 0 and x_pulse > 0:
+            break
+    st.success("Pulse traversed the singularity boundary.")
+
+# ─────────────────────────────────────────────────────────────
+# 9. Summary
+# ─────────────────────────────────────────────────────────────
 st.subheader("Simulation Summary")
 st.write(f"**Initial Mass:** {M0:.3e} kg")
 st.write(f"**Final Mass:** {M:.3e} kg")
-st.write(f"**Final Singularity State (S):** {S:.3e}")
+st.write(f"**Final Singularity State S:** {S:.3e}")
 st.write("**Interpretation:**")
 if S > 0:
-    st.info("System remains in compressive phase (Graviton Input Well).")
+    st.info("System remains in compressive (input-well) phase.")
 else:
-    st.success("System transitioned to expansion phase (Graviton Output Well / White Hole).")
+    st.success("System reached expansion (output-well / white-hole) phase.")
