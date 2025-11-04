@@ -2,6 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import json
+import numpy as np
+import time
 
 # --- Page title and description ---
 st.title("Fractal Conscious Cosmos Simulator 🌌")
@@ -11,7 +13,7 @@ Use the sidebar to adjust coupling, frequency, node count, and other parameters.
 Capture snapshots of the simulation data for research and analysis.
 """)
 
-# --- Initialize session state for all parameters if not already present ---
+# --- Initialize session state for all parameters ---
 default_params = {
     "K": 0.2,
     "FREQ_SCALE": 1.0,
@@ -19,7 +21,8 @@ default_params = {
     "SUB_NODE_COUNT": 5,
     "GRID_SIZE": 50,
     "DT": 0.01,
-    "snapshots": []
+    "snapshots": [],
+    "amplitude_history": []
 }
 for key, value in default_params.items():
     if key not in st.session_state:
@@ -38,7 +41,7 @@ st.session_state.DT = st.sidebar.number_input("Time Step (dt)", min_value=0.001,
 if st.sidebar.button("Export Parameters"):
     st.download_button(
         label="Download Parameters as JSON",
-        data=json.dumps({key: st.session_state[key] for key in default_params.keys() if key != "snapshots"}, indent=2),
+        data=json.dumps({key: st.session_state[key] for key in default_params.keys() if key not in ["snapshots", "amplitude_history"]}, indent=2),
         file_name="simulation_parameters.json",
         mime="application/json"
     )
@@ -46,7 +49,6 @@ if st.sidebar.button("Export Parameters"):
 # --- Snapshot data logging ---
 st.sidebar.header("Data Snapshots")
 if st.sidebar.button("Capture Snapshot"):
-    # Save a snapshot of all key parameters and a timestamp
     snapshot = {
         "K": st.session_state.K,
         "FREQ_SCALE": st.session_state.FREQ_SCALE,
@@ -68,7 +70,7 @@ if st.session_state.snapshots:
         mime="text/csv"
     )
 
-# --- HTML/JS 3D visualization ---
+# --- 3D Visualization HTML ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -194,4 +196,24 @@ animate();
 </html>
 """
 
-components.html(html_code, height=800, width=1200)
+# --- Display layout with two columns: Visualization + Live graph ---
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    components.html(html_code, height=800, width=800)
+
+with col2:
+    st.subheader("Live Node Amplitudes")
+    placeholder = st.empty()
+
+    # --- Simulate live amplitude updates ---
+    while True:
+        # Generate fake live data based on parameters for demo (replace with real data connection if needed)
+        amplitudes = np.random.randn(st.session_state.NODE_COUNT)
+        st.session_state.amplitude_history.append(amplitudes)
+        if len(st.session_state.amplitude_history) > 200:
+            st.session_state.amplitude_history.pop(0)
+        # Convert to DataFrame for plotting
+        df_amp = pd.DataFrame(st.session_state.amplitude_history, columns=[f"Node {i}" for i in range(st.session_state.NODE_COUNT)])
+        placeholder.line_chart(df_amp)
+        time.sleep(0.05)
