@@ -172,7 +172,38 @@ with tabs[1]:
 
     st.plotly_chart(fig3d, use_container_width=True)
 
-
+# --- Button 2: Orbit Motion Toggle ---
+with col2:
+    if st.button("🌌 Start Orbit Animation"):
+        st.markdown(
+            """
+            <script>
+            // Animate rotation of a 3D Plotly figure if it exists on the page
+            const sleep = ms => new Promise(r => setTimeout(r, ms));
+            async function rotateScene() {
+                let angle = 0;
+                for (let i = 0; i < 180; i++) {
+                    const camera = {
+                        eye: {
+                            x: Math.cos(angle) * 2,
+                            y: Math.sin(angle) * 2,
+                            z: 0.6
+                        }
+                    };
+                    const gd = document.querySelector(".js-plotly-plot");
+                    if (gd) Plotly.relayout(gd, { 'scene.camera': camera });
+                    angle += Math.PI / 60;
+                    await sleep(50);
+                }
+            }
+            rotateScene();
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.info("🌠 Orbit animation running (you can click and drag to adjust view).")
+    else:
+        st.caption("Press to begin orbit animation.")
 # ---------------------------------------------
 # TAB 3: Audio Synthesis
 # ---------------------------------------------
@@ -219,3 +250,49 @@ with tabs[2]:
 
 
     st.info("🔊 This audio represents hypothetical spacetime fluid dynamics, not literal sound waves in vacuum.")
+
+# ---------------------------------------------
+# 🔊 Audio & Orbit Control Section
+# ---------------------------------------------
+st.markdown("## Quantum Rumble & Orbital Motion")
+
+col1, col2 = st.columns(2)
+
+# --- Button 1: WebAudio Play ---
+with col1:
+    if st.button("🎧 Play Rumble"):
+        st.markdown(
+            """
+            <script>
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc1.type = "sine";
+            osc2.type = "sawtooth";
+
+            osc1.frequency.setValueAtTime(40, ctx.currentTime);
+            osc2.frequency.setValueAtTime(60, ctx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 6);
+            osc2.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 6);
+
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 8);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.start();
+            osc2.start();
+            osc1.stop(ctx.currentTime + 8);
+            osc2.stop(ctx.currentTime + 8);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.info("🎵 The cosmic ‘rumble’ is playing through your browser.")
+    else:
+        st.caption("Press the button to play the synthesized rumble.")
+        
