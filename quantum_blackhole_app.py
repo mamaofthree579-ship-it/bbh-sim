@@ -1,184 +1,164 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+import math
 
-# === Physical constants ===
-G = 6.67430e-11
-c = 2.99792458e8
-hbar = 1.054571817e-34
-M_sun = 1.98847e30
+# ------------------------------------------------------
+# 🌌 Quantum Black Hole Visualization with Audio & Orbit
+# ------------------------------------------------------
 
-# --- Core equations ---
-def schwarzschild_radius(M):
-    return 2 * G * M / c**2
+st.set_page_config(page_title="Quantum Black Hole Simulator", layout="wide")
 
-def F_QG(r, m, rQ, A_qg=1.0):
-    return A_qg * (G * m / (r**2)) * np.exp(-r / rQ) if r > 0 else 0.0
+st.title("🌀 Quantum Black Hole Simulator")
+st.markdown("""
+Explore a quantum-inspired black hole model featuring a **Schwarzschild radius**, **photon sphere**, 
+and a hypothesized **quantum singularity core** with optional sound and orbital motion.
 
-def dM_dt_QEWH(M, K_scale=1.0):
-    return -(K_scale * (hbar * c**2 / G)) / (M**2)
+Use the interactive buttons below to:
+- **Play** the “Quantum Rumble” sound (synthesized via WebAudio)
+- **Animate** the orbit around the singularity
+""")
 
-def STF_simple(rho_QG, vol, dRdt, lam):
-    return (rho_QG * vol) - lam * dRdt
+# ------------------------------------------------------
+# Parameters
+# ------------------------------------------------------
 
+G = 6.67430e-11  # gravitational constant
+c = 2.99792458e8  # speed of light
+M_sun = 1.98847e30  # solar mass in kg
 
-# --- Sim step ---
-def step_sim(M, r, dt, params, prev_r):
-    Fq = F_QG(r, M, params["rQ"], params["A_qg"])
-    acc_qg = Fq / params["m_test"]
-    acc_newton = G * M / r**2
-    total_acc = acc_newton + acc_qg
-    r_next = max(params["r_min"], r - 0.001 * total_acc * dt)
-    if params["enable_evap"]:
-        dMdt = dM_dt_QEWH(M, params["K_scale"])
-        M_next = max(params["M_min"], M + dMdt * dt)
+# Black hole mass input
+mass_solar = st.slider("Select Black Hole Mass (in Solar Masses)", 1e5, 1e7, 4.3e6, step=1e5)
+M = mass_solar * M_sun
+
+# Derived radii
+r_s = 2 * G * M / c**2  # Schwarzschild radius
+r_photon = 1.5 * r_s  # photon sphere radius
+r_q = 0.2 * r_s  # arbitrary quantum boundary (for visual only)
+
+# ------------------------------------------------------
+# 3D Visualization Setup
+# ------------------------------------------------------
+
+def sphere(radius, resolution=60):
+    """Return X, Y, Z points of a sphere."""
+    u = np.linspace(0, 2 * np.pi, resolution)
+    v = np.linspace(0, np.pi, resolution)
+    x = radius * np.outer(np.cos(u), np.sin(v))
+    y = radius * np.outer(np.sin(u), np.sin(v))
+    z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
+    return x, y, z
+
+# Spheres for layers
+x_h, y_h, z_h = sphere(1.0)        # Event horizon (normalized)
+x_p, y_p, z_p = sphere(1.3)        # Photon sphere
+x_q, y_q, z_q = sphere(0.6)        # Singularity region (inner core)
+
+# Build the figure
+fig = go.Figure()
+
+# Event horizon
+fig.add_surface(
+    x=x_h, y=y_h, z=z_h,
+    colorscale=[[0, "#3b006a"], [1, "#7a2cf3"]],
+    opacity=0.9,
+    showscale=False,
+    name="Event Horizon"
+)
+
+# Photon sphere
+fig.add_surface(
+    x=x_p, y=y_p, z=z_p,
+    colorscale=[[0, "#f0a500"], [1, "#ffcc70"]],
+    opacity=0.3,
+    showscale=False,
+    name="Photon Sphere"
+)
+
+# Quantum core
+fig.add_surface(
+    x=x_q, y=y_q, z=z_q,
+    colorscale=[[0, "#ff00ff"], [1, "#ffffff"]],
+    opacity=0.8,
+    showscale=False,
+    name="Quantum Core"
+)
+
+# Scene layout
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
+        aspectmode='data'
+    ),
+    paper_bgcolor="black",
+    margin=dict(l=0, r=0, t=0, b=0),
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ------------------------------------------------------
+# Info Panel
+# ------------------------------------------------------
+st.markdown("### ⚙️ Physical Parameters")
+st.write(f"**Mass:** {mass_solar:,.0f} M☉")
+st.write(f"**Schwarzschild radius (rₛ):** {r_s:.3e} m  |  {r_s/1000:.3e} km")
+st.write(f"**Photon sphere (≈1.5 rₛ):** {r_photon:.3e} m  |  {r_photon/1000:.3e} km")
+st.write(f"**Quantum boundary (r_Q):** {r_q:.3e} m  |  {r_q/1000:.3e} km")
+
+# ------------------------------------------------------
+# 🎧 Audio & Orbit Control Section
+# ------------------------------------------------------
+st.markdown("---")
+st.markdown("## 🎧 Quantum Rumble & Orbital Motion")
+
+col1, col2 = st.columns(2)
+
+# --- Button 1: WebAudio Play ---
+with col1:
+    if st.button("🎧 Play Rumble"):
+        st.markdown(
+            """
+            <script>
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc1.type = "sine";
+            osc2.type = "sawtooth";
+
+            osc1.frequency.setValueAtTime(35, ctx.currentTime);
+            osc2.frequency.setValueAtTime(50, ctx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 6);
+            osc2.frequency.exponentialRampToValueAtTime(160, ctx.currentTime + 6);
+
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 8);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.start();
+            osc2.start();
+            osc1.stop(ctx.currentTime + 8);
+            osc2.stop(ctx.currentTime + 8);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.success("🎵 Playing the ‘Quantum Rumble’—a deep resonance of the singularity field.")
     else:
-        dMdt = 0.0
-        M_next = M
-    rho_QG = params["rho0"] * np.exp(-r / params["rQ"])
-    vol = (4 / 3) * np.pi * r**3
-    dRdt = (prev_r - r) / dt
-    Strans = STF_simple(rho_QG, vol, dRdt, params["lambda"])
-    return M_next, r_next, Strans, dMdt
+        st.caption("Press to hear the synthesized rumble of the black hole.")
 
-
-# === Streamlit layout ===
-st.set_page_config(page_title="Quantum-Gravity Black Hole Simulator", layout="wide")
-
-st.title("🌀 Quantum-Gravity Black Hole Simulator")
-
-tabs = st.tabs(["Simulation", "3D Visualization", "Audio Synthesis"])
-
-# ---------------------------------------------
-# TAB 1: Simulation
-# ---------------------------------------------
-with tabs[0]:
-    st.markdown("### Physics Evolution")
-
-    M0 = st.slider("Initial Mass (×10⁶ M☉)", 1.0, 100.0, 4.3) * 1e6 * M_sun
-    r_s = schwarzschild_radius(M0)
-    r0 = st.slider("Initial Separation (×rₛ)", 2.0, 50.0, 10.0) * r_s
-
-    params = {
-        "A_qg": st.slider("A₍QG₎", 0.1, 10.0, 1.0),
-        "rQ": st.slider("Quantum Radius r_Q (×rₛ)", 0.1, 20.0, 5.0) * r_s,
-        "lambda": st.number_input("λ (STF coupling)", 1e-25, 1e-20, 1e-23, format="%.1e"),
-        "rho0": st.number_input("ρ₀ (Quantum-density scale)", 1e-12, 1e-6, 1e-9, format="%.1e"),
-        "K_scale": st.slider("K ₍scale₎ (Evap. rate multiplier)", 1.0, 1e40, 1e30, step=1e10, format="%.1e"),
-        "enable_evap": st.checkbox("Enable evaporation (QE–WH)", True),
-        "m_test": 1e20,
-        "r_min": 1e3,
-        "M_min": 1e25,
-    }
-
-    t_max = st.slider("Simulation time (s)", 1.0, 20.0, 10.0)
-    dt = st.slider("Time step dt (s)", 1e-5, 1e-2, 1e-3, format="%.1e")
-
-    steps = int(t_max / dt)
-    M_vals, r_vals, S_vals, t_vals = [M0], [r0], [0.0], [0.0]
-    M, r = M0, r0
-    S_thresh, transitioned = 1e25, False
-
-    for i in range(steps):
-        M, r, S, dMdt = step_sim(M, r, dt, params, r_vals[-1])
-        t = (i + 1) * dt
-        M_vals.append(M)
-        r_vals.append(r)
-        S_vals.append(S)
-        t_vals.append(t)
-        if S > S_thresh and not transitioned:
-            transitioned = True
-
-    col1, col2 = st.columns(2)
-    with col1:
-        figM = go.Figure()
-        figM.add_trace(go.Scatter(x=t_vals, y=np.array(M_vals)/M_sun, mode="lines", line=dict(color="orange")))
-        figM.update_layout(title="Mass evolution (M☉)", template="plotly_dark", height=300)
-        st.plotly_chart(figM, use_container_width=True)
-
-        figR = go.Figure()
-        figR.add_trace(go.Scatter(x=t_vals, y=np.array(r_vals)/r_s, mode="lines", line=dict(color="aqua")))
-        figR.update_layout(title="Separation (×rₛ)", template="plotly_dark", height=300)
-        st.plotly_chart(figR, use_container_width=True)
-
-    with col2:
-        figS = go.Figure()
-        figS.add_trace(go.Scatter(x=t_vals, y=S_vals, mode="lines", line=dict(color="magenta")))
-        figS.add_hline(y=S_thresh, line_dash="dot", line_color="yellow", annotation_text="Sₜᵣₐₙₛ threshold")
-        figS.update_layout(title="Singularity Transition Function Sₜᵣₐₙₛ", template="plotly_dark", height=620)
-        st.plotly_chart(figS, use_container_width=True)
-
-    if transitioned:
-        st.success("🌈 **Sₜᵣₐₙₛ** exceeded threshold — White-hole output phase triggered.")
-        st.balloons()
-    else:
-        st.info("No transition detected.")
-
-
-# ---------------------------------------------
-# TAB 2: 3D Visualization
-# ---------------------------------------------
-with tabs[1]:
-    st.markdown("### 3D Black Hole Anatomy (Quantum-Gravitational Model)")
-    st.write("This view shows the purple-tinted event horizon and glowing accretion disk that oscillates with curvature.")
-
-    # Generate coordinates
-    phi, theta = np.mgrid[0:2*np.pi:100j, 0:np.pi:50j]
-    radius = 1.0
-    x = radius * np.sin(theta) * np.cos(phi)
-    y = radius * np.sin(theta) * np.sin(phi)
-    z = radius * np.cos(theta)
-
-    # Horizon color field (dark purple to bright plasma)
-    horizon_color = np.sqrt(x**2 + y**2 + z**2)
-    fig3d = go.Figure(
-        data=[
-            go.Surface(
-                x=x,
-                y=y,
-                z=z,
-                surfacecolor=horizon_color,
-                colorscale=[[0, "rgb(80,0,100)"], [0.4, "rgb(130,0,180)"], [1, "rgb(255,80,255)"]],
-                showscale=False,
-                opacity=0.98,
-            ),
-        ]
-    )
-
-    # Add accretion disk
-    r_disk = np.linspace(1.0, 3.5, 100)
-    phi_disk = np.linspace(0, 2*np.pi, 200)
-    R, P = np.meshgrid(r_disk, phi_disk)
-    Xd = R * np.cos(P)
-    Yd = R * np.sin(P)
-    Zd = 0.15 * np.sin(6 * P) * np.exp(-0.5 * (R - 2.5))
-    fig3d.add_surface(
-        x=Xd, y=Yd, z=Zd,
-        colorscale=[[0, "rgb(255,160,60)"], [1, "rgb(255,220,180)"]],
-        showscale=False,
-        opacity=0.85,
-    )
-
-    fig3d.update_layout(
-        template="plotly_dark",
-        scene=dict(
-            xaxis_visible=False,
-            yaxis_visible=False,
-            zaxis_visible=False,
-            aspectmode="cube",
-        ),
-        margin=dict(l=0, r=0, b=0, t=0),
-    )
-
-    st.plotly_chart(fig3d, use_container_width=True)
-
-# --- Button 2: Orbit Motion Toggle ---
+# --- Button 2: Orbit Animation ---
 with col2:
     if st.button("🌌 Start Orbit Animation"):
         st.markdown(
             """
             <script>
-            // Animate rotation of a 3D Plotly figure if it exists on the page
             const sleep = ms => new Promise(r => setTimeout(r, ms));
             async function rotateScene() {
                 let angle = 0;
@@ -201,98 +181,6 @@ with col2:
             """,
             unsafe_allow_html=True
         )
-        st.info("🌠 Orbit animation running (you can click and drag to adjust view).")
+        st.info("🌠 Orbit animation running—observe the photon sphere rotate dynamically.")
     else:
-        st.caption("Press to begin orbit animation.")
-# ---------------------------------------------
-# TAB 3: Audio Synthesis
-# ---------------------------------------------
-with tabs[2]:
-    st.markdown("### Audio Synthesis — Quantum Whirlpool Rumble")
-    st.write("Simulates the ambient sound field based on mass oscillation and curvature flow — like a low-frequency plasma whirlpool.")
-
-    enable_audio = st.checkbox("Enable Quantum Rumble", value=True)
-    if enable_audio:
-        st.markdown(
-            """
-            <script>
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc1 = ctx.createOscillator();
-            const osc2 = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc1.type = "sine";
-            osc2.type = "sawtooth";
-
-            osc1.frequency.setValueAtTime(40, ctx.currentTime);
-            osc2.frequency.setValueAtTime(60, ctx.currentTime);
-            osc1.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 4);
-            osc2.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 4);
-
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 6);
-
-            osc1.connect(gain);
-            osc2.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc1.start();
-            osc2.start();
-            osc1.stop(ctx.currentTime + 6);
-            osc2.stop(ctx.currentTime + 6);
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-        st.info("🎧 This synthesized tone uses your browser’s audio engine (WebAudio).")
-    else:
-        st.write("Audio synthesis disabled.")
-
-
-    st.info("🔊 This audio represents hypothetical spacetime fluid dynamics, not literal sound waves in vacuum.")
-
-# ---------------------------------------------
-# 🔊 Audio & Orbit Control Section
-# ---------------------------------------------
-st.markdown("## Quantum Rumble & Orbital Motion")
-
-col1, col2 = st.columns(2)
-
-# --- Button 1: WebAudio Play ---
-with col1:
-    if st.button("🎧 Play Rumble"):
-        st.markdown(
-            """
-            <script>
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc1 = ctx.createOscillator();
-            const osc2 = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc1.type = "sine";
-            osc2.type = "sawtooth";
-
-            osc1.frequency.setValueAtTime(40, ctx.currentTime);
-            osc2.frequency.setValueAtTime(60, ctx.currentTime);
-            osc1.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 6);
-            osc2.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 6);
-
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 8);
-
-            osc1.connect(gain);
-            osc2.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc1.start();
-            osc2.start();
-            osc1.stop(ctx.currentTime + 8);
-            osc2.stop(ctx.currentTime + 8);
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-        st.info("🎵 The cosmic ‘rumble’ is playing through your browser.")
-    else:
-        st.caption("Press the button to play the synthesized rumble.")
-        
+        st.caption("Press to start 3D orbital motion.")
