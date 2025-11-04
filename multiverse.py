@@ -376,5 +376,4 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 </body>
 </html>
 """
-
 components.html(html_code, height=800, width=1200)
