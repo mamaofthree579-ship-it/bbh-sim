@@ -1,125 +1,111 @@
-import streamlit as st
 import numpy as np
-import plotly.graph_objects as go
+import streamlit as st
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Black Hole Anatomy Simulator", layout="wide")
+# --------------------------------------
+# 1. Constants
+# --------------------------------------
+G = 6.67430e-11     # gravitational constant
+c = 3.0e8            # speed of light
+ħ = 1.0545718e-34    # reduced Planck constant
+π = np.pi
 
-st.title("🌀 Black Hole Anatomy Simulator")
-st.markdown("""
-Visualize the structure of a black hole:
-- **Event Horizon** (purple surface)
-- **Accretion Disk** (orange-red plasma)
-- **Fractal Singularity Core** (crystalline glow)
-""")
+# --------------------------------------
+# 2. Streamlit UI
+# --------------------------------------
+st.title("🌀 Graviton Well–Singularity Dynamics Simulator")
+st.write("Explore transitions between gravitational input (black hole) and output (white hole) wells.")
 
-# --- Controls ---
-mass = st.slider("Black Hole Mass (in Solar Masses)", 1e6, 1e9, 4.3e6, step=1e6)
-st.caption("Adjust mass to see relative scaling of features")
+# Simulation controls
+M0 = st.sidebar.number_input("Initial Mass (kg)", 1e3, 1e8, 1e5, format="%.2e")
+r_Q = st.sidebar.number_input("Quantum Radius (m)", 1e-40, 1e-20, 1e-35, format="%.2e")
+λ = st.sidebar.slider("Singularity Coupling Constant (λ)", 0.01, 2.0, 0.1, 0.01)
+Δt = st.sidebar.number_input("Time Step (s)", 1e-5, 1.0, 1e-3, format="%.1e")
+T_max = st.sidebar.number_input("Total Simulation Time (s)", 1.0, 1000.0, 10.0)
+N_r = st.sidebar.slider("Spatial Resolution (steps)", 100, 2000, 500)
 
-# --- Constants ---
-G = 6.67430e-11
-c = 2.998e8
-M_sun = 1.98847e30
+# --------------------------------------
+# 3. Helper functions
+# --------------------------------------
+def F_QG(r, m, r_Q):
+    return (G * m / r**2) * np.exp(-r / r_Q)
 
-# --- Derived Quantities ---
-M = mass * M_sun
-r_s = 2 * G * M / c**2
-r_ph = 1.5 * r_s
-r_disk = 3 * r_s
+def dM_dt(M):
+    return - (ħ * c**2 / G) * (1 / M**2)
 
-# --- Spherical coordinates (each surface needs its own meshgrid) ---
-def sphere_mesh(radius, resolution=60):
-    theta = np.linspace(0, 2 * np.pi, resolution)
-    phi = np.linspace(0, np.pi, resolution)
-    theta, phi = np.meshgrid(theta, phi)
-    x = radius * np.sin(phi) * np.cos(theta)
-    y = radius * np.sin(phi) * np.sin(theta)
-    z = radius * np.cos(phi)
-    return x, y, z
+def S_trans(rho_QG, R_curv, λ):
+    integral_rho = np.trapz(rho_QG)
+    dR_dt = np.gradient(R_curv).mean()
+    return integral_rho - λ * dR_dt
 
-# --- Plot ---
-fig = go.Figure()
+# --------------------------------------
+# 4. Initialize arrays
+# --------------------------------------
+r_min, r_max = 1e-6, 1.0
+r = np.linspace(r_min, r_max, N_r)
+rho_QG = (M0 / r_max**3) * np.exp(-r / r_Q)
+R_curv = (2 * G * M0) / (r**3 * c**2)
 
-# Event Horizon
-x_h, y_h, z_h = sphere_mesh(r_s)
-fig.add_trace(go.Surface(
-    x=x_h, y=y_h, z=z_h,
-    colorscale=[[0, "rgb(80,0,120)"], [1, "rgb(140,0,220)"]],
-    opacity=1.0,
-    showscale=False,
-    name="Event Horizon"
-))
+M = M0
+time_points = []
+S_values = []
+M_values = []
 
-# Accretion Disk
-phi_disk = np.linspace(0, 2 * np.pi, 150)
-r_vals = np.linspace(0.8 * r_disk, r_disk, 30)
-phi_disk, r_vals = np.meshgrid(phi_disk, r_vals)
-x_d = r_vals * np.cos(phi_disk)
-y_d = r_vals * np.sin(phi_disk)
-z_d = 0.1 * r_disk * np.sin(3 * phi_disk) * (r_vals / r_disk)**2
+# --------------------------------------
+# 5. Simulation loop
+# --------------------------------------
+time = 0
+while time < T_max and M > 0:
+    F = F_QG(r, M, r_Q)
+    rho_QG += (F / c**2) * Δt
+    M += dM_dt(M) * Δt
+    R_curv = (2 * G * M) / (r**3 * c**2)
+    S = S_trans(rho_QG, R_curv, λ)
 
-fig.add_trace(go.Surface(
-    x=x_d, y=y_d, z=z_d,
-    surfacecolor=np.abs(np.sin(phi_disk)),
-    colorscale="Inferno",
-    opacity=0.9,
-    showscale=False,
-    name="Accretion Disk"
-))
+    time_points.append(time)
+    S_values.append(S)
+    M_values.append(M)
 
-# Singularity Core (smaller sphere)
-x_c, y_c, z_c = sphere_mesh(0.4 * r_s)
-fig.add_trace(go.Surface(
-    x=x_c, y=y_c, z=z_c,
-    colorscale="Plasma",
-    opacity=0.95,
-    showscale=False,
-    name="Singularity Core"
-))
+    if S < 0:
+        st.warning(f"Transition triggered at t = {time:.3f}s → Output Well Phase")
+        break
 
-# --- Layout ---
-fig.update_layout(
-    scene=dict(
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        zaxis=dict(visible=False),
-        aspectmode='data',
-        bgcolor="black"
-    ),
-    margin=dict(l=0, r=0, t=0, b=0),
-    paper_bgcolor="black"
-)
+    time += Δt
 
-# --- Sidebar Info ---
-st.sidebar.header("📊 Physical Parameters")
-st.sidebar.write(f"**Mass:** {mass:,.0f} M☉")
-st.sidebar.write(f"**Schwarzschild Radius (rₛ):** {r_s:.3e} m")
-st.sidebar.write(f"**Photon Sphere (≈1.5 rₛ):** {r_ph:.3e} m")
-st.sidebar.write(f"**Accretion Disk Outer Radius:** {r_disk:.3e} m")
+# --------------------------------------
+# 6. Visualization
+# --------------------------------------
+fig1, ax1 = plt.subplots()
+ax1.plot(time_points, S_values)
+ax1.set_xlabel("Time (s)")
+ax1.set_ylabel("Singularity Transition Function S(t)")
+ax1.set_title("Evolution of Singularity Transition State")
 
-st.sidebar.markdown("""
----
-### Notes
-- Purple = Event Horizon  
-- Orange = Accretion Disk  
-- Magenta = Fractal Singularity Core  
-- Scales are normalized for clarity
----
-""")
+fig2, ax2 = plt.subplots()
+ax2.plot(r, rho_QG)
+ax2.set_xlabel("Radius (m)")
+ax2.set_ylabel("Quantum Gravity Density ρ_QG")
+ax2.set_title("Final Density Distribution")
 
-# --- Rotation ---
-rotate = st.checkbox("Auto-rotate view", value=True)
-if rotate:
-    for angle in range(0, 360, 10):
-        camera = dict(eye=dict(x=1.8*np.cos(np.radians(angle)),
-                               y=1.8*np.sin(np.radians(angle)),
-                               z=0.5))
-        fig.update_layout(scene_camera=camera)
-        st.plotly_chart(fig, use_container_width=True)
+fig3, ax3 = plt.subplots()
+ax3.plot(time_points, M_values)
+ax3.set_xlabel("Time (s)")
+ax3.set_ylabel("Mass (kg)")
+ax3.set_title("Mass Evolution (Quantum Evaporation)")
+
+st.pyplot(fig1)
+st.pyplot(fig2)
+st.pyplot(fig3)
+
+# --------------------------------------
+# 7. Results Summary
+# --------------------------------------
+st.subheader("Simulation Summary")
+st.write(f"**Initial Mass:** {M0:.3e} kg")
+st.write(f"**Final Mass:** {M:.3e} kg")
+st.write(f"**Final Singularity State (S):** {S:.3e}")
+st.write("**Interpretation:**")
+if S > 0:
+    st.info("System remains in compressive phase (Graviton Input Well).")
 else:
-    st.plotly_chart(fig, use_container_width=True)
-
-st.caption("Visualization by GPT-5 • Based on Schwarzschild geometry and fractal singularity theory.")
-
-
----
+    st.success("System transitioned to expansion phase (Graviton Output Well / White Hole).")
