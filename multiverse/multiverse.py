@@ -227,3 +227,6 @@ document.getElementById("exportBtn").addEventListener("click", () => {
 </script>
 </body>
 </html>
+"""
+
+components.html(html_code, height=600, width=800)
