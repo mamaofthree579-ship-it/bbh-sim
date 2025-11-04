@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import io, base64, soundfile as sf
 
 # === Physical constants ===
 G = 6.67430e-11
@@ -182,20 +181,41 @@ with tabs[2]:
     st.write("Simulates the ambient sound field based on mass oscillation and curvature flow — like a low-frequency plasma whirlpool.")
 
     enable_audio = st.checkbox("Enable Quantum Rumble", value=True)
-    duration = st.slider("Duration (s)", 1.0, 10.0, 4.0)
     if enable_audio:
-        sr = 44100
-        t = np.linspace(0, duration, int(sr * duration))
-        # fluid-like subsonic base
-        base = 0.2 * np.sin(2 * np.pi * (5 + 3*np.sin(0.1*t)) * t)
-        # rising chirp modulated by S_trans idea
-        chirp = 0.3 * np.sin(2*np.pi*(20 + 200*(t/duration)**2)*t)
-        # amplitude envelope (curvature dissipation)
-        envelope = np.exp(-0.2*t)
-        waveform = (base + chirp) * envelope
+        st.markdown(
+            """
+            <script>
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
 
-        wav_io = io.BytesIO()
-        sf.write(wav_io, waveform, sr, format='wav')
-        st.audio(wav_io.getvalue(), format='audio/wav')
+            osc1.type = "sine";
+            osc2.type = "sawtooth";
+
+            osc1.frequency.setValueAtTime(40, ctx.currentTime);
+            osc2.frequency.setValueAtTime(60, ctx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 4);
+            osc2.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 4);
+
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 6);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.start();
+            osc2.start();
+            osc1.stop(ctx.currentTime + 6);
+            osc2.stop(ctx.currentTime + 6);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.info("🎧 This synthesized tone uses your browser’s audio engine (WebAudio).")
+    else:
+        st.write("Audio synthesis disabled.")
+
 
     st.info("🔊 This audio represents hypothetical spacetime fluid dynamics, not literal sound waves in vacuum.")
