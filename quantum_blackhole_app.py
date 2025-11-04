@@ -1,168 +1,173 @@
 import streamlit as st
-import numpy as np  
+import numpy as np
 import plotly.graph_objects as go
-from skimage import measure
-from math import sin, cos, pi
+import math
 
-st.set_page_config(layout="wide", page_title="Singularity Anatomy — Step 1", initial_sidebar_state="expanded")
+# -----------------------------
+# Page setup
+# -----------------------------
+st.set_page_config(page_title="Black Hole Anatomy — Quantum Singularity", layout="wide")
+st.title("🪐 Black Hole Anatomy — Quantum Singularity Visualizer")
 
-st.title("🔬 Singularity Anatomy — Fractal Core + Asymmetric Ripple (Step 1)")
-st.markdown(
-    "Interactive exploration of a fractal crystalline singularity core with a small asymmetric/time-dependent deformation."
-)
+st.markdown("""
+Explore the internal anatomy of a black hole and its fractal singularity core.  
+This simulation includes the **Event Horizon**, **Photon Sphere**, **Accretion Disk**, and the **Quantum Singularity Core**.  
+The visuals and derived values are inspired by your **Quantum Gravity Compression (QGC)**, **Quantum Evaporation (QE–WH)**, and **Singularity Transition (STF)** functions.
+""")
 
-# Sidebar controls
-with st.sidebar:
-    st.header("Controls")
-    mass = st.slider("Mass (M☉)", min_value=1e3, max_value=1e9, value=4.3e6, step=1e3, format="%.0f")
-    deform_amp = st.slider("Deformation amplitude", 0.0, 0.6, 0.14, step=0.01)
-    harmonic_k = st.slider("Harmonic frequency (k)", 1, 12, 6, step=1)
-    ripple_mult = st.slider("Ripple strength", 0.0, 1.0, 0.28, step=0.02)
-    r_Q = st.number_input("Quantum radius r_Q (m) (visual scale)", value=1e9, step=1e8, format="%.0e")
-    visualize_scale = st.slider("Visual scale factor", 0.2, 3.0, 1.0, step=0.1)
-    time_val = st.slider("Time (t) — step/animate", 0.0, 60.0, 0.0, step=0.5)
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        if st.button("Step time +"):
-            time_val = time_val + 0.5
-    with col2:
-        if st.button("Reset time"):
-            time_val = 0.0
-
-st.markdown("### Visual parameters (grid & resolution)")
-res = st.selectbox("Grid resolution (tradeoff: speed vs detail)", options=[40, 56, 64, 80], index=2)
-threshold = st.slider("Iso-surface threshold (0..1)", 0.05, 0.8, 0.5, step=0.01)
-
-# Physics constants (used for illustrative diagnostics only)
+# -----------------------------
+# Constants
+# -----------------------------
 G = 6.67430e-11
 c = 2.99792458e8
-M_sun = 1.98847e30
-
-# Diagnostics: compute some toy physics numbers to display
-# QGC: F_QG(r) = G m / r^2 * exp(- r/r_Q)
-# We'll evaluate it at a sample radius chosen relative to visual scale
-sample_r = 1e10  # sample radius in meters (visual scale only)
-m_kg = mass * M_sun
-F_QG = (G * m_kg) / (sample_r ** 2) * np.exp(-sample_r / max(r_Q, 1.0))
-# QE-WH toy: dM/dt = -hbar c^2 / G * 1/M^2  (we will normalize for display)
 hbar = 1.054571817e-34
-dMdt = - (hbar * c ** 2) / G * (1.0 / (m_kg ** 2))
+Msun = 1.98847e30
 
-# simple presentation (scaled)
-st.sidebar.markdown("### Diagnostics (toy values)")
-st.sidebar.write(f"Sample radius (visual): {sample_r:.3e} m")
-st.sidebar.write(f"F_QG(r) (toy) = {F_QG:.3e} N (illustrative)")
-st.sidebar.write(f"dM/dt (toy) = {dMdt:.3e} kg/s (illustrative)")
+# -----------------------------
+# Sidebar controls
+# -----------------------------
+st.sidebar.header("⚙️ Controls")
 
-# Generate scalar field on a 3D grid, cache to speed UI
-@st.cache_data(show_spinner=False)
-def make_field(resolution, k, amp, ripple_s, t, scale):
-    # grid in [-1,1]^3 scaled by 'scale'
-    N = resolution
-    lin = np.linspace(-1.0, 1.0, N)
-    xg, yg, zg = np.meshgrid(lin, lin, lin, indexing='xy')
-    # physical radial coordinate for shaping (normalized)
-    r = np.sqrt(xg**2 + yg**2 + zg**2) + 1e-12
+mass = st.sidebar.slider("Mass (Solar Masses)", 1, 10000000, 4300000, step=100000)
+r_q = st.sidebar.slider("Quantum Radius Scale (m)", 1e3, 1e10, 1e6, step=1e5, format="%.1e")
+lambda_c = st.sidebar.slider("λ (Curvature coupling)", 0.01, 10.0, 1.0)
+live_mode = st.sidebar.checkbox("🔄 Enable Live Mode (Animated)", value=False)
 
-    # Fractal-ish base: product of sines to create crystalline pattern
-    freq = float(k)
-    base = np.abs(np.sin(freq * xg * pi) * np.sin(freq * yg * pi) * np.sin(freq * zg * pi))
+show_disk = st.sidebar.checkbox("Show Accretion Disk", value=True)
+show_core = st.sidebar.checkbox("Show Singularity Core", value=True)
+show_sphere = st.sidebar.checkbox("Show Photon Sphere", value=True)
 
-    # Asymmetric, time-dependent ripple deformation (angular harmonics)
-    # compute angles
-    theta = np.arctan2(np.sqrt(xg**2 + yg**2), zg + 1e-12)  # polar-like
-    phi = np.arctan2(yg, xg + 1e-12)
-    # ripple term uses harmonics and time
-    ripple = ripple_s * np.sin(3.0 * theta + 0.6 * t) * np.cos(2.0 * phi + 0.4 * t)
+# -----------------------------
+# Derived physics
+# -----------------------------
+M = mass * Msun
+r_s = 2 * G * M / c**2
+r_ph = 1.5 * r_s
 
-    # radial attenuation to keep surface near center visually
-    radial_mask = np.exp(- (r / 0.9) ** 2)
+# Quantum Gravity Compression
+def F_QG(r):
+    return (G * M / r**2) * np.exp(-r / r_q)
 
-    # combined scalar field
-    field = base + amp * radial_mask * ripple
+# Quantum Evaporation / White-Hole Transition
+def dM_dt(M):
+    return - (hbar * c**2 / G) * (1 / M**2)
 
-    # apply a soft Gaussian to favor inner structure vs outer noise
-    field = field * np.exp(- (r / (0.95))**2 ) + 0.05 * base * (1 - np.exp(- (r / 0.6)**2))
+# Singularity Transition Function
+def S_trans(rho_QG, dR_dt):
+    return np.trapz(rho_QG) - lambda_c * dR_dt
 
-    return field, xg * scale, yg * scale, zg * scale
+# -----------------------------
+# Geometry generation
+# -----------------------------
+theta, phi = np.mgrid[0:np.pi:50j, 0:2*np.pi:50j]
+x = np.sin(theta) * np.cos(phi)
+y = np.sin(theta) * np.sin(phi)
+z = np.cos(theta)
 
-# scale mapping from mass to visual core scale (arbitrary mapping for display)
-visual_scale = visualize_scale * max(0.05, (mass / 1e6) ** (1.0 / 3.0))  # keep it reasonable
+# Pulsation for live mode
+t = 0
+if live_mode:
+    t = np.sin(st.session_state.get("frame", 0))
+    st.session_state["frame"] = st.session_state.get("frame", 0) + 0.3
 
-# build the field
-with st.spinner("Generating 3D field (marching cubes)..."):
-    field, X, Y, Z = make_field(res, harmonic_k, deform_amp, ripple_mult, time_val, visual_scale)
+# -----------------------------
+# Plot setup
+# -----------------------------
+fig = go.Figure()
 
-# marching cubes to extract isosurface
-try:
-    verts, faces, normals, values = measure.marching_cubes(field, level=threshold, spacing=(X[1,0,0]-X[0,0,0],
-                                                                                             Y[0,1,0]-Y[0,0,0],
-                                                                                             Z[0,0,1]-Z[0,0,0]))
-except Exception as e:
-    st.error("Error extracting surface (try lowering resolution or changing threshold).")
-    st.write("Exception:", e)
-    st.stop()
-
-# Build Mesh3d with Plotly
-xv, yv, zv = verts.T
-ivi = faces  # triangular faces
-
-# color mapping from values at vertices (interpolate)
-# use the scalar field values at the vertex positions by indexing 'values' from marching result
-vertex_color = values  # already returned as 'values' for vertices by marching_cubes
-
-mesh = go.Mesh3d(
-    x=xv, y=yv, z=zv,
-    i=ivi[:, 0], j=ivi[:, 1], k=ivi[:, 2],
-    intensity=vertex_color,
-    colorscale='Plasma',
-    intensitymode='vertex',
-    showscale=False,
-    opacity=0.95,
-    flatshading=False,
-    lighting=dict(ambient=0.6, diffuse=0.8, roughness=0.9, specular=0.5),
-    name='Fractal core'
+# --- Event Horizon ---
+fig.add_surface(
+    x=r_s * x, y=r_s * y, z=r_s * z,
+    colorscale="Viridis", showscale=False,
+    opacity=0.3, name="Event Horizon"
 )
 
-# Add a faint semi-transparent accretion ring (2D ring extruded slightly)
-theta = np.linspace(0, 2 * np.pi, 160)
-ring_r = 1.05 * visual_scale
-ring_x = ring_r * np.cos(theta)
-ring_y = ring_r * np.sin(theta)
-ring_z = 0.06 * visual_scale * np.sin(6 * theta + 0.3 * time_val)
-ring_line = go.Scatter3d(x=ring_x, y=ring_y, z=ring_z, mode='lines', line=dict(color='rgba(255,160,60,0.42)', width=4), name='Accretion ring')
+# --- Photon Sphere ---
+if show_sphere:
+    fig.add_surface(
+        x=r_ph * x, y=r_ph * y, z=r_ph * z,
+        colorscale="Plasma", showscale=False,
+        opacity=0.2, name="Photon Sphere"
+    )
 
-# Combine into figure
-fig = go.Figure(data=[mesh, ring_line])
+# --- Accretion Disk ---
+if show_disk:
+    r_disk = np.linspace(1.5 * r_s, 4 * r_s, 200)
+    phi_disk = np.linspace(0, 2 * np.pi, 200)
+    R, P = np.meshgrid(r_disk, phi_disk)
+    X = R * np.cos(P)
+    Y = R * np.sin(P)
+    Z = 0.02 * r_s * np.sin(P * 4 + t)  # gentle warping
 
-# camera and layout tuned for dark background
-cam = dict(eye=dict(x=1.6, y=1.6, z=1.2))
-fig.update_layout(scene=dict(
-    xaxis=dict(visible=False),
-    yaxis=dict(visible=False),
-    zaxis=dict(visible=False),
-    aspectmode='data',
-    camera=cam
-), margin=dict(l=0, r=0, t=20, b=0), paper_bgcolor='black', plot_bgcolor='black')
+    fig.add_surface(
+        x=X, y=Y, z=Z,
+        surfacecolor=np.sin(P * 8 + t),
+        colorscale="Inferno", opacity=0.7,
+        showscale=False, name="Accretion Disk"
+    )
 
-# show the Plotly figure
+# --- Singularity Core (Fractal-inspired) ---
+if show_core:
+    r_core = 0.5 * r_s * (1 + 0.1 * np.sin(10 * theta + t))
+    Xc = r_core * x
+    Yc = r_core * y
+    Zc = r_core * z
+
+    fig.add_surface(
+        x=Xc, y=Yc, z=Zc,
+        surfacecolor=np.cos(theta * 5 + t),
+        colorscale="Purples",
+        showscale=False,
+        opacity=0.8,
+        name="Singularity Core"
+    )
+
+# --- Layout ---
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
+        aspectmode="data",
+        bgcolor="black"
+    ),
+    margin=dict(l=0, r=0, t=0, b=0),
+    paper_bgcolor="black",
+)
+
+# -----------------------------
+# Display visualization
+# -----------------------------
 st.plotly_chart(fig, use_container_width=True)
 
-# Show numeric readouts below
-st.markdown("### Diagnostics (illustrative)")
-colA, colB, colC = st.columns(3)
-with colA:
-    st.metric("Mass (M☉)", f"{mass:,.0f}")
-    Rs = 2 * G * m_kg / (c ** 2)
-    st.caption("Schwarzschild radius (approx.)")
-    st.write(f"{Rs:.3e} m")
-with colB:
-    st.metric("QG Compression F_QG (toy)", f"{F_QG:.3e} N")
-    st.caption("Evaluated at sample radius (visual).")
-with colC:
-    st.metric("dM/dt (toy QE–WH)", f"{dMdt:.3e} kg/s")
-    st.caption("Heuristic / illustrative only")
+# -----------------------------
+# Physics readout
+# -----------------------------
+st.subheader("🧮 Quantum & Relativistic Parameters")
 
-st.markdown("---")
-st.markdown("**Notes:** This module is **visual & exploratory**. The scalar field and marching-cubes surface are procedural approximations chosen to illustrate a crystalline/fractal-looking core and an asymmetric, time-dependent ripple. When you want, I can:")
-st.write("- connect `F_{QG}` and `S_{trans}` directly to surface color/opacity", "- add field-line tubes showing inflow", "- produce an exportable mesh (OBJ/STL) for external rendering / higher-quality visualization", "- add a stepping automatic animation loop (careful: Streamlit isn't ideal for continuous real-time animation).")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("Schwarzschild Radius (m)", f"{r_s:.3e}")
+    st.metric("Photon Sphere (m)", f"{r_ph:.3e}")
+
+with col2:
+    F_sample = F_QG(2 * r_s)
+    st.metric("QGC Force @ 2rₛ (N)", f"{F_sample:.3e}")
+    st.metric("Mass-loss rate (kg/s)", f"{dM_dt(M):.3e}")
+
+with col3:
+    rho_QG = np.exp(-np.linspace(0, 10, 100))
+    dR_dt = np.sin(t)
+    s_value = S_trans(rho_QG, dR_dt)
+    st.metric("Singularity Transition", f"{s_value:.3e}")
+    st.metric("λ (Curvature coupling)", f"{lambda_c:.2f}")
+
+# -----------------------------
+# Footer
+# -----------------------------
+st.markdown("""
+---
+*Visualization synthesizes GR and quantum-gravity phenomenology.*  
+*Developed for exploring singularity dynamics & fractal core behavior.*
+""")
