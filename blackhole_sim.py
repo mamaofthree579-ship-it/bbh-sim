@@ -1,148 +1,128 @@
+🪐 quantum_blackhole_app.py
+
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 
-# --- Physical constants ---
-G = 6.67430e-11
-c = 2.99792458e8
-hbar = 1.054571817e-34
-M_sun = 1.98847e30
+st.set_page_config(page_title="Black Hole Anatomy Simulator", layout="wide")
 
-# --- Streamlit layout ---
-st.set_page_config(page_title="Quantum Singularity Explorer", layout="wide")
-
-st.title("🌀 Quantum Singularity Explorer")
+st.title("🌀 Black Hole Anatomy Simulator")
 st.markdown("""
-Explore the **anatomy of a black hole** based on your *fractal crystalline singularity* theory.  
-Adjust the parameters to see how the event horizon, photon sphere, and quantum-gravity
-effects behave near the singularity.
+Explore a 3D model of a black hole with:
+- **Event Horizon** (purple boundary)
+- **Accretion Disk** (hot plasma disk)
+- **Fractal Singularity Core** (quantum graviton crystal)
 """)
 
-# --- Sidebar controls ---
-st.sidebar.header("Simulation Controls")
+# --- Controls ---
+mass = st.slider("Black Hole Mass (in Solar Masses)", 1e6, 1e9, 4.3e6, step=1e6)
+st.caption("Adjust mass to see radius scaling")
 
-M_solar = st.sidebar.slider("Black Hole Mass (M☉)", 1e6, 1e9, 4.3e6, step=1e6)
-r_Q = st.sidebar.slider("Quantum Radius r₍Q₎ (m)", 1e2, 1e10, 1e7, step=1e6)
-lambda_c = st.sidebar.slider("Curvature Coupling λ", 0.0, 1.0, 0.2, step=0.05)
-show_disk = st.sidebar.checkbox("Show Accretion Disk", True)
+# --- Constants ---
+G = 6.67430e-11
+c = 2.998e8
+M_sun = 1.98847e30
 
-# --- Derived quantities ---
-M = M_solar * M_sun
-r_s = 2 * G * M / c**2
-r_ph = 1.5 * r_s
+# --- Derived Quantities ---
+M = mass * M_sun
+r_s = 2 * G * M / c**2     # Schwarzschild radius
+r_ph = 1.5 * r_s            # Photon sphere radius
+r_disk = 3 * r_s            # Accretion disk outer radius
 
-# --- Quantum Gravity Compression Function ---
-def F_QG(r):
-    return (G * M / r**2) * np.exp(-r / r_Q)
+# --- Coordinates for Spherical Surfaces ---
+theta = np.linspace(0, 2 * np.pi, 100)
+phi = np.linspace(0, np.pi, 100)
+theta, phi = np.meshgrid(theta, phi)
 
-# --- Quantum Evaporation rate ---
-def dM_dt(M):
-    return - (hbar * c**2 / G) * (1 / M**2)
+x = np.sin(phi) * np.cos(theta)
+y = np.sin(phi) * np.sin(theta)
+z = np.cos(phi)
 
-# --- Singularity Transition Function ---
-def S_trans(r_vals, rho_QG, dR_dt):
-    integral = np.trapz(rho_QG, r_vals)
-    return integral - lambda_c * dR_dt
-
-# --- Sample field computation ---
-r_vals = np.linspace(r_s, 5*r_s, 300)
-rho_QG = F_QG(r_vals) / (4*np.pi*r_vals**2)
-dR_dt = np.gradient(F_QG(r_vals), r_vals).mean()
-S_value = S_trans(r_vals, rho_QG, dR_dt)
-stable = S_value < 0
-stability_color = "🟢 Stable (Compression Dominant)" if stable else "🔴 Transition Phase (Output Dominant)"
-
-# --- Geometry setup for visualization ---
-theta, phi = np.mgrid[0:np.pi:60j, 0:2*np.pi:60j]
-
-# Event horizon
-x_h = r_s * np.sin(theta) * np.cos(phi)
-y_h = r_s * np.sin(theta) * np.sin(phi)
-z_h = r_s * np.cos(theta)
-
-# Photon sphere
-x_p = r_ph * np.sin(theta) * np.cos(phi)
-y_p = r_ph * np.sin(theta) * np.sin(phi)
-z_p = r_ph * np.cos(theta)
-
-# Fractal crystalline core (purple glassy form)
-r_core = 0.4 * r_s * (1 + 0.3 * np.sin(6*theta) * np.sin(6*phi))
-x_c = r_core * np.sin(theta) * np.cos(phi)
-y_c = r_core * np.sin(theta) * np.sin(phi)
-z_c = r_core * np.cos(theta)
-
+# --- Plotly Figure ---
 fig = go.Figure()
 
-# Event horizon (semi-transparent dark shell)
+# Event horizon
 fig.add_trace(go.Surface(
-    x=x_h, y=y_h, z=z_h,
-    colorscale=[[0, 'black'], [1, '#3a006d']],
-    opacity=0.3,
+    x=r_s * x,
+    y=r_s * y,
+    z=r_s * z,
+    colorscale=[[0, "rgb(80,0,120)"], [1, "rgb(140,0,220)"]],
+    opacity=1.0,
     showscale=False,
     name="Event Horizon"
 ))
 
-# Photon sphere (faint light ring)
+# Accretion disk (flattened torus)
+phi_disk = np.linspace(0, 2 * np.pi, 100)
+r_vals = np.linspace(0.8 * r_disk, r_disk, 30)
+phi_disk, r_vals = np.meshgrid(phi_disk, r_vals)
+
+x_disk = r_vals * np.cos(phi_disk)
+y_disk = r_vals * np.sin(phi_disk)
+z_disk = 0.15 * np.sin(3 * phi_disk) * (r_vals / r_disk)**2  # small warp
+
 fig.add_trace(go.Surface(
-    x=x_p, y=y_p, z=z_p,
-    colorscale=[[0, 'rgba(255,255,255,0.1)'], [1, 'rgba(255,255,255,0.2)']],
-    opacity=0.2,
+    x=x_disk,
+    y=y_disk,
+    z=z_disk,
+    surfacecolor=np.abs(np.sin(phi_disk)),
+    colorscale="Inferno",
+    opacity=0.85,
     showscale=False,
-    name="Photon Sphere"
+    name="Accretion Disk"
 ))
 
-# Fractal crystalline core (purple / plasma look)
+# Singularity core
 fig.add_trace(go.Surface(
-    x=0.6 * x,
-    y=0.6 * y,
-    z=0.6 * z,
+    x=0.4 * r_s * x,
+    y=0.4 * r_s * y,
+    z=0.4 * r_s * z,
     colorscale="Plasma",
-    opacity=0.9,
+    opacity=0.95,
     showscale=False,
     name="Singularity Core"
 ))
 
-# Optional accretion disk
-if show_disk:
-    r_disk = np.linspace(r_ph, 3*r_ph, 80)
-    phi_disk = np.linspace(0, 2*np.pi, 80)
-    R, PHI = np.meshgrid(r_disk, phi_disk)
-    Xd = R * np.cos(PHI)
-    Yd = R * np.sin(PHI)
-    Zd = 0.05 * r_s * np.sin(5 * PHI)
-    fig.add_trace(go.Surface(
-        x=Xd, y=Yd, z=Zd,
-        colorscale="Inferno",
-        opacity=0.6,
-        showscale=False,
-        name="Accretion Disk"
-    ))
-
+# --- Layout ---
 fig.update_layout(
     scene=dict(
-        xaxis=dict(showbackground=False, visible=False),
-        yaxis=dict(showbackground=False, visible=False),
-        zaxis=dict(showbackground=False, visible=False),
-        aspectmode='data'
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
+        aspectmode='data',
+        bgcolor="black"
     ),
-    paper_bgcolor="black",
-    scene_bgcolor="black",
     margin=dict(l=0, r=0, t=0, b=0),
-    height=700
+    paper_bgcolor="black"
 )
 
-st.plotly_chart(fig, use_container_width=True)
+# --- Info Sidebar ---
+st.sidebar.header("📊 Physical Parameters")
+st.sidebar.write(f"**Mass:** {mass:,.0f} M☉")
+st.sidebar.write(f"**Schwarzschild Radius (rₛ):** {r_s:.3e} m")
+st.sidebar.write(f"**Photon Sphere (≈1.5 rₛ):** {r_ph:.3e} m")
+st.sidebar.write(f"**Accretion Disk Outer Radius:** {r_disk:.3e} m")
 
-# --- Results ---
-st.markdown("## ⚙️ Derived Quantities")
-col1, col2 = st.columns(2)
-with col1:
-    st.metric("Schwarzschild radius (rₛ)", f"{r_s:.2e} m")
-    st.metric("Photon sphere radius (1.5rₛ)", f"{r_ph:.2e} m")
-with col2:
-    st.metric("Quantum compression avg (F_QG)", f"{F_QG(r_s):.2e} N")
-    st.metric("Transition Function (Sₜᵣₐₙₛ)", f"{S_value:.2e}")
+st.sidebar.markdown("""
+---
+### 🧠 Notes
+- Purple sphere: **Event Horizon**
+- Orange glow: **Accretion Disk**
+- Magenta core: **Quantum Fractal Singularity**
+- Sizes are **scaled for visibility**, not true proportion.
+---
+""")
 
-st.markdown(f"### Stability: {stability_color}")
+# --- Optional rotation ---
+rotate = st.checkbox("Auto-rotate view", value=True)
+if rotate:
+    for angle in range(0, 360, 5):
+        camera = dict(eye=dict(x=1.5*np.cos(np.radians(angle)),
+                               y=1.5*np.sin(np.radians(angle)),
+                               z=0.5))
+        fig.update_layout(scene_camera=camera)
+        st.plotly_chart(fig, use_container_width=True)
+else:
+    st.plotly_chart(fig, use_container_width=True)
 
-st.caption("Prototype physics visualization — parameters adjustable for exploratory testing of fractal singularity behavior.")
+st.caption("Visualization by GPT-5 • Based on Schwarzschild geometry + fractal singularity theory model.")
