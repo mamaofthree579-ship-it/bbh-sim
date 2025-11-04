@@ -1,6 +1,3 @@
-# Quantum Singularity Explorer (fixed and stable)
-# ---------------------------------------------------------
-
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
@@ -96,11 +93,13 @@ fig.add_trace(go.Surface(
 
 # Fractal crystalline core (purple / plasma look)
 fig.add_trace(go.Surface(
-    x=x_c, y=y_c, z=z_c,
+    x=0.6 * x,
+    y=0.6 * y,
+    z=0.6 * z,
     colorscale="Plasma",
-    opacity=0.95,
+    opacity=0.9,
     showscale=False,
-    name="Fractal Core"
+    name="Singularity Core"
 ))
 
 # Optional accretion disk
