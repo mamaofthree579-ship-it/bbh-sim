@@ -1,57 +1,34 @@
 import streamlit as st
-import numpy as np
 import streamlit.components.v1 as components
+import json
 
-# --- SESSION STATE INITIALIZATION ---
-session_vars = ["sweep_r", "sweep_k", "sweep_freq", "sweep_alpha", "sweep_beta"]
-for var in session_vars:
-    if var not in st.session_state:
-        st.session_state[var] = None
+st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide")
 
-# --- SIDEBAR CONTROLS ---
-st.sidebar.header("Simulation Controls")
-st.session_state.sweep_r = st.sidebar.slider(
-    "Sweep Radius (r)", min_value=0.0, max_value=10.0, value=st.session_state.sweep_r or 1.0
-)
-st.session_state.sweep_k = st.sidebar.slider(
-    "Coupling Constant (K)", min_value=0.0, max_value=1.0, value=st.session_state.sweep_k or 0.2
-)
-st.session_state.sweep_freq = st.sidebar.slider(
-    "Frequency Scale", min_value=0.1, max_value=5.0, value=st.session_state.sweep_freq or 1.0
-)
-st.session_state.sweep_alpha = st.sidebar.slider(
-    "Alpha", min_value=0.0, max_value=1.0, value=st.session_state.sweep_alpha or 0.01
-)
-st.session_state.sweep_beta = st.sidebar.slider(
-    "Beta", min_value=0.0, max_value=1.0, value=st.session_state.sweep_beta or 0.01
-)
+st.title("Fractal Conscious Cosmos Simulator 🌌")
 
-# --- DISPLAY CURRENT SETTINGS ---
-st.write("### Current Simulation Parameters")
-for var in session_vars:
-    st.write(f"{var}: {st.session_state[var]}")
-
-# --- HTML / JS CODE FOR 3D SIMULATION ---
-html_code = f"""
+html_code = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Fractal Conscious Cosmos Simulator</title>
 <style>
-body {{ margin: 0; overflow: hidden; background-color: #000; }}
-#ui {{ position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }}
-label {{ display: block; margin-top: 5px; }}
+body { margin: 0; overflow: hidden; background-color: #000; }
+#ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; z-index:100;}
+label { display: block; margin-top: 5px; }
+#log { position: absolute; bottom: 10px; left: 10px; color: #0f0; font-family: monospace; max-height: 200px; overflow-y: auto; z-index:100;}
 </style>
 </head>
 <body>
 <div id="ui">
-  <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="{st.session_state.sweep_k}"></label>
-  <label>Frequency Scale: <input type="range" id="freqSlider" min="0.1" max="5" step="0.01" value="{st.session_state.sweep_freq}"></label>
+  <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="0.2"></label>
+  <label>Frequency Scale: <input type="range" id="freqSlider" min="0.1" max="2" step="0.01" value="1"></label>
 </div>
+<div id="log"></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-// --- PARAMETERS ---
+
+// PARAMETERS
 const NODE_COUNT = 20;
 const SUB_NODE_COUNT = 5;
 const GRID_SIZE = 50;
@@ -60,145 +37,172 @@ let K = parseFloat(document.getElementById("kSlider").value);
 let FREQ_SCALE = parseFloat(document.getElementById("freqSlider").value);
 
 // --- NODE CLASSES ---
-class SubNode {{
-    constructor(parent) {{
+class SubNode {
+    constructor(parent) {
         this.parent = parent;
         this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
         this.A = Math.random() * 0.5 + 0.5;
         this.phi = Math.random() * 2 * Math.PI;
         this.mesh = null;
-    }}
+    }
 
-    updatePhase(dt) {{
+    updatePhase(dt) {
         this.phi += this.omega * dt;
-    }}
+    }
 
-    amplitudeAt(t) {{
+    amplitudeAt(t) {
         return this.A * Math.cos(this.omega * t + this.phi);
-    }}
-}}
+    }
+}
 
-class Node {{
-    constructor(id) {{
+class Node {
+    constructor(id) {
         this.id = id;
         this.K = K;
         this.mesh = null;
         this.subNodes = [];
-        for (let i=0; i<SUB_NODE_COUNT; i++) {{
+        for (let i=0; i<SUB_NODE_COUNT; i++){
             this.subNodes.push(new SubNode(this));
-        }}
+        }
         this.neighbors = [];
-    }}
+    }
 
-    update(dt) {{
+    update(dt) {
         this.subNodes.forEach(sn => sn.updatePhase(dt));
+
         let dphi = 0;
-        for (let n of this.neighbors) {{
+        for (let n of this.neighbors) {
             dphi += n.K * Math.sin(n.subNodes[0].phi - this.subNodes[0].phi);
-        }}
+        }
         this.subNodes.forEach(sn => sn.phi += dphi * dt);
-    }}
+    }
 
-    amplitudeAt(t) {{
+    amplitudeAt(t) {
         return this.subNodes.reduce((sum, sn) => sum + sn.amplitudeAt(t), 0)/this.subNodes.length;
-    }}
-}}
+    }
+}
 
-// --- DARK MATTER GRID ---
-class DarkMatterGrid {{
-    constructor(width, height) {{
+// DARK MATTER GRID
+class DarkMatterGrid {
+    constructor(width, height) {
         this.width = width;
         this.height = height;
         this.grid = Array(width).fill().map(() => Array(height).fill(Math.random()));
-    }}
+    }
 
-    diffuse(D=0.1, alpha=0.01) {{
+    diffuse(D=0.1, alpha=0.01) {
         const newGrid = this.grid.map(arr => [...arr]);
-        for (let i=1; i<this.width-1; i++) {{
-            for (let j=1; j<this.height-1; j++) {{
+        for (let i=1; i<this.width-1; i++) {
+            for (let j=1; j<this.height-1; j++) {
                 let laplace = this.grid[i+1][j] + this.grid[i-1][j] +
                               this.grid[i][j+1] + this.grid[i][j-1] - 4*this.grid[i][j];
                 newGrid[i][j] = this.grid[i][j] + D * laplace - alpha * this.grid[i][j];
-            }}
-        }}
+            }
+        }
         this.grid = newGrid;
-    }}
-}}
+    }
+}
 
-// --- SCENE SETUP ---
+// SCENE SETUP
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.z = 60;
-const renderer = new THREE.WebGLRenderer({{antialias:true}});
+const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// --- CREATE NODES ---
+// CREATE NODES
 const nodes = [];
-for (let i=0; i<NODE_COUNT; i++){{
+for (let i=0; i<NODE_COUNT; i++){
     const node = new Node(i);
     const geometry = new THREE.SphereGeometry(1, 8, 8);
-    const material = new THREE.MeshBasicMaterial({{color:0x00ffff}});
+    const material = new THREE.MeshBasicMaterial({color:0x00ffff});
     const mesh = new THREE.Mesh(geometry, material);
     node.mesh = mesh;
     mesh.position.x = (Math.random() - 0.5) * 50;
     mesh.position.y = (Math.random() - 0.5) * 50;
     scene.add(mesh);
 
-    node.subNodes.forEach((sn, idx) => {{
+    node.subNodes.forEach((sn, idx) => {
         const g = new THREE.SphereGeometry(0.3, 6, 6);
-        const m = new THREE.MeshBasicMaterial({{color: 0xff00ff}});
+        const m = new THREE.MeshBasicMaterial({color: 0xff00ff});
         const meshSN = new THREE.Mesh(g, m);
         meshSN.position.x = mesh.position.x + (Math.random()-0.5)*3;
         meshSN.position.y = mesh.position.y + (Math.random()-0.5)*3;
         scene.add(meshSN);
         sn.mesh = meshSN;
-    }});
+    });
 
     nodes.push(node);
-}}
+}
 
-// Assign neighbors
-nodes.forEach(node => {{
+// Random neighbors
+nodes.forEach(node => {
     node.neighbors = nodes.sort(() => Math.random()-0.5).slice(0, 3);
-}});
+});
 
-// Dark matter grid
 const dmGrid = new DarkMatterGrid(GRID_SIZE, GRID_SIZE);
 
-// --- ANIMATION LOOP ---
+// AUDIO SETUP
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const baseOsc = audioCtx.createOscillator();
+const gainNode = audioCtx.createGain();
+baseOsc.connect(gainNode);
+gainNode.connect(audioCtx.destination);
+baseOsc.type = 'sine';
+baseOsc.start();
+gainNode.gain.value = 0.05;
+
+// ANIMATION
 let t=0;
-function animate() {{
+function animate() {
     requestAnimationFrame(animate);
-    nodes.forEach(node => {{
+
+    nodes.forEach(node => {
         node.update(DT);
         const amp = node.amplitudeAt(t);
         node.mesh.scale.set(amp+0.5, amp+0.5, amp+0.5);
         node.mesh.material.color.setHSL((amp+1)/2, 1, 0.5);
-        node.subNodes.forEach(sn => {{
+
+        node.subNodes.forEach(sn => {
             const ampSN = sn.amplitudeAt(t);
             sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
             sn.mesh.material.color.setHSL((ampSN+1)/2, 1, 0.5);
-        }});
-    }});
+        });
+    });
+
+    // Update audio frequency based on first node
+    baseOsc.frequency.value = 16 + nodes[0].amplitudeAt(t)*30;
+
     dmGrid.diffuse();
     renderer.render(scene, camera);
     t += DT;
-}}
+}
 animate();
 
-// --- UI INTERACTIONS ---
-document.getElementById("kSlider").addEventListener("input", e => {{
+// UI EVENTS
+document.getElementById("kSlider").addEventListener("input", e => {
     K = parseFloat(e.target.value);
     nodes.forEach(node => node.K = K);
-}});
-document.getElementById("freqSlider").addEventListener("input", e => {{
+});
+document.getElementById("freqSlider").addEventListener("input", e => {
     FREQ_SCALE = parseFloat(e.target.value);
     nodes.forEach(node => node.subNodes.forEach(sn => sn.omega = Math.random() * 2 * Math.PI * FREQ_SCALE));
-}});
+});
+
 </script>
 </body>
 </html>
 """
 
 components.html(html_code, height=800, width=1200)
+
+st.markdown("""
+#### Notes:
+- **Coupling K** affects how nodes influence each other.
+- **Frequency Scale** changes oscillation rates of sub-nodes.
+- Nodes represent energy/consciousness hubs.
+- Dark matter grid simulates environmental influence and diffusion.
+- Audio feedback maps node oscillation to sound frequency.
+""")
+st.success("Simulator running! Adjust sliders and explore the fractal cosmos.")
