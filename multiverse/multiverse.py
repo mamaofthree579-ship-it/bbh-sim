@@ -1,22 +1,32 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import pandas as pd
+import json
 
-# Initialize session state for all parameters if not already present
-if 'K' not in st.session_state:
-    st.session_state.K = 0.2
-if 'FREQ_SCALE' not in st.session_state:
-    st.session_state.FREQ_SCALE = 1.0
-if 'NODE_COUNT' not in st.session_state:
-    st.session_state.NODE_COUNT = 20
-if 'SUB_NODE_COUNT' not in st.session_state:
-    st.session_state.SUB_NODE_COUNT = 5
-if 'GRID_SIZE' not in st.session_state:
-    st.session_state.GRID_SIZE = 50
-if 'DT' not in st.session_state:
-    st.session_state.DT = 0.01
+# --- Page title and description ---
+st.title("Fractal Conscious Cosmos Simulator 🌌")
+st.markdown("""
+Explore a dynamic 3D fractal universe with twinkling nodes, subnodes, and a diffusing dark matter grid.
+Use the sidebar to adjust coupling, frequency, node count, and other parameters.  
+Capture snapshots of the simulation data for research and analysis.
+""")
 
-# Sidebar controls
-st.sidebar.title("Simulation Controls")
+# --- Initialize session state for all parameters if not already present ---
+default_params = {
+    "K": 0.2,
+    "FREQ_SCALE": 1.0,
+    "NODE_COUNT": 20,
+    "SUB_NODE_COUNT": 5,
+    "GRID_SIZE": 50,
+    "DT": 0.01,
+    "snapshots": []
+}
+for key, value in default_params.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+# --- Sidebar controls ---
+st.sidebar.header("Simulation Controls")
 st.session_state.K = st.sidebar.slider("Coupling K", 0.0, 1.0, st.session_state.K, 0.01)
 st.session_state.FREQ_SCALE = st.sidebar.slider("Frequency Scale", 0.1, 2.0, st.session_state.FREQ_SCALE, 0.01)
 st.session_state.NODE_COUNT = st.sidebar.number_input("Node Count", min_value=5, max_value=100, value=st.session_state.NODE_COUNT)
@@ -24,25 +34,48 @@ st.session_state.SUB_NODE_COUNT = st.sidebar.number_input("Sub-node Count", min_
 st.session_state.GRID_SIZE = st.sidebar.number_input("Dark Matter Grid Size", min_value=10, max_value=100, value=st.session_state.GRID_SIZE)
 st.session_state.DT = st.sidebar.number_input("Time Step (dt)", min_value=0.001, max_value=0.1, value=st.session_state.DT, step=0.001)
 
-# Button to export session parameters
+# --- Export parameters ---
 if st.sidebar.button("Export Parameters"):
     st.download_button(
         label="Download Parameters as JSON",
-        data=str({key: st.session_state[key] for key in st.session_state.keys()}),
+        data=json.dumps({key: st.session_state[key] for key in default_params.keys() if key != "snapshots"}, indent=2),
         file_name="simulation_parameters.json",
         mime="application/json"
     )
 
-# HTML/JS code for 3D visualization
+# --- Snapshot data logging ---
+st.sidebar.header("Data Snapshots")
+if st.sidebar.button("Capture Snapshot"):
+    # Save a snapshot of all key parameters and a timestamp
+    snapshot = {
+        "K": st.session_state.K,
+        "FREQ_SCALE": st.session_state.FREQ_SCALE,
+        "NODE_COUNT": st.session_state.NODE_COUNT,
+        "SUB_NODE_COUNT": st.session_state.SUB_NODE_COUNT,
+        "GRID_SIZE": st.session_state.GRID_SIZE,
+        "DT": st.session_state.DT
+    }
+    st.session_state.snapshots.append(snapshot)
+    st.sidebar.success(f"Snapshot captured! Total: {len(st.session_state.snapshots)}")
+
+if st.session_state.snapshots:
+    df_snapshots = pd.DataFrame(st.session_state.snapshots)
+    st.dataframe(df_snapshots)
+    st.download_button(
+        label="Download Snapshots CSV",
+        data=df_snapshots.to_csv(index=False),
+        file_name="snapshots.csv",
+        mime="text/csv"
+    )
+
+# --- HTML/JS 3D visualization ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Fractal Conscious Cosmos Simulator</title>
-<style>
-body {{ margin: 0; overflow: hidden; background-color: #000; }}
-</style>
+<style>body{{margin:0;overflow:hidden;background-color:#000;}}</style>
 </head>
 <body>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
