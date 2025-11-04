@@ -161,6 +161,58 @@ if show_anim:
     st.success("Pulse successfully traversed from input to output well (singularity transition).")
 
 # ─────────────────────────────────────────────────────────────
+# 8b. Optional 3-D dual-well visualization (interactive view)
+# ─────────────────────────────────────────────────────────────
+show_3D_dual = st.checkbox("Show 3-D Dual-Well Structure", False)
+
+if show_3D_dual:
+    st.subheader("3D Dual Graviton Wells – Singularity Bridge")
+
+    from mpl_toolkits.mplot3d import Axes3D  # ensure available
+    fig3d = plt.figure(figsize=(8, 6))
+    ax3d = fig3d.add_subplot(111, projection="3d")
+
+    # Coordinates for two funnel-shaped wells connected at the center
+    r = np.linspace(0.1, 1.0, 100)
+    theta = np.linspace(0, 2 * np.pi, 200)
+    R, Θ = np.meshgrid(r, theta)
+
+    # Define two potential wells offset along z-axis (input/output)
+    z_input = -np.exp(-R) - 1.0
+    z_output = np.exp(-R) + 1.0  # mirrored
+    X = R * np.cos(Θ)
+    Y = R * np.sin(Θ)
+
+    # Plot both wells
+    ax3d.plot_surface(X, Y, z_input, alpha=0.8, linewidth=0, antialiased=False)
+    ax3d.plot_surface(X, Y, z_output, alpha=0.8, linewidth=0, antialiased=False)
+
+    # Singularity bridge (center tube)
+    z_bridge = np.linspace(-0.2, 0.2, 30)
+    θ_bridge = np.linspace(0, 2 * np.pi, 40)
+    Rb, Θb = np.meshgrid(np.full_like(θ_bridge, 0.1), θ_bridge)
+    Xb = Rb * np.cos(Θb)
+    Yb = Rb * np.sin(Θb)
+    Zb = np.outer(np.ones_like(θ_bridge), z_bridge)
+    ax3d.plot_surface(Xb, Yb, Zb.T, color="red", alpha=0.6)
+
+    # Styling
+    ax3d.set_title("3D Representation of Input/Output Wells Connected by Singularity")
+    ax3d.set_xlabel("X-axis (spatial)")
+    ax3d.set_ylabel("Y-axis (spatial)")
+    ax3d.set_zlabel("Energy potential")
+    ax3d.view_init(elev=25, azim=45)
+
+    st.pyplot(fig3d)
+
+    st.markdown("""
+    **Interpretation**  
+    - Left funnel → *graviton input well* (black-hole analogue).  
+    - Right funnel → *graviton output well* (white-hole analogue).  
+    - Red tube → *singularity bridge*, allowing bidirectional energy–information tunneling.
+    """)
+
+# ─────────────────────────────────────────────────────────────
 # 9. Summary
 # ─────────────────────────────────────────────────────────────
 st.subheader("Simulation Summary")
