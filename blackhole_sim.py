@@ -1,8 +1,5 @@
-# singularity_app.py
-# Quantum Singularity Explorer (Prototype 1)
+# Quantum Singularity Explorer (fixed and stable)
 # ---------------------------------------------------------
-# Streamlit app visualizing the anatomy of a black hole with
-# a fractal quantum-graviton singularity core.
 
 import streamlit as st
 import numpy as np
@@ -18,13 +15,11 @@ M_sun = 1.98847e30
 st.set_page_config(page_title="Quantum Singularity Explorer", layout="wide")
 
 st.title("🌀 Quantum Singularity Explorer")
-st.markdown(
-"""
-This simulator explores your **fractal–core black hole theory**, combining classical and
-quantum–gravitational effects. It visualizes the event horizon, photon sphere, accretion disk,
-and crystalline singularity core.
-"""
-)
+st.markdown("""
+Explore the **anatomy of a black hole** based on your *fractal crystalline singularity* theory.  
+Adjust the parameters to see how the event horizon, photon sphere, and quantum-gravity
+effects behave near the singularity.
+""")
 
 # --- Sidebar controls ---
 st.sidebar.header("Simulation Controls")
@@ -54,15 +49,14 @@ def S_trans(r_vals, rho_QG, dR_dt):
 
 # --- Sample field computation ---
 r_vals = np.linspace(r_s, 5*r_s, 300)
-rho_QG = F_QG(r_vals) / (4*np.pi*r_vals**2)   # toy density
+rho_QG = F_QG(r_vals) / (4*np.pi*r_vals**2)
 dR_dt = np.gradient(F_QG(r_vals), r_vals).mean()
 S_value = S_trans(r_vals, rho_QG, dR_dt)
-
 stable = S_value < 0
 stability_color = "🟢 Stable (Compression Dominant)" if stable else "🔴 Transition Phase (Output Dominant)"
 
-# --- 3D visualization ---
-theta, phi = np.mgrid[0:np.pi:50j, 0:2*np.pi:50j]
+# --- Geometry setup for visualization ---
+theta, phi = np.mgrid[0:np.pi:60j, 0:2*np.pi:60j]
 
 # Event horizon
 x_h = r_s * np.sin(theta) * np.cos(phi)
@@ -74,7 +68,7 @@ x_p = r_ph * np.sin(theta) * np.cos(phi)
 y_p = r_ph * np.sin(theta) * np.sin(phi)
 z_p = r_ph * np.cos(theta)
 
-# Fractal-like crystalline core
+# Fractal crystalline core (purple glassy form)
 r_core = 0.4 * r_s * (1 + 0.3 * np.sin(6*theta) * np.sin(6*phi))
 x_c = r_core * np.sin(theta) * np.cos(phi)
 y_c = r_core * np.sin(theta) * np.sin(phi)
@@ -82,27 +76,30 @@ z_c = r_core * np.cos(theta)
 
 fig = go.Figure()
 
-# Event horizon shell
+# Event horizon (semi-transparent dark shell)
 fig.add_trace(go.Surface(
     x=x_h, y=y_h, z=z_h,
-    colorscale="Viridis",
-    opacity=0.3, name="Event Horizon",
-    showscale=False
+    colorscale=[[0, 'black'], [1, '#3a006d']],
+    opacity=0.3,
+    showscale=False,
+    name="Event Horizon"
 ))
 
-# Photon sphere
+# Photon sphere (faint light ring)
 fig.add_trace(go.Surface(
     x=x_p, y=y_p, z=z_p,
-    colorscale=[[0, 'rgba(255,255,255,0.2)'], [1, 'rgba(255,255,255,0.2)']],
+    colorscale=[[0, 'rgba(255,255,255,0.1)'], [1, 'rgba(255,255,255,0.2)']],
+    opacity=0.2,
     showscale=False,
     name="Photon Sphere"
 ))
 
-# Fractal crystalline core
+# Fractal crystalline core (purple / plasma look)
 fig.add_trace(go.Surface(
     x=x_c, y=y_c, z=z_c,
     colorscale="Plasma",
-    opacity=0.9,
+    opacity=0.95,
+    showscale=False,
     name="Fractal Core"
 ))
 
@@ -113,17 +110,20 @@ if show_disk:
     R, PHI = np.meshgrid(r_disk, phi_disk)
     Xd = R * np.cos(PHI)
     Yd = R * np.sin(PHI)
-    Zd = 0.05*r_s * np.sin(5*PHI)
+    Zd = 0.05 * r_s * np.sin(5 * PHI)
     fig.add_trace(go.Surface(
         x=Xd, y=Yd, z=Zd,
-        colorscale="Inferno", opacity=0.6, showscale=False, name="Accretion Disk"
+        colorscale="Inferno",
+        opacity=0.6,
+        showscale=False,
+        name="Accretion Disk"
     ))
 
 fig.update_layout(
     scene=dict(
-        xaxis=dict(showbackground=False),
-        yaxis=dict(showbackground=False),
-        zaxis=dict(showbackground=False),
+        xaxis=dict(showbackground=False, visible=False),
+        yaxis=dict(showbackground=False, visible=False),
+        zaxis=dict(showbackground=False, visible=False),
         aspectmode='data'
     ),
     paper_bgcolor="black",
@@ -134,8 +134,8 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Results panel ---
-st.markdown("## ⚙️ Derived Physical Quantities")
+# --- Results ---
+st.markdown("## ⚙️ Derived Quantities")
 col1, col2 = st.columns(2)
 with col1:
     st.metric("Schwarzschild radius (rₛ)", f"{r_s:.2e} m")
