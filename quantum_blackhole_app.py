@@ -1,5 +1,3 @@
-🌀 Enhanced Black Hole Anatomy App with Pulsing Fractal Core
-
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
