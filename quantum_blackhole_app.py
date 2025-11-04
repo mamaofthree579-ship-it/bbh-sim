@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 import math
-import time
 
 # -----------------------------
 # Page setup
@@ -11,9 +10,9 @@ st.set_page_config(page_title="Black Hole Anatomy — Quantum Singularity", layo
 st.title("🪐 Black Hole Anatomy — Quantum Singularity Visualizer")
 
 st.markdown("""
-Explore the inner anatomy of a black hole and its fractal singularity core.  
-This simulation includes **Event Horizon**, **Photon Sphere**, **Accretion Disk**, and the **Quantum Singularity Core**,  
-with parameters derived from **Quantum Gravity Compression (QGC)**, **Quantum Evaporation (QE–WH)**, and **Singularity Transition (STF)** concepts.
+Explore the internal anatomy of a black hole and its fractal singularity core.  
+This simulation includes the **Event Horizon**, **Photon Sphere**, **Accretion Disk**, and the **Quantum Singularity Core**.  
+The visuals and derived values are inspired by your **Quantum Gravity Compression (QGC)**, **Quantum Evaporation (QE–WH)**, and **Singularity Transition (STF)** functions.
 """)
 
 # -----------------------------
@@ -65,104 +64,81 @@ x = np.sin(theta) * np.cos(phi)
 y = np.sin(theta) * np.sin(phi)
 z = np.cos(theta)
 
-# -----------------------------
-# Animation frame counter
-# -----------------------------
-if "frame" not in st.session_state:
-    st.session_state["frame"] = 0
+# Pulsation for live mode
+t = 0
+if live_mode:
+    t = np.sin(st.session_state.get("frame", 0))
+    st.session_state["frame"] = st.session_state.get("frame", 0) + 0.3
 
 # -----------------------------
-# Live mode loop (optional)
+# Plot setup
 # -----------------------------
-num_frames = 1 if not live_mode else 60  # single frame if static
-placeholder = st.empty()
+fig = go.Figure()
 
-for frame in range(num_frames):
-    t = np.sin(st.session_state["frame"] / 10.0)
-    cam_angle = st.session_state["frame"] * 3  # degrees per frame
+# --- Event Horizon ---
+fig.add_surface(
+    x=r_s * x, y=r_s * y, z=r_s * z,
+    colorscale="Viridis", showscale=False,
+    opacity=0.3, name="Event Horizon"
+)
 
-    # -----------------------------
-    # Plot setup
-    # -----------------------------
-    fig = go.Figure()
-
-    # --- Event Horizon ---
+# --- Photon Sphere ---
+if show_sphere:
     fig.add_surface(
-        x=r_s * x, y=r_s * y, z=r_s * z,
-        colorscale="Viridis", showscale=False,
-        opacity=0.3, name="Event Horizon"
+        x=r_ph * x, y=r_ph * y, z=r_ph * z,
+        colorscale="Plasma", showscale=False,
+        opacity=0.2, name="Photon Sphere"
     )
 
-    # --- Photon Sphere ---
-    if show_sphere:
-        fig.add_surface(
-            x=r_ph * x, y=r_ph * y, z=r_ph * z,
-            colorscale="Plasma", showscale=False,
-            opacity=0.2, name="Photon Sphere"
-        )
+# --- Accretion Disk ---
+if show_disk:
+    r_disk = np.linspace(1.5 * r_s, 4 * r_s, 200)
+    phi_disk = np.linspace(0, 2 * np.pi, 200)
+    R, P = np.meshgrid(r_disk, phi_disk)
+    X = R * np.cos(P)
+    Y = R * np.sin(P)
+    Z = 0.02 * r_s * np.sin(P * 4 + t)  # gentle warping
 
-    # --- Accretion Disk ---
-    if show_disk:
-        r_disk = np.linspace(1.5 * r_s, 4 * r_s, 200)
-        phi_disk = np.linspace(0, 2 * np.pi, 200)
-        R, P = np.meshgrid(r_disk, phi_disk)
-        X = R * np.cos(P)
-        Y = R * np.sin(P)
-        Z = 0.02 * r_s * np.sin(P * 4 + t)  # gentle wave
-
-        fig.add_surface(
-            x=X, y=Y, z=Z,
-            surfacecolor=np.sin(P * 8 + t),
-            colorscale="Inferno", opacity=0.7,
-            showscale=False, name="Accretion Disk"
-        )
-
-    # --- Singularity Core (Fractal-inspired) ---
-    if show_core:
-        r_core = 0.5 * r_s * (1 + 0.1 * np.sin(10 * theta + t))
-        Xc = r_core * x
-        Yc = r_core * y
-        Zc = r_core * z
-
-        fig.add_surface(
-            x=Xc, y=Yc, z=Zc,
-            surfacecolor=np.cos(theta * 5 + t),
-            colorscale="Purples",
-            showscale=False,
-            opacity=0.8,
-            name="Singularity Core"
-        )
-
-    # --- Camera rotation ---
-    camera = dict(
-        eye=dict(
-            x=2.5 * math.cos(math.radians(cam_angle)),
-            y=2.5 * math.sin(math.radians(cam_angle)),
-            z=0.8
-        )
+    fig.add_surface(
+        x=X, y=Y, z=Z,
+        surfacecolor=np.sin(P * 8 + t),
+        colorscale="Inferno", opacity=0.7,
+        showscale=False, name="Accretion Disk"
     )
 
-    # --- Layout ---
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False),
-            zaxis=dict(visible=False),
-            aspectmode="data",
-            bgcolor="black"
-        ),
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor="black",
-        scene_camera=camera,
+# --- Singularity Core (Fractal-inspired) ---
+if show_core:
+    r_core = 0.5 * r_s * (1 + 0.1 * np.sin(10 * theta + t))
+    Xc = r_core * x
+    Yc = r_core * y
+    Zc = r_core * z
+
+    fig.add_surface(
+        x=Xc, y=Yc, z=Zc,
+        surfacecolor=np.cos(theta * 5 + t),
+        colorscale="Purples",
+        showscale=False,
+        opacity=0.8,
+        name="Singularity Core"
     )
 
-    # Render frame
-    placeholder.plotly_chart(fig, use_container_width=True)
-    if not live_mode:
-        break
+# --- Layout ---
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
+        aspectmode="data",
+        bgcolor="black"
+    ),
+    margin=dict(l=0, r=0, t=0, b=0),
+    paper_bgcolor="black",
+)
 
-    time.sleep(0.05)
-    st.session_state["frame"] += 1
+# -----------------------------
+# Display visualization
+# -----------------------------
+st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
 # Physics readout
@@ -182,7 +158,7 @@ with col2:
 
 with col3:
     rho_QG = np.exp(-np.linspace(0, 10, 100))
-    dR_dt = np.sin(st.session_state["frame"])
+    dR_dt = np.sin(t)
     s_value = S_trans(rho_QG, dR_dt)
     st.metric("Singularity Transition", f"{s_value:.3e}")
     st.metric("λ (Curvature coupling)", f"{lambda_c:.2f}")
@@ -192,6 +168,6 @@ with col3:
 # -----------------------------
 st.markdown("""
 ---
-*Visualization integrates GR geometry with quantum-gravity phenomenology.*  
-*Use this as a conceptual testbed for fractal singularity hypotheses.*
+*Visualization synthesizes GR and quantum-gravity phenomenology.*  
+*Developed for exploring singularity dynamics & fractal core behavior.*
 """)
