@@ -62,10 +62,6 @@ def compute_inst_amplitudes(time, omegas, amps, phases):
     node_phase = np.angle(complex_phase)
     return node_amp, node_phase, inst
 
-# Numba-accelerated helpers (optional)
-if NUMBA_AVAILABLE and st.session_state.use_numba:
-    from numba import njit, prange
-
     @njit(parallel=True)
     def numba_kuramoto_rhs_flat(phases_flat, omegas, neighbors, K):
         # phases_flat: (N*M,)
