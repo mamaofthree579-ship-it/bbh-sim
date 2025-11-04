@@ -1,13 +1,3 @@
-# app.py
-"""
-Streamlight — Full Upgraded Research Simulator
-Features added:
- - Optional Numba JIT acceleration (Numba recommended; fallback to pure NumPy)
- - RK4 integrator (default) and optional SciPy solve_ivp integration
- - Parallel parameter sweep using multiprocessing with progress updates
- - Export JSON snapshots for Three.js visualizer
- - Three.js viewer HTML provided separately (threejs_viewer.html)
-"""
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,127 +8,49 @@ import io
 import os
 from pathlib import Path
 
-# Optional imports & flags
-try:
-    from numba import njit, prange
-    NUMBA_AVAILABLE = True
-except Exception:
-    NUMBA_AVAILABLE = False
+# import other necessary modules here (e.g., your simulation classes/functions)
 
-try:
-    from scipy.integrate import solve_ivp
-    SCIPY_AVAILABLE = True
-except Exception:
-    SCIPY_AVAILABLE = False
+# --- SESSION STATE INITIALIZATION ---
+session_vars = ["sweep_r", "sweep_k", "sweep_freq", "sweep_alpha", "sweep_beta"]
+for var in session_vars:
+    if var not in st.session_state:
+        st.session_state[var] = None  # Initialize to None or a default value
 
-# multiprocessing
-import multiprocessing as mp
+# --- SIDEBAR CONTROLS ---
+st.sidebar.header("Simulation Controls")
 
-st.set_page_config(layout="wide", page_title="Streamlight — Full Upgraded Simulator")
+st.session_state.sweep_r = st.sidebar.slider(
+    "Sweep Radius (r)", min_value=0.0, max_value=10.0, value=st.session_state.sweep_r or 1.0
+)
+st.session_state.sweep_k = st.sidebar.slider(
+    "Coupling Constant (K)", min_value=0.0, max_value=1.0, value=st.session_state.sweep_k or 0.2
+)
+st.session_state.sweep_freq = st.sidebar.slider(
+    "Frequency Scale", min_value=0.1, max_value=5.0, value=st.session_state.sweep_freq or 1.0
+)
+st.session_state.sweep_alpha = st.sidebar.slider(
+    "Alpha", min_value=0.0, max_value=1.0, value=st.session_state.sweep_alpha or 0.01
+)
+st.session_state.sweep_beta = st.sidebar.slider(
+    "Beta", min_value=0.0, max_value=1.0, value=st.session_state.sweep_beta or 0.01
+)
 
-# -----------------------
-# Session initialization
-# -----------------------
-def init_state():
-    if "init" not in st.session_state:
-        st.session_state.init = True
-        # default parameters
-        st.session_state.N = 80
-        st.session_state.M = 6
-        st.session_state.K = 0.25
-        st.session_state.freq_scale = 1.0
-        st.session_state.dt = 0.01
-        st.session_state.grid_size = 96
-        st.session_state.D = 0.08
-        st.session_state.alpha = 0.005
-        st.session_state.k_neigh = 6
-        st.session_state.integrator = "RK4"  # or "solve_ivp"
-        st.session_state.use_numba = NUMBA_AVAILABLE
-        st.session_state.parallel_workers = max(1, mp.cpu_count()-1)
-        reset_simulation()
+# --- DISPLAY CURRENT SETTINGS ---
+st.write("### Current Simulation Parameters")
+for var in session_vars:
+    st.write(f"{var}: {st.session_state[var]}")
 
-def reset_simulation(seed=None):
-    rng = np.random.default_rng(seed if seed is not None else int(time.time()%1e9))
-    N = st.session_state.N; M = st.session_state.M
-    st.session_state.pos = rng.uniform(-1,1,(N,2))*44.0
-    st.session_state.omegas = rng.uniform(0.2,2.0,(N,M))*(2*np.pi)*st.session_state.freq_scale
-    st.session_state.amps = rng.uniform(0.3,1.0,(N,M))
-    st.session_state.phases = rng.uniform(0,2*np.pi,(N,M))
-    # neighbors (k-d tree if SciPy installed)
-    try:
-        from scipy.spatial import cKDTree
-        k = min(st.session_state.N-1, st.session_state.k_neigh)
-        tree = cKDTree(st.session_state.pos)
-        dists, idxs = tree.query(st.session_state.pos, k=k+1)
-        st.session_state.neighbors = idxs[:,1:]
-    except Exception:
-        # fallback random neighbors
-        N = st.session_state.N
-        neighs = []
-        for i in range(N):
-            choices = [j for j in range(N) if j!=i]
-            neighs.append(np.random.choice(choices, size=min(len(choices), st.session_state.k_neigh), replace=False))
-        st.session_state.neighbors = np.vstack(neighs)
-    st.session_state.grid = rng.uniform(0.05,1.0,(st.session_state.grid_size, st.session_state.grid_size))
-    st.session_state.time = 0.0
-    st.session_state.log = pd.DataFrame(columns=["t","mean_amp","kuramoto_R","energy_variance"])
+# --- SIMULATION PLACEHOLDER ---
+st.write("### Simulation Output")
+# Example: generate some data for demo
+time = np.linspace(0, 10, 500)
+amplitude = np.sin(time * st.session_state.sweep_freq) * st.session_state.sweep_r
 
-init_state()
+st.line_chart(amplitude)
 
-# -----------------------
-# Sidebar (controls)
-# -----------------------
-st.sidebar.header("Simulation controls")
-st.sidebar.number_input("Nodes (N)", min_value=6, max_value=2000, value=st.session_state.N, key="N")
-st.sidebar.number_input("Subnodes (M)", min_value=1, max_value=50, value=st.session_state.M, key="M")
-st.sidebar.slider("Coupling K", 0.0, 2.0, st.session_state.K, 0.01, key="K")
-st.sidebar.slider("Frequency scale", 0.1, 3.0, st.session_state.freq_scale, 0.01, key="freq_scale")
-st.sidebar.slider("Time step dt", 0.0005, 0.05, st.session_state.dt, 0.0005, key="dt")
-st.sidebar.slider("DM diffusion D", 0.0, 1.0, st.session_state.D, 0.01, key="D")
-st.sidebar.slider("DM decay α", 0.0, 0.2, st.session_state.alpha, 0.001, key="alpha")
-st.sidebar.number_input("Neighbors k", 1, 50, value=st.session_state.k_neigh, key="k_neigh")
-st.sidebar.selectbox("Integrator", options=["RK4","solve_ivp"], index=0 if st.session_state.integrator=="RK4" else 1, key="integrator")
-st.sidebar.checkbox("Use Numba JIT (if available)", value=NUMBA_AVAILABLE, key="use_numba")
-st.sidebar.number_input("Parallel workers (sweep)", min_value=1, max_value=mp.cpu_count(), value=st.session_state.parallel_workers, key="workers")
-st.sidebar.markdown("---")
-apply_reset = st.sidebar.button("Apply & Reset")
-
-if apply_reset:
-    # apply new values and reset
-    st.session_state.N = int(st.session_state.N)
-    st.session_state.M = int(st.session_state.M)
-    st.session_state.K = float(st.session_state.K)
-    st.session_state.freq_scale = float(st.session_state.freq_scale)
-    st.session_state.dt = float(st.session_state.dt)
-    st.session_state.D = float(st.session_state.D)
-    st.session_state.alpha = float(st.session_state.alpha)
-    st.session_state.k_neigh = int(st.session_state.k_neigh)
-    st.session_state.integrator = st.session_state.integrator
-    st.session_state.use_numba = st.session_state.use_numba and NUMBA_AVAILABLE
-    st.session_state.parallel_workers = int(st.session_state.workers)
-    reset_simulation()
-    st.experimental_rerun()
-
-# Run/reset buttons
-run_cont = st.sidebar.checkbox("Run continuous", value=False, key="run_cont")
-step_button = st.sidebar.button("Step 1")
-reset_button = st.sidebar.button("Reset random seed")
-export_csv = st.sidebar.button("Export logs CSV")
-snapshot_button = st.sidebar.button("Export JSON snapshot")
-st.sidebar.markdown("---")
-
-# Sweep controls
-st.sidebar.header("Parallel parameter sweep")
-do_sweep = st.sidebar.checkbox("Enable sweep", value=False)
-if do_sweep:
-    sKmin = st.sidebar.number_input("K min", 0.0, 2.0, 0.0, step=0.01, key="sKmin")
-    sKmax = st.sidebar.number_input("K max", 0.0, 5.0, 1.0, step=0.01, key="sKmax")
-    sfmin = st.sidebar.number_input("freq min", 0.1, 5.0, 0.5, step=0.01, key="sfmin")
-    sfmax = st.sidebar.number_input("freq max", 0.1, 5.0, 2.0, step=0.01, key="sfmax")
-    sKsteps = st.sidebar.number_input("K steps", 2, 80, 16, key="sKsteps")
-    sfsteps = st.sidebar.number_input("freq steps", 2, 80, 16, key="sfsteps")
-    sweep_button = st.sidebar.button("Run parallel sweep")
-    sweep_export = st.sidebar.button("Export sweep CSV")
+# --- UPDATE LOGIC ---
+# Any updates to session_state variables are automatically persisted across reruns
+    
 
 # -----------------------
 # Core numeric functions
