@@ -1,7 +1,7 @@
 import streamlit as st
-import numpy as np
-import measure from skimage 
+import numpy as np  
 import plotly.graph_objects as go
+from skimage import measure
 from math import sin, cos, pi
 
 st.set_page_config(layout="wide", page_title="Singularity Anatomy — Step 1", initial_sidebar_state="expanded")
