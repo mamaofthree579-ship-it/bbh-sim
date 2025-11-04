@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from skimage import measure
+import measure from skimage 
 import plotly.graph_objects as go
 from math import sin, cos, pi
 
