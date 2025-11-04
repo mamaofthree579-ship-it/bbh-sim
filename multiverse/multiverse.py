@@ -178,9 +178,10 @@ function animate(){
         node.mesh.material.color.setHSL((amp+1)/2,1,0.5);
 
         node.subNodes.forEach(sn => {
-            const ampSN = sn.amplitudeAt(t);
-            sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
-            sn.mesh.material.color.setHSL((ampSN+1)/2,1,0.5);
+            let ampSN = sn.amplitudeAt(t);
+ampSN = Math.max(0.1, ampSN);  // never smaller than 0.1
+sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
+sn.mesh.material.color.setHSL(Math.min(1, Math.max(0, (ampSN+1)/2)), 1, 0.5);
         });
     });
 
