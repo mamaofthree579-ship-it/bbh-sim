@@ -1,146 +1,132 @@
+🌀 Enhanced Black Hole Anatomy App with Pulsing Fractal Core
+
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import base64
+import time
 
-st.set_page_config(page_title="Black Hole Singularity Anatomy", layout="wide")
-st.title("🌀 Black Hole Singularity Anatomy Explorer")
+st.set_page_config(page_title="Quantum Black Hole Anatomy", layout="wide")
 
+st.title("🌀 Quantum Black Hole Anatomy Simulator")
 st.markdown("""
-This visualization illustrates a **conceptual model** of a black hole’s internal structure.
-It integrates both classical general relativity layers and speculative quantum-gravity features.
-Use the checkboxes and sliders to reveal different layers of the singularity anatomy.
+This interactive visualization shows the layered anatomy of a black hole:
+- **Event Horizon:** Gravitational boundary of no return  
+- **Accretion Disk:** Plasma flow emitting radiation  
+- **Fractal Singularity Core:** Pulsing crystalline structure of compiled quantum gravitons
 """)
 
-# -----------------------------
-# Controls
-# -----------------------------
-mass = st.slider("Black Hole Mass (Solar Masses)", 1e5, 1e8, 4.3e6, step=1e5, format="%.0f")
-spin = st.slider("Spin Parameter (a*)", 0.0, 1.0, 0.6, step=0.05)
-quantum_radius = st.slider("Quantum Compression Radius (relative scale)", 0.2, 1.5, 0.8, step=0.1)
-show_horizon = st.checkbox("Show Event Horizon", True)
-show_photon = st.checkbox("Show Photon Sphere", True)
-show_disk = st.checkbox("Show Accretion Disk", True)
-show_singularity = st.checkbox("Show Quantum Singularity Core", True)
-show_quantum_field = st.checkbox("Show Quantum Boundary Glow", True)
+# --- Controls ---
+mass = st.slider("Black Hole Mass (in Solar Masses)", 1e6, 1e9, 4.3e6, step=1e6)
+pulse_speed = st.slider("Singularity Pulse Speed", 0.5, 3.0, 1.5, step=0.1)
+animate = st.checkbox("Activate Fractal Core Pulse", value=True)
 
-# -----------------------------
-# Physical radii
-# -----------------------------
+# --- Constants ---
 G = 6.67430e-11
-c = 2.99792458e8
+c = 2.998e8
 M_sun = 1.98847e30
+
+# --- Derived Quantities ---
 M = mass * M_sun
+r_s = 2 * G * M / c**2
+r_ph = 1.5 * r_s
+r_disk = 3 * r_s
 
-r_s = 2 * G * M / (c**2)
-r_p = 1.5 * r_s
-r_q = r_s * quantum_radius
+# --- Helper Function for Sphere Mesh ---
+def sphere_mesh(radius, resolution=60):
+    theta = np.linspace(0, 2 * np.pi, resolution)
+    phi = np.linspace(0, np.pi, resolution)
+    theta, phi = np.meshgrid(theta, phi)
+    x = radius * np.sin(phi) * np.cos(theta)
+    y = radius * np.sin(phi) * np.sin(theta)
+    z = radius * np.cos(phi)
+    return x, y, z
 
-st.markdown(f"""
-**Schwarzschild radius:** {r_s:.3e} m  
-**Photon sphere radius:** {r_p:.3e} m  
-**Quantum compression scale:** {r_q:.3e} m  
-""")
+# --- Plot Setup ---
+def create_blackhole_figure(pulse_phase=0.0):
+    fig = go.Figure()
 
-# -----------------------------
-# Generate 3D geometry
-# -----------------------------
-u = np.linspace(0, 2*np.pi, 80)
-v = np.linspace(0, np.pi, 40)
-x = np.outer(np.cos(u), np.sin(v))
-y = np.outer(np.sin(u), np.sin(v))
-z = np.outer(np.ones_like(u), np.cos(v))
-
-fig = go.Figure()
-
-# Event Horizon
-if show_horizon:
-    fig.add_surface(
-        x=x, y=y, z=z,
+    # Event Horizon
+    x_h, y_h, z_h = sphere_mesh(r_s)
+    fig.add_trace(go.Surface(
+        x=x_h, y=y_h, z=z_h,
+        colorscale=[[0, "rgb(60,0,120)"], [1, "rgb(140,0,220)"]],
         opacity=1.0,
-        colorscale=[[0, "#0d0c1d"], [1, "#4b0082"]],
         showscale=False,
         name="Event Horizon"
-    )
+    ))
 
-# Photon Sphere
-if show_photon:
-    fig.add_surface(
-        x=1.3*x, y=1.3*y, z=1.3*z,
-        opacity=0.3,
-        colorscale=[[0, "#ffb703"], [1, "#fb8500"]],
-        showscale=False,
-        name="Photon Sphere"
-    )
+    # Accretion Disk
+    phi_disk = np.linspace(0, 2 * np.pi, 150)
+    r_vals = np.linspace(0.8 * r_disk, r_disk, 30)
+    phi_disk, r_vals = np.meshgrid(phi_disk, r_vals)
+    x_d = r_vals * np.cos(phi_disk)
+    y_d = r_vals * np.sin(phi_disk)
+    z_d = 0.1 * r_disk * np.sin(3 * phi_disk) * (r_vals / r_disk)**2
 
-# Accretion Disk
-if show_disk:
-    theta = np.linspace(0, 2*np.pi, 120)
-    r_disk = np.linspace(1.3, 3.5, 60)
-    T, R = np.meshgrid(theta, r_disk)
-    X = R * np.cos(T)
-    Y = R * np.sin(T)
-    Z = 0.2 * np.sin(4*T) * (1 / R)  # turbulence
-
-    fig.add_surface(
-        x=X, y=Y, z=Z,
-        surfacecolor=R,
-        colorscale=[[0, "#ff4500"], [1, "#ffff00"]],
-        opacity=0.8,
+    fig.add_trace(go.Surface(
+        x=x_d, y=y_d, z=z_d,
+        surfacecolor=np.abs(np.sin(phi_disk)),
+        colorscale="Inferno",
+        opacity=0.85,
         showscale=False,
         name="Accretion Disk"
-    )
+    ))
 
-# Quantum Singularity Core
-if show_singularity:
-    try:
-        with open("singularity.png", "rb") as f:
-            image_b64 = base64.b64encode(f.read()).decode()
-        surface_texture = f"data:image/png;base64,{image_b64}"
-    except Exception:
-        surface_texture = None
+    # Fractal Singularity Core (pulsing)
+    pulse = 0.3 * np.sin(pulse_phase) + 1.0
+    r_core = 0.4 * r_s * pulse
+    x_c, y_c, z_c = sphere_mesh(r_core)
 
-    fig.add_surface(
-        x=0.6*x, y=0.6*y, z=0.6*z,
-        opacity=1.0,
-        colorscale=[[0, "#b5179e"], [1, "#f72585"]],
-        surfacepattern="x",
+    # Fractal color variation
+    fractal_intensity = np.abs(np.sin(4 * np.sqrt(x_c**2 + y_c**2 + z_c**2) / r_core))
+    fig.add_trace(go.Surface(
+        x=x_c, y=y_c, z=z_c,
+        surfacecolor=fractal_intensity,
+        colorscale="Plasma",
+        opacity=0.95,
         showscale=False,
-        name="Singularity Core"
+        name="Fractal Core"
+    ))
+
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            aspectmode='data',
+            bgcolor="black"
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="black"
     )
 
-# Quantum Boundary Glow (Field)
-if show_quantum_field:
-    fig.add_surface(
-        x=quantum_radius * 1.8 * x,
-        y=quantum_radius * 1.8 * y,
-        z=quantum_radius * 1.8 * z,
-        opacity=0.15,
-        colorscale=[[0, "#7209b7"], [1, "#4361ee"]],
-        showscale=False,
-        name="Quantum Boundary"
-    )
+    return fig
 
-# -----------------------------
-# Layout
-# -----------------------------
-fig.update_layout(
-    scene=dict(
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        zaxis=dict(visible=False),
-        aspectmode='data',
-        camera=dict(eye=dict(x=1.6, y=1.6, z=1.0))
-    ),
-    paper_bgcolor="black",
-    margin=dict(l=0, r=0, t=0, b=0),
-    showlegend=False
-)
 
-st.plotly_chart(fig, use_container_width=True)
+# --- Sidebar Info ---
+st.sidebar.header("📊 Physical Parameters")
+st.sidebar.write(f"**Mass:** {mass:,.0f} M☉")
+st.sidebar.write(f"**Schwarzschild Radius (rₛ):** {r_s:.3e} m")
+st.sidebar.write(f"**Photon Sphere (≈1.5 rₛ):** {r_ph:.3e} m")
+st.sidebar.write(f"**Accretion Disk Outer Radius:** {r_disk:.3e} m")
+st.sidebar.markdown("""
+---
+**Legend**
+- Purple = Event Horizon  
+- Orange = Accretion Disk  
+- Magenta = Fractal Core (Quantum Graviton Crystal)
+---
+""")
 
-st.markdown(
-    "<hr><small>⚛️ Conceptual illustration blending classical GR and quantum-compression theory. "
-    "Parameters control proportional scaling, not literal distance. Developed for exploratory visualization.</small>",
-    unsafe_allow_html=True,
-)
+# --- Main Display ---
+if animate:
+    placeholder = st.empty()
+    for t in np.linspace(0, 2*np.pi, 80):
+        fig = create_blackhole_figure(pulse_phase=t * pulse_speed)
+        placeholder.plotly_chart(fig, use_container_width=True)
+        time.sleep(0.05)
+else:
+    fig = create_blackhole_figure()
+    st.plotly_chart(fig, use_container_width=True)
+
+st.caption("Visualization by GPT-5 • Based on relativistic geometry and quantum-graviton singularity theory.")
