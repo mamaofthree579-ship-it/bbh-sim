@@ -1,201 +1,111 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-from streamlit.components.v1 import html as components_html
+import io, soundfile as sf
 
 st.set_page_config(page_title="Quantum Black Hole Simulator", layout="wide")
-st.title("Quantum Black Hole Simulator — Embedded Interactive")
+st.title("🌀 Quantum Black Hole Simulator")
 
 st.markdown(
-    "This app embeds a Plotly 3D visualization + WebAudio synth inside a single iframe so the buttons and animation work reliably."
+    "Explore a simplified quantum-gravity black-hole model. "
+    "Use the sliders to adjust mass and spin, visualize the curvature, "
+    "and listen to a synthesized low-frequency 'rumble' inspired by your theory."
 )
 
-# ----- Build Plotly geometry -----
-def sphere_mesh(radius=1.0, res_u=48, res_v=24):
-    u = np.linspace(0, 2 * np.pi, res_u)
-    v = np.linspace(0, np.pi, res_v)
-    x = radius * np.outer(np.cos(u), np.sin(v))
-    y = radius * np.outer(np.sin(u), np.sin(v))
-    z = radius * np.outer(np.ones_like(u), np.cos(v))
-    return x.tolist(), y.tolist(), z.tolist()
+# -----------------------------
+# Parameters
+# -----------------------------
+mass = st.slider("Black Hole Mass (Solar Masses)", 1e5, 1e8, 4.3e6, step=1e5, format="%.0f")
+spin = st.slider("Spin parameter (a*)", 0.0, 1.0, 0.5, step=0.05)
+show_orbit = st.button("Show 3D Orbit Visualization")
+play_rumble = st.button("🔊 Play Quantum Rumble")
 
-x_h, y_h, z_h = sphere_mesh(1.0)
-x_p, y_p, z_p = sphere_mesh(1.3)
-x_q, y_q, z_q = sphere_mesh(0.6)
+# -----------------------------
+# Physical Calculations
+# -----------------------------
+G = 6.67430e-11
+c = 2.99792458e8
+M_sun = 1.98847e30
 
-fig = go.Figure()
-fig.add_surface(x=x_h, y=y_h, z=z_h, colorscale=[[0, "#2b0055"], [1, "#8a3fff"]],
-                showscale=False, opacity=0.95, name="EventHorizon")
-fig.add_surface(x=x_p, y=y_p, z=z_p, colorscale=[[0, "#fca311"], [1, "#ffd56b"]],
-                showscale=False, opacity=0.28, name="PhotonSphere")
-fig.add_surface(x=x_q, y=y_q, z=z_q, colorscale=[[0, "#ff6ad5"], [1, "#ffffff"]],
-                showscale=False, opacity=0.85, name="QuantumCore")
+M = mass * M_sun
+r_s = 2 * G * M / (c ** 2)
+r_q = r_s * (1 - 0.5 * spin)
+r_p = 1.5 * r_s
 
-fig.update_layout(
-    scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False), aspectmode='data'),
-    margin=dict(l=0, r=0, t=0, b=0),
-    paper_bgcolor="black",
+st.markdown(f"**Schwarzschild radius:** {r_s:.3e} m")
+st.markdown(f"**Quantum core radius (r₍Q₎):** {r_q:.3e} m")
+st.markdown(f"**Photon sphere:** {r_p:.3e} m")
+
+# -----------------------------
+# 3D Visualization
+# -----------------------------
+def make_blackhole_plot():
+    u = np.linspace(0, 2*np.pi, 80)
+    v = np.linspace(0, np.pi, 40)
+    x = np.outer(np.cos(u), np.sin(v))
+    y = np.outer(np.sin(u), np.sin(v))
+    z = np.outer(np.ones_like(u), np.cos(v))
+
+    fig = go.Figure()
+
+    # Event horizon
+    fig.add_surface(x=x, y=y, z=z, opacity=1.0, colorscale=[[0, "#240046"], [1, "#9d4edd"]],
+                    showscale=False)
+
+    # Photon sphere
+    fig.add_surface(x=1.3*x, y=1.3*y, z=1.3*z, opacity=0.3, colorscale=[[0, "#ffb703"], [1, "#fb8500"]],
+                    showscale=False)
+
+    # Quantum core (glow)
+    fig.add_surface(x=0.6*x, y=0.6*y, z=0.6*z, opacity=0.8,
+                    colorscale=[[0, "#ff6ad5"], [1, "#ffffff"]],
+                    showscale=False)
+
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            aspectmode='data',
+            camera=dict(eye=dict(x=1.5, y=1.5, z=0.8))
+        ),
+        paper_bgcolor="black",
+        margin=dict(l=0, r=0, t=0, b=0),
+    )
+
+    return fig
+
+if show_orbit:
+    st.plotly_chart(make_blackhole_plot(), use_container_width=True)
+
+# -----------------------------
+# Audio synthesis: "Quantum Rumble"
+# -----------------------------
+if play_rumble:
+    duration = 6.0
+    sample_rate = 44100
+    t = np.linspace(0, duration, int(sample_rate * duration))
+
+    # Deep gravitational pulse + harmonic distortion
+    f_base = 30 + np.log10(mass) * 4  # frequency ~ scaled by mass
+    tone = np.sin(2 * np.pi * f_base * t)
+    mod = np.sin(2 * np.pi * (f_base / 8) * t)
+    envelope = np.exp(-t / 2.5)
+
+    rumble = 0.7 * tone * envelope + 0.2 * mod * np.sin(2 * np.pi * f_base * 1.5 * t)
+    rumble = rumble / np.max(np.abs(rumble))
+
+    buf = io.BytesIO()
+    sf.write(buf, rumble, sample_rate, format="WAV")
+    st.audio(buf.getvalue(), format="audio/wav")
+
+# -----------------------------
+# Footer
+# -----------------------------
+st.markdown(
+    "<hr><small>⚛️ Simulation model uses heuristic equations: "
+    "Quantum Gravity Compression (F<sub>QG</sub>), Quantum Evaporation (QE–WH), "
+    "and Singularity Transition (S<sub>trans</sub>). "
+    "Visuals are scaled for conceptual clarity.</small>",
+    unsafe_allow_html=True,
 )
-
-plotly_div = fig.to_html(include_plotlyjs='cdn', full_html=False)
-
-# ---------- HTML/JS for iframe ----------
-PAGE_HTML = f"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>BBH Embedded</title>
-  <style>
-    body {{ margin:0; font-family:Inter, Arial, sans-serif; background:#05000a; color:#eae6ff; }}
-    .container {{ padding:12px; max-width:1200px; margin:auto; }}
-    .controls {{ display:flex; gap:10px; align-items:center; margin-top:8px; flex-wrap:wrap; }}
-    .btn {{ background:#8000ff; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }}
-    .btn.secondary {{ background:#444; }}
-    label {{ font-size:0.95rem; margin-right:8px; color:#d6c7ff; }}
-    .info {{ margin-top:8px; color:#ffd; font-size:0.95rem; }}
-    .small {{ color:#cfc3ff; font-size:0.9rem; }}
-    input[type=range] {{ width:200px; }}
-    .row {{ display:flex; gap:12px; align-items:center; }}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h3 style="margin:6px 0 4px 0;">Embedded Black Hole — Live 3D</h3>
-    <div id="plotly-area">{plotly_div}</div>
-
-    <div class="controls">
-      <div class="row">
-        <label>Mass (M☉)</label>
-        <input id="massSlider" type="range" min="1e5" max="1e8" step="1e5" value="4300000">
-        <span id="massLabel" class="small">4,300,000</span>
-      </div>
-
-      <div class="row">
-        <label>Hotspot speed</label>
-        <input id="speedSlider" type="range" min="0.002" max="0.08" step="0.002" value="0.026">
-        <span id="speedLabel" class="small">0.026</span>
-      </div>
-
-      <button class="btn" id="playBtn">🎧 Play Rumble</button>
-      <button class="btn secondary" id="stopBtn">⏹ Stop</button>
-      <button class="btn" id="animBtn">🌠 Start Orbit</button>
-      <button class="btn secondary" id="stopAnimBtn">⏹ Stop Orbit</button>
-    </div>
-
-    <div class="info" id="physInfo">
-      <div>Schwarzschild radius rₛ (computed): <strong id="rsVal">—</strong> m</div>
-      <div>Photon sphere ≈ 1.5 rₛ: <strong id="psVal">—</strong> m</div>
-      <div class="small">Note: normalized visual scale used for clarity.</div>
-    </div>
-  </div>
-
-<script>
-  const G = 6.67430e-11;
-  const c = 2.99792458e8;
-  const M_sun = 1.98847e30;
-  let currentMass = Number(document.getElementById('massSlider').value);
-  let hotspotSpeed = Number(document.getElementById('speedSlider').value);
-
-  const massLabel = document.getElementById('massLabel');
-  const speedLabel = document.getElementById('speedLabel');
-  const rsVal = document.getElementById('rsVal');
-  const psVal = document.getElementById('psVal');
-
-  function computeRadii(M_solar) {{{{
-    const M = M_solar * M_sun;
-    const rs = 2 * G * M / (c*c);
-    const rph = 1.5 * rs;
-    return {{{{ rs, rph }}}};
-  }}}}
-
-  function updatePhysicalDisplay() {{{{
-    const r = computeRadii(currentMass);
-    rsVal.textContent = r.rs.toExponential(6);
-    psVal.textContent = r.rph.toExponential(6);
-  }}}}
-
-  massLabel.textContent = Number(currentMass).toLocaleString();
-  speedLabel.textContent = hotspotSpeed.toFixed(3);
-  updatePhysicalDisplay();
-
-  document.getElementById('massSlider').addEventListener('input', (e)=>{{{{ 
-    currentMass = Number(e.target.value);
-    massLabel.textContent = Number(currentMass).toLocaleString();
-    updatePhysicalDisplay();
-  }}}});
-  document.getElementById('speedSlider').addEventListener('input', (e)=>{{{{ 
-    hotspotSpeed = Number(e.target.value);
-    speedLabel.textContent = hotspotSpeed.toFixed(3);
-  }}}});
-
-  function getPlotlyDiv() {{{{
-    return document.querySelector('.js-plotly-plot');
-  }}}}
-  const plotlyDiv = getPlotlyDiv();
-
-  let animHandle = null;
-  let animRunning = false;
-  let angle = 0;
-
-  function startOrbit() {{{{
-    if (!plotlyDiv || animRunning) return;
-    animRunning = true;
-    function step() {{{{
-      const radius = 2.2;
-      const eye = {{{{x: Math.cos(angle)*radius, y: Math.sin(angle)*radius, z: 0.6}}}};
-      Plotly.relayout(plotlyDiv, {{{{'scene.camera.eye': eye}}}});
-      angle += hotspotSpeed;
-      animHandle = requestAnimationFrame(step);
-    }}}}
-    animHandle = requestAnimationFrame(step);
-  }}}}
-  function stopOrbit() {{{{
-    animRunning = false;
-    if (animHandle) cancelAnimationFrame(animHandle);
-  }}}}
-
-  document.getElementById('animBtn').addEventListener('click', ()=> startOrbit());
-  document.getElementById('stopAnimBtn').addEventListener('click', ()=> stopOrbit());
-
-  // WebAudio rumble
-  let audioCtx=null, osc1=null, osc2=null, g1=null, g2=null;
-
-  function startRumble() {{{{
-    if (audioCtx && audioCtx.state!=='closed') return;
-    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    osc1=audioCtx.createOscillator(); osc2=audioCtx.createOscillator();
-    g1=audioCtx.createGain(); g2=audioCtx.createGain();
-
-    osc1.type='sine'; osc2.type='sawtooth';
-    osc1.frequency.value=30+(Math.log10(currentMass)-5)*6;
-    osc2.frequency.value=osc1.frequency.value*2;
-    osc1.connect(g1); g1.connect(audioCtx.destination);
-    osc2.connect(g2); g2.connect(audioCtx.destination);
-
-    const now=audioCtx.currentTime;
-    g1.gain.setValueAtTime(0.0001,now);
-    g1.gain.linearRampToValueAtTime(0.28,now+0.05);
-    g1.gain.exponentialRampToValueAtTime(0.0001,now+6.0);
-    g2.gain.setValueAtTime(0.0001,now);
-    g2.gain.linearRampToValueAtTime(0.06,now+0.05);
-    g2.gain.exponentialRampToValueAtTime(0.0001,now+6.0);
-
-    osc1.start(now); osc2.start(now);
-    osc1.stop(now+6.05); osc2.stop(now+6.05);
-    setTimeout(()=>{{{{audioCtx.close(); audioCtx=null;}}}},6200);
-  }}}}
-  function stopRumble() {{{{
-    if (!audioCtx) return;
-    try{{{{osc1&&osc1.stop();osc2&&osc2.stop();audioCtx.close();}}}}catch(e){{{{}}}} 
-    audioCtx=null;
-  }}}}
-
-  document.getElementById('playBtn').addEventListener('click', ()=> startRumble());
-  document.getElementById('stopBtn').addEventListener('click', ()=> stopRumble());
-</script>
-</body>
-</html>
-"""
-
-components_html(PAGE_HTML, height=820, scrolling=True)
