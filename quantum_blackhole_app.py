@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import io, soundfile as sf
 
 st.set_page_config(page_title="Quantum Black Hole Simulator", layout="wide")
 st.title("🌀 Quantum Black Hole Simulator")
