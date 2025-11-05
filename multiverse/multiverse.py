@@ -1,219 +1,366 @@
+# app.py
+"""
+Fractal Conscious Cosmos Simulator — Python-driven sync (Streamlit)
+- Simulation (phases/amps/dark-matter) runs in Python (NumPy)
+- Visualizer (Three.js) embedded via components.html receives a JSON snapshot every update
+- Sidebar controls, Run/Step, logging, snapshot/export
+"""
 import streamlit as st
-import streamlit.components.v1 as components
+import numpy as np
 import pandas as pd
 import json
-import numpy as np
 import time
+import io
 
-# --- Page title and description ---
-st.title("Fractal Conscious Cosmos Simulator 🌌")
-st.markdown("""
-Explore a dynamic 3D fractal universe with twinkling nodes, subnodes, and a diffusing dark matter grid.
-Use the sidebar to adjust coupling, frequency, node count, and other parameters.  
-Capture snapshots of the simulation data for research and analysis.
-""")
+st.set_page_config(layout="wide", page_title="Fractal Conscious Cosmos Simulator")
 
-# --- Initialize session state for all parameters ---
-default_params = {
-    "K": 0.2,
-    "FREQ_SCALE": 1.0,
-    "NODE_COUNT": 20,
-    "SUB_NODE_COUNT": 5,
-    "GRID_SIZE": 50,
-    "DT": 0.01,
-    "snapshots": [],
-    "amplitude_history": []
-}
-for key, value in default_params.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+# -------------------------
+# Utility / Session state
+# -------------------------
+def init_session():
+    if "initialized" not in st.session_state:
+        st.session_state.initialized = True
+        # simulation parameters
+        st.session_state.N = 30                # nodes
+        st.session_state.M = 5                 # subnodes per node
+        st.session_state.K = 0.25              # coupling
+        st.session_state.freq_scale = 1.0
+        st.session_state.dt = 0.02
+        st.session_state.grid_size = 48
+        st.session_state.D = 0.06              # dark matter diffusion
+        st.session_state.alpha = 0.004         # dark matter decay
+        st.session_state.steps_per_update = 4
+        st.session_state.run = False
+        st.session_state.auto_export = False
+        st.session_state.auto_export_interval = 30.0  # seconds
+        # logs and time
+        st.session_state.time = 0.0
+        st.session_state.log = pd.DataFrame(columns=["t","mean_amp","kuramoto_R","energy_variance"])
+        st.session_state.last_export_time = time.time()
+        reset_sim(seed=12345)  # deterministic by default
 
-# --- Sidebar controls ---
-st.sidebar.header("Simulation Controls")
-st.session_state.K = st.sidebar.slider("Coupling K", 0.0, 1.0, st.session_state.K, 0.01)
-st.session_state.FREQ_SCALE = st.sidebar.slider("Frequency Scale", 0.1, 2.0, st.session_state.FREQ_SCALE, 0.01)
-st.session_state.NODE_COUNT = st.sidebar.number_input("Node Count", min_value=5, max_value=100, value=st.session_state.NODE_COUNT)
-st.session_state.SUB_NODE_COUNT = st.sidebar.number_input("Sub-node Count", min_value=1, max_value=20, value=st.session_state.SUB_NODE_COUNT)
-st.session_state.GRID_SIZE = st.sidebar.number_input("Dark Matter Grid Size", min_value=10, max_value=100, value=st.session_state.GRID_SIZE)
-st.session_state.DT = st.sidebar.number_input("Time Step (dt)", min_value=0.001, max_value=0.1, value=st.session_state.DT, step=0.001)
+def reset_sim(seed=None):
+    rng = np.random.default_rng(seed if seed is not None else int(time.time() % 1e9))
+    N = st.session_state.N; M = st.session_state.M
+    st.session_state.pos = rng.uniform(-1,1,(N,2))*40.0
+    st.session_state.omegas = rng.uniform(0.2,2.0,(N,M)) * (2*np.pi) * st.session_state.freq_scale
+    st.session_state.amps = rng.uniform(0.3,1.0,(N,M))
+    st.session_state.phases = rng.uniform(0,2*np.pi,(N,M))
+    # simple neighbor assignment (k nearest by Euclidean)
+    k = min(6, max(1, N//6))
+    # compute pairwise dists and choose k nearest
+    d = np.linalg.norm(st.session_state.pos[:,None,:] - st.session_state.pos[None,:,:], axis=-1)
+    neighbors = np.argsort(d, axis=1)[:,1:k+1]
+    st.session_state.neighbors = neighbors
+    # dark matter grid
+    st.session_state.grid = rng.uniform(0.05,1.0,(st.session_state.grid_size, st.session_state.grid_size))
+    # reset time and log
+    st.session_state.time = 0.0
+    st.session_state.log = pd.DataFrame(columns=["t","mean_amp","kuramoto_R","energy_variance"])
 
-# --- Export parameters ---
-if st.sidebar.button("Export Parameters"):
-    st.download_button(
-        label="Download Parameters as JSON",
-        data=json.dumps({key: st.session_state[key] for key in default_params.keys() if key not in ["snapshots", "amplitude_history"]}, indent=2),
-        file_name="simulation_parameters.json",
-        mime="application/json"
-    )
+init_session()
 
-# --- Snapshot data logging ---
-st.sidebar.header("Data Snapshots")
-if st.sidebar.button("Capture Snapshot"):
-    snapshot = {
-        "K": st.session_state.K,
-        "FREQ_SCALE": st.session_state.FREQ_SCALE,
-        "NODE_COUNT": st.session_state.NODE_COUNT,
-        "SUB_NODE_COUNT": st.session_state.SUB_NODE_COUNT,
-        "GRID_SIZE": st.session_state.GRID_SIZE,
-        "DT": st.session_state.DT
+# -------------------------
+# Sidebar controls
+# -------------------------
+with st.sidebar:
+    st.header("Simulation Controls (data-first)")
+    st.session_state.N = st.number_input("Nodes (N)", min_value=6, max_value=200, value=st.session_state.N, step=1)
+    st.session_state.M = st.number_input("Subnodes per node (M)", min_value=1, max_value=20, value=st.session_state.M, step=1)
+    st.session_state.K = st.slider("Global coupling K", 0.0, 2.0, float(st.session_state.K), 0.01)
+    st.session_state.freq_scale = st.slider("Frequency scale", 0.1, 3.0, float(st.session_state.freq_scale), 0.01)
+    st.session_state.dt = st.number_input("Time step dt", min_value=0.001, max_value=0.1, value=st.session_state.dt, step=0.001, format="%.4f")
+    st.session_state.steps_per_update = st.number_input("Steps per update (per visual refresh)", min_value=1, max_value=200, value=st.session_state.steps_per_update, step=1)
+    st.session_state.grid_size = st.number_input("Dark matter grid size", min_value=16, max_value=256, value=st.session_state.grid_size, step=1)
+    st.session_state.D = st.slider("DM diffusion D", 0.0, 1.0, float(st.session_state.D), 0.01)
+    st.session_state.alpha = st.slider("DM decay α", 0.0, 0.05, float(st.session_state.alpha), 0.0005)
+
+    st.markdown("---")
+    st.write("Run controls")
+    run_col1, run_col2 = st.columns([1,1])
+    if run_col1.button("Step"):
+        step_sim(steps=st.session_state.steps_per_update)
+    if run_col2.button("Reset (random)"):
+        reset_sim()
+    # toggle run/stop
+    if st.button("Start / Stop (toggle)"):
+        st.session_state.run = not st.session_state.run
+
+    st.markdown("---")
+    st.write("Export / Snapshot")
+    if st.button("Capture Snapshot (save JSON)"):
+        snap = create_snapshot()
+        # start download
+        st.download_button("Download snapshot JSON", data=json.dumps(snap, indent=2), file_name=f"snapshot_t{st.session_state.time:.3f}.json", mime="application/json")
+    st.session_state.auto_export = st.checkbox("Auto-export CSV every N sec", value=st.session_state.auto_export)
+    if st.session_state.auto_export:
+        st.session_state.auto_export_interval = st.number_input("Auto-export interval (s)", min_value=5.0, max_value=3600.0, value=st.session_state.auto_export_interval, step=1.0)
+
+    st.markdown("---")
+    st.write("Data & Logs")
+    if st.button("Export log CSV"):
+        csv_bytes = st.session_state.log.to_csv(index=False).encode()
+        st.download_button("Download simulation log CSV", data=csv_bytes, file_name="sim_log.csv", mime="text/csv")
+
+# -------------------------
+# Core simulation functions
+# -------------------------
+def compute_inst_amplitudes(time):
+    """Compute instantaneous amplitudes and representative node phases."""
+    omegas = st.session_state.omegas
+    amps = st.session_state.amps
+    phases = st.session_state.phases
+    inst = amps * np.cos(omegas * time + phases)   # N x M
+    node_amp = inst.mean(axis=1)
+    complex_phase = np.exp(1j * (omegas * time + phases)).mean(axis=1)
+    node_phase = np.angle(complex_phase)
+    return node_amp, node_phase, inst
+
+def kuramoto_step(dt):
+    """
+    Simple Euler-like Kuramoto-style step applied to subnode phases.
+    It's stable enough for demonstration; replace with RK4 for higher fidelity.
+    """
+    N, M = st.session_state.phases.shape
+    neighbors = st.session_state.neighbors
+    K = st.session_state.K
+    # representative node phases
+    _, node_phase, _ = compute_inst_amplitudes(st.session_state.time)
+    # phase velocity: intrinsic + coupling via mean neighbor difference
+    dph = np.zeros_like(st.session_state.phases)
+    for i in range(N):
+        neigh_idx = neighbors[i]
+        if neigh_idx.size > 0:
+            diffs = np.sin(node_phase[neigh_idx] - node_phase[i])
+            mean_diff = diffs.mean()
+        else:
+            mean_diff = 0.0
+        dph[i, :] = st.session_state.omegas[i, :] + K * mean_diff
+    st.session_state.phases = (st.session_state.phases + dph * dt) % (2*np.pi)
+
+def evolve_dark_matter(dt):
+    g = st.session_state.grid
+    D = st.session_state.D; alpha = st.session_state.alpha
+    lap = (np.roll(g,1,axis=0) + np.roll(g,-1,axis=0) + np.roll(g,1,axis=1) + np.roll(g,-1,axis=1) - 4*g)
+    newg = g + D * lap * dt - alpha * g * dt
+    st.session_state.grid = np.clip(newg, 0.0, None)
+
+def step_sim(steps=1):
+    """Advance the simulation `steps` times and log aggregated metrics."""
+    for _ in range(steps):
+        kuramoto_step(st.session_state.dt)
+        evolve_dark_matter(st.session_state.dt)
+        st.session_state.time += st.session_state.dt
+        # metrics & log
+        amps, node_phase, _ = compute_inst_amplitudes(st.session_state.time)
+        z = np.mean(np.exp(1j * node_phase))
+        R = float(np.abs(z))
+        mean_amp = float(np.mean(np.abs(amps)))
+        energy_var = float(np.var(amps))
+        st.session_state.log = st.session_state.log.append(
+            {"t": st.session_state.time, "mean_amp": mean_amp, "kuramoto_R": R, "energy_variance": energy_var},
+            ignore_index=True
+        )
+
+def create_snapshot():
+    """Create a JSON-serializable snapshot to inject into the JS visualizer."""
+    amps, node_phase, inst = compute_inst_amplitudes(st.session_state.time)
+    snap = {
+        "time": float(st.session_state.time),
+        "N": int(st.session_state.N),
+        "M": int(st.session_state.M),
+        "pos": st.session_state.pos.tolist(),
+        "node_amp": amps.tolist(),
+        "node_phase": node_phase.tolist(),
+        "sub_inst": inst.tolist(),   # N x M matrix
+        "dm_grid": (st.session_state.grid / np.nanmax(st.session_state.grid)).tolist()  # normalized
     }
-    st.session_state.snapshots.append(snapshot)
-    st.sidebar.success(f"Snapshot captured! Total: {len(st.session_state.snapshots)}")
+    return snap
 
-if st.session_state.snapshots:
-    df_snapshots = pd.DataFrame(st.session_state.snapshots)
-    st.dataframe(df_snapshots)
-    st.download_button(
-        label="Download Snapshots CSV",
-        data=df_snapshots.to_csv(index=False),
-        file_name="snapshots.csv",
-        mime="text/csv"
-    )
+# -------------------------
+# Auto-run logic (polling)
+# -------------------------
+# If run is True, perform a small batch of steps, update snapshot, and rerun to refresh the UI.
+if st.session_state.run:
+    # run batch
+    step_sim(steps=st.session_state.steps_per_update)
+    # auto-export if enabled
+    if st.session_state.auto_export and (time.time() - st.session_state.last_export_time) >= st.session_state.auto_export_interval:
+        csv_bytes = st.session_state.log.to_csv(index=False).encode()
+        # provide a download button via st.download_button (imperative) — show ephemeral message
+        st.session_state.last_export_time = time.time()
+        st.success("Auto-exported logs (download available below).")
+        st.download_button("Download auto-exported log CSV", data=csv_bytes, file_name=f"sim_log_t{int(time.time())}.csv", mime="text/csv")
+    # re-render by letting the script continue to the components.html which gets a fresh snapshot
+    # small sleep to avoid tight loop on rerun
+    time.sleep(0.01)
+    st.experimental_rerun()
 
-# --- 3D Visualization HTML ---
-html_code = f"""
-<!DOCTYPE html>
-<html lang="en">
+# -------------------------
+# Page main layout — left: visualizer, right: metrics + live chart
+# -------------------------
+col1, col2 = st.columns([3, 1])
+
+# The visualizer will receive a snapshot JSON injected into the HTML.
+snapshot = create_snapshot()
+snapshot_json = json.dumps(snapshot)
+
+with col1:
+    st.subheader("3D Visualizer (synchronized snapshot)")
+    # The HTML/JS reads `const snapshot = ...` and renders it.
+    html = f"""<!doctype html>
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Fractal Conscious Cosmos Simulator</title>
-<style>body{{margin:0;overflow:hidden;background-color:#000;}}</style>
+<meta charset="utf-8">
+<title>Visualizer</title>
+<style>body{{margin:0;background:#000}}#overlay{{position:absolute;left:10px;top:10px;color:#fff;font-family:sans-serif;z-index:10}}</style>
 </head>
 <body>
+<div id="overlay">t = {snapshot['time']:.3f} s</div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-const NODE_COUNT = {st.session_state.NODE_COUNT};
-const SUB_NODE_COUNT = {st.session_state.SUB_NODE_COUNT};
-const GRID_SIZE = {st.session_state.GRID_SIZE};
-const DT = {st.session_state.DT};
-let K = {st.session_state.K};
-let FREQ_SCALE = {st.session_state.FREQ_SCALE};
+const snapshot = {snapshot_json};  // injected snapshot from Python
 
-class SubNode {{
-    constructor(parent) {{
-        this.parent = parent;
-        this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
-        this.A = Math.random() * 0.5 + 0.5;
-        this.phi = Math.random() * 2 * Math.PI;
-        this.mesh = null;
-    }}
-    updatePhase(dt) {{ this.phi += this.omega * dt; }}
-    amplitudeAt(t) {{ return this.A * Math.cos(this.omega * t + this.phi); }}
-}}
-
-class Node {{
-    constructor(id) {{
-        this.id = id;
-        this.K = K;
-        this.mesh = null;
-        this.subNodes = [];
-        for (let i=0;i<SUB_NODE_COUNT;i++) this.subNodes.push(new SubNode(this));
-        this.neighbors = [];
-    }}
-    update(dt) {{
-        this.subNodes.forEach(sn => sn.updatePhase(dt));
-        let dphi = 0;
-        for (let n of this.neighbors) dphi += n.K * Math.sin(n.subNodes[0].phi - this.subNodes[0].phi);
-        this.subNodes.forEach(sn => sn.phi += dphi * dt);
-    }}
-    amplitudeAt(t) {{ return this.subNodes.reduce((sum, sn) => sum + sn.amplitudeAt(t), 0)/this.subNodes.length; }}
-}}
-
-class DarkMatterGrid {{
-    constructor(width, height) {{
-        this.width = width;
-        this.height = height;
-        this.grid = Array(width).fill().map(() => Array(height).fill(Math.random()));
-    }}
-    diffuse(D=0.1, alpha=0.01) {{
-        const newGrid = this.grid.map(arr => [...arr]);
-        for (let i=1;i<this.width-1;i++){{
-            for (let j=1;j<this.height-1;j++){{
-                let laplace = this.grid[i+1][j] + this.grid[i-1][j] +
-                              this.grid[i][j+1] + this.grid[i][j-1] - 4*this.grid[i][j];
-                newGrid[i][j] = this.grid[i][j] + D*laplace - alpha*this.grid[i][j];
-            }}
-        }}
-        this.grid = newGrid;
-    }}
-}}
-
+// Basic Three.js scene
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.z = 60;
-const renderer = new THREE.WebGLRenderer({{antialias:true}});
-renderer.setSize(window.innerWidth, window.innerHeight);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 90;
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth*0.95, window.innerHeight*0.85);
 document.body.appendChild(renderer.domElement);
 
+// ambient light for visibility
+const amb = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(amb);
+const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(50,50,100); scene.add(dir);
+
+// draw DM grid as a translucent plane texture
+function drawDMGrid(dm) {
+    const size = dm.length;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(size, size);
+    for (let y=0;y<size;y++){
+        for (let x=0;x<size;x++){
+            const v = Math.max(0, Math.min(1, dm[y][x]));
+            const idx = (y*size + x)*4;
+            // magma-ish map tweak
+            img.data[idx] = Math.floor(255*v);
+            img.data[idx+1] = Math.floor(60*v);
+            img.data[idx+2] = Math.floor(140*(1-v));
+            img.data[idx+3] = 200;
+        }
+    }
+    ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(90,90), new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:0.55}));
+    plane.position.set(0,0,-10);
+    scene.add(plane);
+}
+
+// create node meshes based on snapshot
 const nodes = [];
-for (let i=0;i<NODE_COUNT;i++){{
-    const node = new Node(i);
-    const geometry = new THREE.SphereGeometry(1, 8, 8);
-    const material = new THREE.MeshBasicMaterial({{color:0x00ffff}});
-    const mesh = new THREE.Mesh(geometry, material);
-    node.mesh = mesh;
-    mesh.position.x = (Math.random()-0.5)*50;
-    mesh.position.y = (Math.random()-0.5)*50;
-    scene.add(mesh);
+(function createNodes(){
+    const N = snapshot.N;
+    const pos = snapshot.pos;
+    for (let i=0;i<N;i++){
+        const amp = snapshot.node_amp[i];
+        const h = (snapshot.node_phase[i] + Math.PI) / (2*Math.PI);
+        const color = new THREE.Color().setHSL(h, 1, 0.5);
+        const geo = new THREE.SphereGeometry(1.5 + Math.abs(amp)*2.5, 16, 16);
+        const mat = new THREE.MeshStandardMaterial({color: color});
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.x = pos[i][0];
+        mesh.position.y = pos[i][1];
+        mesh.userData = {id: i};
+        scene.add(mesh);
+        // small satellites for subnodes (use instanced or simple small spheres)
+        const subMeshes = [];
+        const sub_inst = snapshot.sub_inst[i];
+        for (let j=0;j<sub_inst.length;j++){
+            const subAmp = sub_inst[j];
+            const sg = new THREE.SphereGeometry(0.5 + Math.abs(subAmp)*0.8, 8, 8);
+            const sh = (snapshot.node_phase[i]+Math.PI)/(2*Math.PI);
+            const smat = new THREE.MeshBasicMaterial({color: new THREE.Color().setHSL(sh,1,0.5)});
+            const sMesh = new THREE.Mesh(sg, smat);
+            sMesh.position.x = mesh.position.x + (Math.random()-0.5)*3;
+            sMesh.position.y = mesh.position.y + (Math.random()-0.5)*3;
+            scene.add(sMesh);
+            subMeshes.push(sMesh);
+        }
+        nodes.push({mesh:mesh, subs: subMeshes});
+    }
+})();
 
-    node.subNodes.forEach(sn => {{
-        const g = new THREE.SphereGeometry(0.3, 6, 6);
-        const m = new THREE.MeshBasicMaterial({{color: 0xff00ff}});
-        const meshSN = new THREE.Mesh(g, m);
-        meshSN.position.x = mesh.position.x + (Math.random()-0.5)*3;
-        meshSN.position.y = mesh.position.y + (Math.random()-0.5)*3;
-        scene.add(meshSN);
-        sn.mesh = meshSN;
-    }});
+// draw DM background
+drawDMGrid(snapshot.dm_grid);
 
-    nodes.push(node);
-}}
-
-nodes.forEach(node => node.neighbors = nodes.sort(()=>Math.random()-0.5).slice(0,3));
-const dmGrid = new DarkMatterGrid(GRID_SIZE, GRID_SIZE);
-
-let t=0;
-function animate() {{
+// animate small twinkle effect for subs and nodes using snapshot amplitudes for scale/color
+let t = 0;
+function animate(){
     requestAnimationFrame(animate);
-    nodes.forEach(node => {{
-        node.update(DT);
-        const amp = node.amplitudeAt(t);
-        node.mesh.scale.set(amp+0.5, amp+0.5, amp+0.5);
-        node.mesh.material.color.setHSL((amp+1)/2, 1, 0.5);
-        node.subNodes.forEach(sn => {{
-            const ampSN = sn.amplitudeAt(t);
-            sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
-            sn.mesh.material.color.setHSL((ampSN+1)/2, 1, 0.5);
-        }});
-    }});
-    dmGrid.diffuse();
+    for (let i=0;i<nodes.length;i++){
+        const baseAmp = snapshot.node_amp[i];
+        const s = 1.0 + 0.12*Math.sin(t*3 + i);
+        nodes[i].mesh.scale.set(s*(1+Math.abs(baseAmp)), s*(1+Math.abs(baseAmp)), s*(1+Math.abs(baseAmp)));
+        // subnodes twinkle
+        for (let j=0;j<nodes[i].subs.length;j++){
+            const k = nodes[i].subs[j];
+            const flick = 0.8 + 0.4*Math.sin(t*6 + i + j);
+            k.scale.set(flick, flick, flick);
+        }
+    }
+    t += 0.02;
     renderer.render(scene, camera);
-    t+=DT;
-}}
+}
 animate();
+
+// responsive resize
+window.addEventListener('resize', ()=> {
+    renderer.setSize(window.innerWidth*0.95, window.innerHeight*0.85);
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+});
 </script>
 </body>
 </html>
 """
-
-# --- Display layout with two columns: Visualization + Live graph ---
-col1, col2 = st.columns([3, 1])
-
-with col1:
-    components.html(html_code, height=800, width=800)
+    # Render the visualizer
+    components.html(html, height=800, scrolling=True)
 
 with col2:
-    st.subheader("Live Node Amplitudes")
-    placeholder = st.empty()
+    st.subheader("Live metrics & amplitude chart")
+    # show most recent log table
+    if len(st.session_state.log) > 0:
+        st.write("Recent metrics (last 10):")
+        st.dataframe(st.session_state.log.tail(10).reset_index(drop=True))
+    else:
+        st.info("Run simulation steps to populate metrics.")
 
-    # --- Simulate live amplitude updates ---
-    while True:
-        # Generate fake live data based on parameters for demo (replace with real data connection if needed)
-        amplitudes = np.random.randn(st.session_state.NODE_COUNT)
-        st.session_state.amplitude_history.append(amplitudes)
-        if len(st.session_state.amplitude_history) > 200:
-            st.session_state.amplitude_history.pop(0)
-        # Convert to DataFrame for plotting
-        df_amp = pd.DataFrame(st.session_state.amplitude_history, columns=[f"Node {i}" for i in range(st.session_state.NODE_COUNT)])
-        placeholder.line_chart(df_amp)
-        time.sleep(0.05)
+    # live amplitude chart sampled from Python simulation (authoritative)
+    st.write("Live node amplitude history (last 200 samples)")
+    if "amp_history" not in st.session_state:
+        st.session_state.amp_history = []
+    # append current amplitudes
+    amps_now, _, _ = compute_inst_amplitudes(st.session_state.time)
+    st.session_state.amp_history.append(amps_now.tolist())
+    if len(st.session_state.amp_history) > 200:
+        st.session_state.amp_history = st.session_state.amp_history[-200:]
+    df_amp = pd.DataFrame(st.session_state.amp_history, columns=[f"Node {i}" for i in range(st.session_state.N)])
+    st.line_chart(df_amp)
+
+    # quick download options
+    st.markdown("---")
+    st.write("Download current snapshot / logs")
+    if st.button("Download current snapshot JSON"):
+        snap = create_snapshot()
+        st.download_button("Download snapshot JSON", data=json.dumps(snap, indent=2), file_name=f"snapshot_t{st.session_state.time:.3f}.json", mime="application/json")
+    if st.button("Download logs CSV (full)"):
+        csv_bytes = st.session_state.log.to_csv(index=False).encode()
+        st.download_button("Download logs CSV", data=csv_bytes, file_name="sim_log_full.csv", mime="text/csv")
+
+# End of app
+st.markdown("---")
+st.caption("Note: This app uses Python-driven simulation and injects a snapshot into the Three.js visualizer on each update. "
+           "If you want continuous, high-frequency, bidirectional streaming, we can add a websocket bridge in a follow-up.")
