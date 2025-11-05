@@ -7,7 +7,7 @@ st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide
 st.title("🌀 Fractal Conscious Cosmos Simulator")
 st.markdown("""
 This simulator models the **harmonic coupling of consciousness, energy, and matter** across quantum-to-cosmic layers.  
-It visualizes how **frequency harmonics**, **dark matter diffusion**, and **energy nodes** interact within a coherent fractal universe.
+It visualizes how **frequency harmonics**, **dark-matter diffusion**, and **energy nodes** interact within a coherent fractal universe.
 """)
 
 # --- Sidebar Controls ---
@@ -19,12 +19,8 @@ dark_decay = st.sidebar.slider("Dark Matter Decay (α)", 0.001, 0.05, 0.01)
 freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0)
 coupling_K = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.2)
 show_dark_matter = st.sidebar.checkbox("Show Dark Matter Layer", True)
-export_data = st.sidebar.button("Export Current Simulation Data")
 
-if export_data:
-    st.sidebar.success("✅ Simulation data export feature coming soon (CSV & JSON formats planned).")
-
-# --- HTML + JS Visualization ---
+# --- HTML + JavaScript Visualization ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -32,9 +28,9 @@ html_code = f"""
 <meta charset="UTF-8">
 <title>Fractal Conscious Cosmos Simulator</title>
 <style>
-body {{ margin: 0; overflow: hidden; background-color: #000; }}
-#ui {{ position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }}
-label {{ display: block; margin-top: 5px; }}
+  body {{ margin: 0; overflow: hidden; background-color: #000; }}
+  #ui {{ position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }}
+  label {{ display: block; margin-top: 5px; }}
 </style>
 </head>
 <body>
@@ -45,7 +41,6 @@ label {{ display: block; margin-top: 5px; }}
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-// --- PARAMETERS ---
 const NODE_COUNT = {node_count};
 const SUB_NODE_COUNT = {subnode_count};
 const DT = 0.01;
@@ -53,7 +48,6 @@ let K = {coupling_K};
 let FREQ_SCALE = {freq_scale};
 const SHOW_DM = {str(show_dark_matter).lower()};
 
-// --- CLASSES ---
 class SubNode {{
   constructor() {{
     this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
@@ -80,7 +74,7 @@ class Node {{
     this.subNodes.forEach(sn => sn.phi += dphi * dt);
   }}
   amplitudeAt(t) {{
-    return this.subNodes.reduce((sum, sn) => sum + sn.amplitudeAt(t), 0)/this.subNodes.length;
+    return this.subNodes.reduce((s, sn) => s + sn.amplitudeAt(t), 0)/this.subNodes.length;
   }}
 }}
 
@@ -93,24 +87,22 @@ class DarkMatterGrid {{
     const newGrid = this.grid.map(row => [...row]);
     for (let i=1; i<this.size-1; i++) {{
       for (let j=1; j<this.size-1; j++) {{
-        const laplace = this.grid[i+1][j] + this.grid[i-1][j] +
-                        this.grid[i][j+1] + this.grid[i][j-1] - 4*this.grid[i][j];
-        newGrid[i][j] = this.grid[i][j] + D * laplace - alpha * this.grid[i][j];
+        const lap = this.grid[i+1][j] + this.grid[i-1][j] +
+                    this.grid[i][j+1] + this.grid[i][j-1] - 4*this.grid[i][j];
+        newGrid[i][j] = this.grid[i][j] + D*lap - alpha*this.grid[i][j];
       }}
     }}
     this.grid = newGrid;
   }}
 }}
 
-// --- SCENE ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.z = 60;
-const renderer = new THREE.WebGLRenderer({antialias:true});
+const renderer = new THREE.WebGLRenderer({{antialias:true}});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// --- NODES ---
 const nodes = [];
 for (let i=0; i<NODE_COUNT; i++) {{
   const node = new Node();
@@ -122,20 +114,18 @@ for (let i=0; i<NODE_COUNT; i++) {{
 
   node.subNodes.forEach(sn => {{
     const g = new THREE.SphereGeometry(0.3, 6, 6);
-    const m = new THREE.MeshBasicMaterial({{color: 0xff00ff}});
+    const m = new THREE.MeshBasicMaterial({{color:0xff00ff}});
     const mesh = new THREE.Mesh(g, m);
-    mesh.position.copy(node.mesh.position).add(new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3));
+    mesh.position.copy(node.mesh.position)
+                 .add(new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3));
     sn.mesh = mesh;
     scene.add(mesh);
   }});
   nodes.push(node);
 }}
 nodes.forEach(n => n.neighbors = nodes.sort(() => Math.random()-0.5).slice(0,3));
-
-// --- DARK MATTER ---
 const dmGrid = new DarkMatterGrid(50);
 
-// --- ANIMATION ---
 let t = 0;
 function animate() {{
   requestAnimationFrame(animate);
@@ -156,7 +146,6 @@ function animate() {{
 }}
 animate();
 
-// --- UI Sliders ---
 document.getElementById("kSlider").addEventListener("input", e => K = parseFloat(e.target.value));
 document.getElementById("freqSlider").addEventListener("input", e => {{
   FREQ_SCALE = parseFloat(e.target.value);
