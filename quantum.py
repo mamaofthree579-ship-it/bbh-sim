@@ -3,6 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 import math
 import time
+import anywidget
 
 # -----------------------------
 # Page setup
