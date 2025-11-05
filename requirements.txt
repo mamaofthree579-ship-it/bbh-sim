@@ -7,3 +7,4 @@ matplotlib
 pyyaml
 gwpy
 scikit-image
+anywidget
