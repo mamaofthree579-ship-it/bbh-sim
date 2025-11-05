@@ -1,11 +1,4 @@
-# app.py
-"""
-Fractal Conscious Cosmos Simulator — Python-driven sync (Streamlit)
-- Simulation (phases/amps/dark-matter) runs in Python (NumPy)
-- Visualizer (Three.js) embedded via components.html receives a JSON snapshot every update
-- Sidebar controls, Run/Step, logging, snapshot/export
-"""
-import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
 import json
