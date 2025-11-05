@@ -1,14 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# --- App Title and Description ---
 st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide")
-
-st.title("🌀 Fractal Conscious Cosmos Simulator")
-st.markdown("""
-This simulator models the **harmonic coupling of consciousness, energy, and matter** across quantum-to-cosmic layers.  
-It visualizes how **frequency harmonics**, **dark-matter diffusion**, and **energy nodes** interact within a coherent fractal universe.
-""")
 
 # --- Sidebar Controls ---
 st.sidebar.header("Simulation Controls")
@@ -20,7 +13,13 @@ freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0)
 coupling_K = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.2)
 show_dark_matter = st.sidebar.checkbox("Show Dark Matter Layer", True)
 
-# --- HTML + JavaScript Visualization ---
+st.title("🌀 Fractal Conscious Cosmos Simulator")
+st.markdown("""
+This simulation models **harmonic coupling** across a cosmic-scale consciousness field.  
+Each luminous node represents a coherent structure of energy–information, while **dark-matter diffusion**
+represents subtle, unconscious substrate dynamics that unify the cosmos beyond classical time-space boundaries.
+""")
+
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -28,8 +27,13 @@ html_code = f"""
 <meta charset="UTF-8">
 <title>Fractal Conscious Cosmos Simulator</title>
 <style>
-  body {{ margin: 0; overflow: hidden; background-color: #000; }}
-  #ui {{ position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }}
+  body {{ margin: 0; overflow: hidden; background-color: #000; color: white; font-family: sans-serif; }}
+  #metrics {{
+    position: absolute; top: 10px; right: 20px;
+    background: rgba(0,0,0,0.5); padding: 10px 15px;
+    border-radius: 10px; font-size: 14px;
+  }}
+  #ui {{ position: absolute; top: 10px; left: 10px; }}
   label {{ display: block; margin-top: 5px; }}
 </style>
 </head>
@@ -38,14 +42,20 @@ html_code = f"""
   <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="{coupling_K}"></label>
   <label>Frequency Scale: <input type="range" id="freqSlider" min="0.1" max="2" step="0.01" value="{freq_scale}"></label>
 </div>
+<div id="metrics">
+  <b>Live Metrics</b><br>
+  Energy Coherence: <span id="energy">0.00</span><br>
+  Phase Variance: <span id="variance">0.00</span><br>
+  Dark Matter Energy Density: <span id="density">0.00</span>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
 const NODE_COUNT = {node_count};
 const SUB_NODE_COUNT = {subnode_count};
-const DT = 0.01;
 let K = {coupling_K};
 let FREQ_SCALE = {freq_scale};
+const DT = 0.01;
 const SHOW_DM = {str(show_dark_matter).lower()};
 
 class SubNode {{
@@ -76,6 +86,9 @@ class Node {{
   amplitudeAt(t) {{
     return this.subNodes.reduce((s, sn) => s + sn.amplitudeAt(t), 0)/this.subNodes.length;
   }}
+  meanPhase() {{
+    return this.subNodes.reduce((s, sn) => s + sn.phi, 0)/this.subNodes.length;
+  }}
 }}
 
 class DarkMatterGrid {{
@@ -84,7 +97,7 @@ class DarkMatterGrid {{
     this.grid = Array(size).fill().map(() => Array(size).fill(Math.random()));
   }}
   diffuse(D={dark_diffusion}, alpha={dark_decay}) {{
-    const newGrid = this.grid.map(row => [...row]);
+    const newGrid = this.grid.map(r => [...r]);
     for (let i=1; i<this.size-1; i++) {{
       for (let j=1; j<this.size-1; j++) {{
         const lap = this.grid[i+1][j] + this.grid[i-1][j] +
@@ -93,6 +106,13 @@ class DarkMatterGrid {{
       }}
     }}
     this.grid = newGrid;
+  }}
+  energyDensity() {{
+    let total = 0;
+    for (let i=0; i<this.size; i++) {{
+      for (let j=0; j<this.size; j++) total += this.grid[i][j];
+    }}
+    return total / (this.size * this.size);
   }}
 }}
 
@@ -111,13 +131,12 @@ for (let i=0; i<NODE_COUNT; i++) {{
   node.mesh = new THREE.Mesh(geom, mat);
   node.mesh.position.set((Math.random()-0.5)*50, (Math.random()-0.5)*50, (Math.random()-0.5)*50);
   scene.add(node.mesh);
-
   node.subNodes.forEach(sn => {{
     const g = new THREE.SphereGeometry(0.3, 6, 6);
     const m = new THREE.MeshBasicMaterial({{color:0xff00ff}});
     const mesh = new THREE.Mesh(g, m);
     mesh.position.copy(node.mesh.position)
-                 .add(new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3));
+      .add(new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3));
     sn.mesh = mesh;
     scene.add(mesh);
   }});
@@ -142,9 +161,21 @@ function animate() {{
   }});
   if (SHOW_DM) dmGrid.diffuse();
   renderer.render(scene, camera);
+  updateMetrics();
   t += DT;
 }}
 animate();
+
+function updateMetrics() {{
+  const phases = nodes.map(n => n.meanPhase());
+  const meanPhase = phases.reduce((s, p) => s + p, 0) / phases.length;
+  const variance = Math.sqrt(phases.reduce((s, p) => s + Math.pow(p-meanPhase,2),0)/phases.length);
+  const coherence = Math.abs(Math.cos(meanPhase));
+  const density = dmGrid.energyDensity();
+  document.getElementById("energy").textContent = coherence.toFixed(3);
+  document.getElementById("variance").textContent = variance.toFixed(3);
+  document.getElementById("density").textContent = density.toFixed(3);
+}}
 
 document.getElementById("kSlider").addEventListener("input", e => K = parseFloat(e.target.value));
 document.getElementById("freqSlider").addEventListener("input", e => {{
