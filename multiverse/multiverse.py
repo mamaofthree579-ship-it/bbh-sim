@@ -229,7 +229,7 @@ const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(50,50,10
 
 // draw DM grid as a translucent plane texture
 function drawDMGrid(dm) {
-    const size = dm.length;
+    const size = dm.length,
     const canvas = document.createElement('canvas');
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
