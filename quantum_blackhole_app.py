@@ -1,11 +1,3 @@
-# quantum_blackhole_app.py
-# Streamlit app: Black Hole Anatomy with Jets + cones + synthesized chirp audio
-#
-# Requirements: streamlit, numpy, plotly
-# Install (if needed): pip install streamlit numpy plotly
-#
-# Usage: streamlit run quantum_blackhole_app.py
-
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
