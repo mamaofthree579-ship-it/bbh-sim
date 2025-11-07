@@ -1,15 +1,13 @@
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-import time
 
-st.set_page_config(page_title="Black Hole Anatomy Explorer", layout="wide")
+st.set_page_config(page_title="Black Hole Anatomy — Smooth Live Mode", layout="wide")
 
-st.title("🌀 Black Hole Anatomy — Realistic Visualization")
+st.title("🌀 Black Hole Anatomy — Realistic Visualization (Smooth Mode)")
 
 st.markdown("""
-Explore the anatomy of a black hole and its surrounding structures.
-Use the sliders and toggle options below to adjust parameters.
+This version uses internal Plotly animation for seamless rotation.
 """)
 
 # --- Sidebar controls
@@ -29,18 +27,18 @@ x = np.sin(TH) * np.cos(PH)
 y = np.sin(TH) * np.sin(PH)
 z = np.cos(TH)
 
-# --- Black hole parameters
-r_s = 1.0  # Schwarzschild radius (normalized)
+# --- Parameters
+r_s = 1.0
 r_inner = r_s * 0.98
 r_outer = r_s * 3.0
 
-# --- Event horizon (dark sphere)
+# --- Event horizon
 horizon = go.Surface(
     x=r_inner*x, y=r_inner*y, z=r_inner*z,
     colorscale=[[0, "black"], [1, "rgb(60,0,60)"]],
     showscale=False,
-    name="Event Horizon",
-    opacity=1
+    opacity=1,
+    name="Event Horizon"
 )
 
 # --- Accretion disk
@@ -49,7 +47,7 @@ phi_disk = np.linspace(0, 2*np.pi, 200)
 R, PHI = np.meshgrid(r, phi_disk)
 X = R * np.cos(PHI)
 Y = R * np.sin(PHI)
-Z = 0.05 * np.sin(5*PHI)  # slight warping
+Z = 0.05 * np.sin(5*PHI)
 color_intensity = np.clip(np.exp(-0.2 * (R - r_outer)) * disk_temp, 0, 1)
 disk = go.Surface(
     x=X, y=Y, z=Z,
@@ -60,7 +58,7 @@ disk = go.Surface(
     name="Accretion Disk"
 )
 
-# --- Photon sphere (light ring)
+# --- Photon sphere
 r_photon = 1.5 * r_s
 ring_phi = np.linspace(0, 2*np.pi, 200)
 ring_x = r_photon * np.cos(ring_phi)
@@ -73,14 +71,11 @@ ring = go.Scatter3d(
     name="Photon Sphere"
 )
 
-# --- Fractal Singularity Core
+# --- Core (Singularity)
 r_core = 0.3 * r_s
-fractal_phi = np.linspace(0, 2*np.pi, 80)
-fractal_theta = np.linspace(0, np.pi, 40)
-FPH, FTH = np.meshgrid(fractal_phi, fractal_theta)
-core_x = r_core * np.sin(FTH) * np.cos(FPH)
-core_y = r_core * np.sin(FTH) * np.sin(FPH)
-core_z = r_core * np.cos(FTH)
+core_x = r_core * np.sin(TH) * np.cos(PH)
+core_y = r_core * np.sin(TH) * np.sin(PH)
+core_z = r_core * np.cos(TH)
 core = go.Surface(
     x=core_x, y=core_y, z=core_z,
     colorscale=[[0, "rgb(80,0,100)"], [1, "rgb(180,0,255)"]],
@@ -89,16 +84,29 @@ core = go.Surface(
     name="Singularity Core"
 )
 
-# --- Scene layout
+# --- Optional lensing halo
+r_lens = 2.5 * r_s
+lens_x = r_lens * x
+lens_y = r_lens * y
+lens_z = r_lens * z
+lens = go.Surface(
+    x=lens_x, y=lens_y, z=lens_z,
+    opacity=0.15,
+    colorscale=[[0, "rgba(255,255,255,0.2)"], [1, "rgba(255,255,255,0.05)"]],
+    showscale=False,
+    name="Lensing Halo"
+)
+
+# --- Scene setup
 scene = dict(
-    xaxis=dict(showbackground=False, showgrid=False, visible=False),
-    yaxis=dict(showbackground=False, showgrid=False, visible=False),
-    zaxis=dict(showbackground=False, showgrid=False, visible=False),
+    xaxis=dict(showbackground=False, visible=False),
+    yaxis=dict(showbackground=False, visible=False),
+    zaxis=dict(showbackground=False, visible=False),
     aspectmode="cube"
 )
 
-# --- Initialize figure
-fig = go.Figure(data=[disk, horizon, ring, core])
+# --- Build base figure
+fig = go.Figure(data=[disk, horizon, ring, core, lens])
 fig.update_layout(
     paper_bgcolor="black",
     scene=scene,
@@ -106,15 +114,37 @@ fig.update_layout(
     showlegend=show_labels
 )
 
-# --- Live rotation or static view
-plot_area = st.empty()
+# --- Smooth internal animation (rotating camera)
 if live_mode:
-    for angle in range(0, 360, 2):
-        fig.update_layout(scene_camera=dict(eye=dict(x=np.cos(np.radians(angle))*1.5, y=np.sin(np.radians(angle))*1.5, z=0.6)))
-        plot_area.plotly_chart(fig, use_container_width=True)
-        time.sleep(0.03)
-else:
-    fig.update_layout(scene_camera=dict(eye=dict(x=1.5, y=1.5, z=0.6)))
-    plot_area.plotly_chart(fig, use_container_width=True)
+    frames = []
+    for angle in np.linspace(0, 360, 90):
+        rad = np.radians(angle)
+        cam = dict(eye=dict(x=np.cos(rad)*1.6, y=np.sin(rad)*1.6, z=0.6))
+        frames.append(go.Frame(layout=dict(scene_camera=cam)))
+    fig.frames = frames
+    fig.update_layout(
+        updatemenus=[{
+            "buttons": [
+                {"args": [None, {"frame": {"duration": 80, "redraw": True},
+                                 "fromcurrent": True, "mode": "immediate"}],
+                 "label": "▶️ Play",
+                 "method": "animate"},
+                {"args": [[None], {"frame": {"duration": 0}, "mode": "immediate"}],
+                 "label": "⏸ Pause",
+                 "method": "animate"}
+            ],
+            "direction": "left",
+            "pad": {"r": 10, "t": 80},
+            "showactive": True,
+            "type": "buttons",
+            "x": 0.3,
+            "xanchor": "right",
+            "y": 0,
+            "yanchor": "top"
+        }]
+    )
 
-st.caption("Visualization inspired by realistic GRMHD simulations — simplified for educational study.")
+# --- Show
+st.plotly_chart(fig, use_container_width=True)
+
+st.caption("Internal Plotly animation ensures smooth rotation without flashing.")
