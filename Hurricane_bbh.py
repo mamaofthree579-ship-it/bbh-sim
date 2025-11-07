@@ -144,38 +144,3 @@ with col2:
     st.write(f"Fractal detail: **{fractal_detail}**")
     st.write(" ")
     st.markdown("Use **Play** (sidebar) to animate between collapse → emergence.")
-
-# Animation loop / update
-st.session_state.playing = bool(play)
-
-loop_delay = max(0.04, 0.14 / float(speed))
-
-if st.session_state.playing:
-    t0 = time.perf_counter()
-    run_chunk_seconds = 1.0
-    # Use a local placeholder to refresh safely
-    frame_placeholder = st.empty()
-
-    while st.session_state.playing and (time.perf_counter() - t0) < run_chunk_seconds:
-        st.session_state.time_phase = (st.session_state.time_phase + 0.012 * speed) % 1.0
-        st.session_state.angle += rotation_speed * 0.02
-
-        fig = build_figure(
-            mode, fractal_detail, field_strength,
-            outward_default, st.session_state.time_phase,
-            st.session_state.angle, rotation_speed,
-            show_energy, show_labels
-        )
-
-        # ✅ SAFE update using the same placeholder, avoiding duplicate element IDs
-        frame_placeholder.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-        time.sleep(loop_delay)
-    # final render once per chunk
-    frame_placeholder.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-else:
-    fig = build_figure(
-        mode, fractal_detail, field_strength, outward_default,
-        st.session_state.time_phase, st.session_state.angle,
-        rotation_speed, show_energy, show_labels
-    )
-    st.empty().plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
