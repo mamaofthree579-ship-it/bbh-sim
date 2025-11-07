@@ -107,6 +107,56 @@ fig.add_surface(
     showscale=False, name="Event Horizon", opacity=1.0
 )
 
+# --- Starfield (draw FIRST) ---
+Nstars = 2000
+phi = np.random.uniform(0, 2 * np.pi, Nstars)
+costheta = np.random.uniform(-1, 1, Nstars)
+u = np.random.uniform(0, 1, Nstars)
+
+theta = np.arccos(costheta)
+r = 150 * (u ** (1/3))  # large radius for background
+
+x_star = r * np.sin(theta) * np.cos(phi)
+y_star = r * np.sin(theta) * np.sin(phi)
+z_star = r * np.cos(theta)
+
+fig.add_trace(go.Scatter3d(
+    x=x_star, y=y_star, z=z_star,
+    mode="markers",
+    marker=dict(size=0.8, color="rgba(255,255,255,0.4)"),
+    name="Starfield Background"
+))
+
+# --- Accretion Nebula (draw SECOND) ---
+Nneb = 1000
+theta = np.random.uniform(0, 2 * np.pi, Nneb)
+r = 10 * np.sqrt(np.random.rand(Nneb))
+x_neb = r * np.cos(theta)
+y_neb = r * np.sin(theta)
+z_neb = np.random.normal(0, 0.4, Nneb)
+
+fig.add_trace(go.Scatter3d(
+    x=x_neb, y=y_neb, z=z_neb,
+    mode="markers",
+    marker=dict(size=2, color="rgba(255,165,0,0.3)"),
+    name="Accretion Nebula"
+))
+
+# --- Singularity Core (draw LAST) ---
+u = np.linspace(0, 2 * np.pi, 50)
+v = np.linspace(0, np.pi, 50)
+x = np.outer(np.cos(u), np.sin(v))
+y = np.outer(np.sin(u), np.sin(v))
+z = np.outer(np.ones(np.size(u)), np.cos(v))
+
+fig.add_surface(
+    x=0.6*x, y=0.6*y, z=0.6*z,
+    colorscale="Plasma",
+    opacity=0.9,
+    showscale=False,
+    name="Singularity Core"
+)
+
 # --- Singularity Core (fractal crystalline glow) ---
 fig.add_surface(
     x=0.5*x_core, y=0.5*y_core, z=0.5*z_core,
