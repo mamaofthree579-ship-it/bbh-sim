@@ -133,7 +133,7 @@ fig.update_layout(scene=dict(
         paper_bgcolor="black", plot_bgcolor="black",
         margin=dict(l=0, r=0, t=0,
 b=0))
-    return fig
+     return fig
 
 # UI presentation (main column)
 col1, col2 = st.columns([2, 1])
