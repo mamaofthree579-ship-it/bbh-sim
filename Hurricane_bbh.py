@@ -1,136 +1,76 @@
+import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import streamlit as st
 
-st.set_page_config(page_title="Black Hole Anatomy — Lensed View", layout="wide")
+# --- App Setup ---
+st.set_page_config(page_title="Black Hole Anatomy Simulator", layout="wide")
+st.title("🌀 Black Hole Anatomy Simulator")
+st.caption("A realistic 3D visualization exploring the structure and dynamics of a single black hole")
 
-st.title("🌀 Black Hole Anatomy — Lensed Singularity Model")
+# --- Parameters ---
+mass = st.sidebar.slider("Black Hole Mass (M☉)", 1e3, 1e8, 4.3e6, step=1e5, format="%.0f")
+r_s = 2 * 6.674e-11 * mass * 1.988e30 / (3e8)**2  # Schwarzschild radius
+r_outer = 3 * r_s  # accretion disk outer boundary
+r_inner = r_s      # inner disk radius
 
-st.markdown("""
-This simulation shows a realistic **black hole anatomy** including event horizon, photon sphere,
-and a visual approximation of **gravitational lensing** around the core.
-""")
+# --- Meshgrid for Disk ---
+theta = np.linspace(0, 2*np.pi, 200)
+r = np.linspace(r_inner, r_outer, 100)
+R, T = np.meshgrid(r, theta)
+x = R * np.cos(T)
+y = R * np.sin(T)
+z = np.zeros_like(x)
 
-# --- Sidebar controls
-st.sidebar.header("Simulation Controls")
-mass = st.sidebar.slider("Mass (visual scale, M☉)", 1e3, 1e8, 4.3e6, step=1e3, format="%.0f")
-spin = st.sidebar.slider("Spin parameter (a*)", 0.0, 0.99, 0.7, step=0.01)
-disk_temp = st.sidebar.slider("Disk intensity", 0.1, 2.0, 1.0, step=0.1)
-live_mode = st.sidebar.checkbox("Enable Rotation", value=True)
-show_labels = st.sidebar.checkbox("Show Labels", value=True)
+# --- Accretion Disk Coloring (hot inner, cooler outer) ---
+colors = np.exp(-((R - r_inner) / (r_outer - r_inner)))
+colors = (colors - colors.min()) / (colors.max() - colors.min())
 
-# --- Coordinate grid
-theta = np.linspace(0, np.pi, 100)
-phi = np.linspace(0, 2*np.pi, 100)
-TH, PH = np.meshgrid(theta, phi)
-x = np.sin(TH) * np.cos(PH)
-y = np.sin(TH) * np.sin(PH)
-z = np.cos(TH)
+# --- Plotly Figure ---
+fig = go.Figure()
 
-r_s = 1.0
-r_inner = r_s * 0.98
-r_outer = r_s * 3.0
+# --- Singularity Core (purple fractal sphere) ---
+phi, theta = np.mgrid[0:np.pi:60j, 0:2*np.pi:60j]
+x_core = 0.5 * r_s * np.sin(phi) * np.cos(theta)
+y_core = 0.5 * r_s * np.sin(phi) * np.sin(theta)
+z_core = 0.5 * r_s * np.cos(phi)
 
-# --- Event Horizon
-horizon = go.Surface(
-    x=r_inner*x, y=r_inner*y, z=r_inner*z,
-    colorscale=[[0, "black"], [1, "rgb(80,0,100)"]],
-    showscale=False, opacity=1, name="Event Horizon"
-)
-
-# --- Accretion Disk
-r = np.linspace(r_outer, 10*r_outer, 200)
-phi_disk = np.linspace(0, 2*np.pi, 200)
-R, PHI = np.meshgrid(r, phi_disk)
-X = R * np.cos(PHI)
-Y = R * np.sin(PHI)
-Z = 0.05 * np.sin(5*PHI)
-color_intensity = np.clip(np.exp(-0.2*(R - r_outer)) * disk_temp, 0, 1)
-disk = go.Surface(
-    x=X, y=Y, z=Z, surfacecolor=color_intensity,
-    colorscale="Inferno", showscale=False, opacity=0.9,
-    name="Accretion Disk"
-)
-
-# --- Photon Sphere
-r_photon = 1.5 * r_s
-ring_phi = np.linspace(0, 2*np.pi, 200)
-ring_x = r_photon * np.cos(ring_phi)
-ring_y = r_photon * np.sin(ring_phi)
-ring_z = np.zeros_like(ring_phi)
-ring = go.Scatter3d(
-    x=ring_x, y=ring_y, z=ring_z,
-    mode="lines", line=dict(color="violet", width=6),
-    name="Photon Sphere"
-)
-
-# --- Singularity Core (fractal-like crystalline)
-r_core = 0.3 * r_s
-core_x = r_core * np.sin(TH) * np.cos(PH)
-core_y = r_core * np.sin(TH) * np.sin(PH)
-core_z = r_core * np.cos(TH)
-core = go.Surface(
-    x=core_x, y=core_y, z=core_z,
-    colorscale=[[0, "rgb(100,0,140)"], [1, "rgb(220,100,255)"]],
-    showscale=False, opacity=0.85,
+fig.add_surface(
+    x=x_core, y=y_core, z=z_core,
+    colorscale=[[0, 'rgb(80,0,120)'], [1, 'rgb(200,120,255)']],
+    opacity=0.9,
+    showscale=False,
     name="Singularity Core"
 )
 
-# --- Gravitational Lensing Field (background stars)
-Nstars = 500
+# --- Accretion Disk ---
+fig.add_surface(
+    x=x, y=y, z=z,
+    surfacecolor=colors,
+    colorscale="Inferno",
+    opacity=0.8,
+    showscale=False,
+    name="Accretion Disk"
+)
+
+# --- Star Field (distant, not in black hole cube) ---
+Nstars = 1200
 np.random.seed(42)
-star_x = np.random.uniform(-5*r_outer, 5*r_outer, Nstars)
-star_y = np.random.uniform(-5*r_outer, 5*r_outer, Nstars)
-star_z = np.random.uniform(-5*r_outer, 5*r_outer, Nstars)
+r_starfield = 50 * r_outer
+theta_s = np.random.uniform(0, np.pi, Nstars)
+phi_s = np.random.uniform(0, 2*np.pi, Nstars)
 
-# distance from origin
-r_dist = np.sqrt(star_x**2 + star_y**2 + star_z**2)
+star_x = r_starfield * np.sin(theta_s) * np.cos(phi_s)
+star_y = r_starfield * np.sin(theta_s) * np.sin(phi_s)
+star_z = r_starfield * np.cos(theta_s)
 
-# define region where light bends noticeably
-mask = (r_dist > 1.2*r_s) & (r_dist < 1.8*r_s)
-deflection_strength = 0.25 * np.exp(-((r_dist - 1.5*r_s)**2) / (0.05*r_s)**2)
-
-# apply only within that mask
-star_x_lensed = star_x.copy()
-star_y_lensed = star_y.copy()
-star_z_lensed = star_z.copy()
-
-star_x_lensed[mask] += deflection_strength[mask] * (star_x[mask] / r_dist[mask])
-star_y_lensed[mask] += deflection_strength[mask] * (star_y[mask] / r_dist[mask])
-# small outward offset to create ring rather than collapse
-star_x_lensed[mask] += 0.2 * (star_x[mask] / r_dist[mask])
-star_y_lensed[mask] += 0.2 * (star_y[mask] / r_dist[mask])
-
-stars = go.Scatter3d(
-    x=star_x_lensed, y=star_y_lensed, z=star_z_lensed,
+fig.add_trace(go.Scatter3d(
+    x=star_x, y=star_y, z=star_z,
     mode="markers",
     marker=dict(size=2, color="white", opacity=0.6),
-    name="Background Stars"
-)
+    name="Stars"
+))
 
-# --- Space Grid & Star Field ---
-Nstars = 1000
-np.random.seed(42)
-
-# Push stars far out, forming a distant sky sphere
-r_starfield = 50 * r_outer
-theta = np.random.uniform(0, np.pi, Nstars)
-phi = np.random.uniform(0, 2*np.pi, Nstars)
-
-star_x = r_starfield * np.sin(theta) * np.cos(phi)
-star_y = r_starfield * np.sin(theta) * np.sin(phi)
-star_z = r_starfield * np.cos(theta)
-
-stars = go.Scatter3d(
-    x=star_x,
-    y=star_y,
-    z=star_z,
-    mode="markers",
-    marker=dict(size=2, color="white", opacity=0.7),
-    name="Background Stars"
-)
-
-# --- Layout (expanded frame + realistic space background) ---
+# --- Layout (full-screen use, realistic space) ---
 fig.update_layout(
     scene=dict(
         xaxis=dict(visible=False, range=[-r_starfield, r_starfield]),
@@ -145,32 +85,25 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=0, b=0),
 )
 
-# --- Smooth camera animation
-if live_mode:
-    frames = []
-    for angle in np.linspace(0, 360, 120):
-        rad = np.radians(angle)
-        cam = dict(eye=dict(x=2.2*np.cos(rad), y=2.2*np.sin(rad), z=0.8))
-        frames.append(go.Frame(layout=dict(scene_camera=cam)))
-    fig.frames = frames
-    fig.update_layout(
-        updatemenus=[{
-            "buttons": [
-                {"args": [None, {"frame": {"duration": 60, "redraw": True},
-                                 "fromcurrent": True, "mode": "immediate"}],
-                 "label": "▶️ Play", "method": "animate"},
-                {"args": [[None], {"frame": {"duration": 0}, "mode": "immediate"}],
-                 "label": "⏸ Pause", "method": "animate"}
-            ],
-            "direction": "left",
-            "pad": {"r": 10, "t": 80},
-            "showactive": True,
-            "type": "buttons",
-            "x": 0.3, "xanchor": "right",
-            "y": 0, "yanchor": "top"
-        }]
-    )
+# --- Camera + View Options ---
+st.sidebar.markdown("### View Options")
+view = st.sidebar.radio("Camera Angle", ["Isometric", "Above Disk", "Edge View"])
 
-st.plotly_chart(fig, use_container_width=True)
+camera_dict = {
+    "Isometric": dict(eye=dict(x=1.5, y=1.5, z=1)),
+    "Above Disk": dict(eye=dict(x=0, y=0, z=2.5)),
+    "Edge View": dict(eye=dict(x=2.5, y=0, z=0.1)),
+}
+fig.update_layout(scene_camera=camera_dict[view])
 
-st.caption("Black hole rendering with lensing distortion — smooth rotation, full-frame visualization.")
+# --- Display Visualization ---
+st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+# --- Information Sidebar ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Simulation Notes:**")
+st.sidebar.info(
+    "The singularity core represents a hypothesized fractal structure of quantum-compressed matter.\n\n"
+    "The accretion disk emits energy in multiple spectra as matter orbits and heats from gravitational shear.\n\n"
+    "The background stars are distant—forming a realistic skybox for depth."
+)
