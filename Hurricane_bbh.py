@@ -108,6 +108,42 @@ stars = go.Scatter3d(
     name="Background Stars"
 )
 
+# --- Space Grid & Star Field ---
+Nstars = 1000
+np.random.seed(42)
+
+# Push stars far out, forming a distant sky sphere
+r_starfield = 50 * r_outer
+theta = np.random.uniform(0, np.pi, Nstars)
+phi = np.random.uniform(0, 2*np.pi, Nstars)
+
+star_x = r_starfield * np.sin(theta) * np.cos(phi)
+star_y = r_starfield * np.sin(theta) * np.sin(phi)
+star_z = r_starfield * np.cos(theta)
+
+stars = go.Scatter3d(
+    x=star_x,
+    y=star_y,
+    z=star_z,
+    mode="markers",
+    marker=dict(size=2, color="white", opacity=0.7),
+    name="Background Stars"
+)
+
+# --- Layout (expanded frame + realistic space background) ---
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(visible=False, range=[-r_starfield, r_starfield]),
+        yaxis=dict(visible=False, range=[-r_starfield, r_starfield]),
+        zaxis=dict(visible=False, range=[-r_starfield, r_starfield]),
+        aspectmode="data",
+        bgcolor="black"
+    ),
+    paper_bgcolor="black",
+    plot_bgcolor="black",
+    showlegend=False,
+    margin=dict(l=0, r=0, t=0, b=0),
+)
 
 # --- Scene setup
 scene = dict(
