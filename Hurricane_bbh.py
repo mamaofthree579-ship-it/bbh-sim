@@ -123,7 +123,7 @@ if show_labels:
             showlegend=False
         ))
 
-    # Camera / rotation
+# Camera / rotation
     cam_radius = 2.4
     cam = dict(eye=dict(x=cam_radius * np.cos(angle), y=cam_radius * np.sin(angle), z=0.9))
     fig.update_layout(scene=dict(
