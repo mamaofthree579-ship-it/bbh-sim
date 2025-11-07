@@ -172,39 +172,39 @@ with col2:
     st.markdown("Use **Play** (sidebar) to animate between collapse → emergence.")
 
 # Animation loop / update
-# Determine whether playing: prefer explicit play checkbox, and session_state to manage loop
 st.session_state.playing = bool(play)
 
-# small cap on speed for sleep
 loop_delay = max(0.04, 0.14 / float(speed))
 
-# We'll iterate while playing, updating session_state.time_phase and angle
 if st.session_state.playing:
-    # run a non-blocking-ish loop that updates the plot_area repeatedly
-    # NOTE: Streamlit may still show warnings for long loops; keep iterations small and yield control via time.sleep
     t0 = time.perf_counter()
-    # limit total run chunk to ~1 second per interaction to avoid freezing UI
     run_chunk_seconds = 1.0
+    # Use a local placeholder to refresh safely
+    frame_placeholder = st.empty()
+
     while st.session_state.playing and (time.perf_counter() - t0) < run_chunk_seconds:
-        # advance time_phase
-        st.session_state.time_phase += (0.012 * speed)
-        if st.session_state.time_phase > 1.0:
-            st.session_state.time_phase = 0.0
-        # advance rotation angle
+        st.session_state.time_phase = (st.session_state.time_phase + 0.012 * speed) % 1.0
         st.session_state.angle += rotation_speed * 0.02
-        # build figure and render
-        fig = build_figure(mode, fractal_detail, field_strength, outward_default, st.session_state.time_phase, st.session_state.angle, rotation_speed, show_energy, show_labels)
-        plot_area.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+        fig = build_figure(
+            mode, fractal_detail, field_strength,
+            outward_default, st.session_state.time_phase,
+            st.session_state.angle, rotation_speed,
+            show_energy, show_labels
+        )
+
+        # ✅ SAFE update using the same placeholder, avoiding duplicate element IDs
+        frame_placeholder.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         time.sleep(loop_delay)
-        # refresh streaming state in case user toggles 'play' checkbox (Streamlit will rerun and update st.session_state.playing)
-        st.session_state.playing = bool(st.session_state.get("playing", True)) and bool(st.session_state.get("time_phase", 0) is not None)
-    # final draw after chunk
-    fig = build_figure(mode, fractal_detail, field_strength, outward_default, st.session_state.time_phase, st.session_state.angle, rotation_speed, show_energy, show_labels)
-    plot_area.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    # final render once per chunk
+    frame_placeholder.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 else:
-    # not playing: draw one static frame
-    fig = build_figure(mode, fractal_detail, field_strength, outward_default, st.session_state.time_phase, st.session_state.angle, rotation_speed, show_energy, show_labels)
-    plot_area.plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
+    fig = build_figure(
+        mode, fractal_detail, field_strength, outward_default,
+        st.session_state.time_phase, st.session_state.angle,
+        rotation_speed, show_energy, show_labels
+    )
+    st.empty().plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
 
 # Provide a small legend / controls footer
 with st.expander("Legend & Notes", expanded=False):
