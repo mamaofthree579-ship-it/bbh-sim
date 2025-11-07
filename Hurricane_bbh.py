@@ -1,146 +1,144 @@
-# quantum_field_sim.py
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import time
 
-st.set_page_config(page_title="Quantum Field Flow — BBH Singularity", layout="wide")
-st.title("🌀 Quantum Field Flow Simulator — Collapse ↔ Emergence")
+st.set_page_config(page_title="Fractal Singularity — Quantum Black Hole Anatomy", layout="wide")
+st.title("🌀 Fractal Singularity: Quantum Black Hole Anatomy Explorer")
 
-# Sidebar controls
-with st.sidebar:
-    st.header("Controls")
-    mode = st.selectbox("Core Mode", ["Classical Anatomy", "Quantum Fractal Core"])
-    field_direction = st.selectbox("Field Direction (default)", ["Collapse (Inward)", "Emergence (Outward)"])
-    play = st.checkbox("Play time evolution", value=False)
-    speed = st.slider("Time evolution speed", min_value=0.2, max_value=5.0, value=1.0, step=0.1)
-    rotation_speed = st.slider("Rotation speed", min_value=0.0, max_value=2.0, value=0.3, step=0.05)
-    field_strength = st.slider("Field intensity (affects color scale)", min_value=0.1, max_value=1.0, value=0.6, step=0.05)
-    fractal_detail = st.slider("Fractal/Texture detail (visual)", 0, 4, 2, 1)
-    show_energy = st.checkbox("Color by energy-density (on lines)", value=True)
-    show_labels = st.checkbox("Show labels", value=True)
-    hide_ui = st.checkbox("Hide sidebar controls (for screenshots)", value=False)
+# --- Sidebar Controls ---
+st.sidebar.header("Simulation Controls")
+core_scale = st.sidebar.slider("Base Core Size", 0.3, 1.0, 0.6, 0.05)
+disk_radius = st.sidebar.slider("Accretion Disk Radius", 1.2, 3.0, 2.0, 0.1)
+rotation_speed = st.sidebar.slider("Rotation Speed", 10, 80, 40, 5)
+pulse_strength = st.sidebar.slider("Core Pulsation Strength", 0.0, 0.3, 0.1, 0.01)
+frames_count = 100
 
-if hide_ui:
-    st.markdown("<style>.sidebar .sidebar-content {display:none;}</style>", unsafe_allow_html=True)
-
-# Session state for animation/time
-if "time_phase" not in st.session_state:
-    st.session_state.time_phase = 0.0  # 0..1 where 0=collapse,0.5=stasis,1=emergence
-if "angle" not in st.session_state:
-    st.session_state.angle = 0.0
-if "playing" not in st.session_state:
-    st.session_state.playing = False
-
-# Map UI fields to simple booleans
-outward_default = (field_direction == "Emergence (Outward)")
-
-# Geometry params
-def build_core_mesh(core_radius=0.25, detail=50, fractal_detail=2, core_mode="Classical Anatomy"):
-    theta, phi = np.mgrid[0:np.pi:detail*1j, 0:2*np.pi:detail*1j]
-    x = np.sin(theta) * np.cos(phi)
-    y = np.sin(theta) * np.sin(phi)
-    z = np.cos(theta)
-    # Simple fractal-like perturbation (visual only)
-    if core_mode == "Quantum Fractal Core" and fractal_detail > 0:
-        for k in range(fractal_detail):
-            perturb = 0.02 * (0.9**k) * np.sin((k+2) * phi + 0.5 * k)
-            x = (1 + perturb) * x
-            y = (1 + perturb) * y
-            z = (1 + perturb) * z
-    return core_radius * x, core_radius * y, core_radius * z
-
-# Field line generator (returns list of x,y,z arrays and energy scalars per point)
-def generate_field_lines(n_lines=28, points_per_line=160, outward=False, time_phase=0.0, field_strength=0.6):
-    """
-    time_phase in [0,1]: controls collapse->stasis->emergence
-      0.0 => strongly inward flow
-      0.5 => slow/stationary
-      1.0 => strongly outward flow
-    outward param can set default orientation (if provided)
-    """
-    lines = []
-    # directional factor from time phase: -1 inward, 0 stasis, +1 outward
-    dir_factor = np.interp(time_phase, [0.0, 0.5, 1.0], [-1.0, 0.0, 1.0])
-    for i in range(n_lines):
-        base_angle = i * (2 * np.pi / n_lines) + 0.3 * np.sin(i)
-        r = np.linspace(0.18, 1.6, points_per_line)
-        # small spiral/warp depends on phase & field_strength
-        spiral_amp = 0.25 * (0.3 + 0.7 * (field_strength))
-        spiral = spiral_amp * np.sin(6 * np.pi * r + 2 * dir_factor + i * 0.2)
-        x = r * np.cos(base_angle + spiral)
-        y = r * np.sin(base_angle + spiral)
-        z = 0.15 * np.sin(4 * np.pi * r + i * 0.2) * (0.6 + 0.4 * dir_factor)
-        # orientation flip: collapse=inward (points move towards center), emergence=outward
-        if dir_factor < 0:
-            # collapse: start from outer region moving inward visually (we invert param for visuals)
-            x = x[::-1]; y = y[::-1]; z = z[::-1]
-        # energy-like scalar: stronger near core when collapsing, stronger outward when emerging
-        # simple model: energy ~ field_strength * (1/(r+0.05)) * (1 + dir_factor*r)
-        energy = field_strength * (1.0 / (r + 0.05)) * (1.0 + dir_factor * r * 0.4)
-        lines.append({"x": x, "y": y, "z": z, "energy": energy})
-    return lines
-
-# Build initial grid
-theta = np.linspace(0, np.pi, 50)
-phi = np.linspace(0, 2*np.pi, 50)
+# === 1. Geometry ===
+theta = np.linspace(0, np.pi, 100)
+phi = np.linspace(0, 2*np.pi, 100)
 x = np.outer(np.sin(theta), np.cos(phi))
 y = np.outer(np.sin(theta), np.sin(phi))
 z = np.outer(np.cos(theta), np.ones_like(phi))
 
-# Core frame 0
-surface = go.Surface(x=x, y=y, z=z, colorscale="Inferno", showscale=False)
-
-# Animation frames – rotate around z axis
-frames = []
-for angle in np.linspace(0, 2*np.pi, 40):
-    rot_x = np.cos(angle)*x - np.sin(angle)*y
-    rot_y = np.sin(angle)*x + np.cos(angle)*y
-    frames.append(go.Frame(data=[go.Surface(x=rot_x, y=rot_y, z=z,
-                                            colorscale="Inferno", showscale=False)]))
-
-fig = go.Figure(
-    data=[surface],
-    frames=frames,
-    layout=go.Layout(
-        scene=dict(aspectmode="data"),
-        updatemenus=[dict(type="buttons", showactive=False,
-            buttons=[dict(label="Play", method="animate", args=[None, {"frame": {"duration": 50, "redraw": True}, "fromcurrent": True}]),
-                     dict(label="Pause", method="animate", args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}])])]
+# === 2. Base Surfaces ===
+def make_core(scale, temperature_factor=0.0):
+    """Fractal-like singularity core with temperature-sensitive color."""
+    color_scales = [
+        [[0, "#2b004d"], [0.5, "#8a2be2"], [1, "#ffccff"]],
+        [[0, "#4b0082"], [0.5, "#9400d3"], [1, "#ffffff"]],
+        [[0, "#5f00ff"], [0.5, "#a020f0"], [1, "#87cefa"]]
+    ]
+    idx = int(np.clip(temperature_factor * (len(color_scales) - 1), 0, len(color_scales)-1))
+    return go.Surface(
+        x=scale * x,
+        y=scale * y,
+        z=scale * z,
+        surfacecolor=np.cos(6 * x * y * z),
+        colorscale=color_scales[idx],
+        showscale=False,
+        opacity=0.95,
+        name="Fractal Core"
     )
+
+# Event Horizon
+horizon_surface = go.Surface(
+    x=1.0 * x, y=1.0 * y, z=1.0 * z,
+    surfacecolor=np.zeros_like(x),
+    colorscale=[[0, "black"], [1, "purple"]],
+    showscale=False,
+    opacity=0.4,
+    name="Event Horizon"
 )
 
-# Optional labels
-if show_labels:
-        fig.add_trace(go.Scatter3d(
-            x=[0.0, 0.0, 1.1],
-            y=[0.0, 0.0, 0.0],
-            z=[0.5, -0.5, 0.0],
-            mode="text",
-            text=["Singularity Core", "Event Horizon", "Accretion Disk"],
-            textfont=dict(color="white", size=12),
-            hoverinfo="skip",
-            showlegend=False
-        ))
-    
-# Camera / rotation
-cam_radius = 2.4
-cam = dict(eye=dict(x=cam_radius * np.cos(angle), y=cam_radius * np.sin(angle), z=0.9))
-fig.update_layout(scene=dict(
-    xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
-        aspectmode="auto"
-    ), scene_camera=cam,
-        paper_bgcolor="black", plot_bgcolor="black",
-        margin=dict(l=0, r=0, t=0, b=0))
+# Accretion Disk
+phi_disk = np.linspace(0, 2*np.pi, 200)
+r_disk = np.linspace(1.0, disk_radius, 2)
+R, P = np.meshgrid(r_disk, phi_disk)
+x_disk = R * np.cos(P)
+y_disk = R * np.sin(P)
+z_disk = 0.05 * np.sin(10 * P)
+disk_surface = go.Surface(
+    x=x_disk, y=y_disk, z=z_disk,
+    surfacecolor=np.cos(P),
+    colorscale="Inferno",
+    showscale=False,
+    opacity=0.9,
+    name="Accretion Disk"
+)
 
-# UI presentation (main column)
-col1, col2 = st.columns([2, 1])
-with col1:
-    plot_area = st.empty()
-with col2:
-    st.markdown("### Controls (quick)")
-    st.write(f"Mode: **{mode}**")
-    st.write(f"Field intent: **{field_direction}**")
-    st.write(f"Fractal detail: **{fractal_detail}**")
-    st.write(" ")
-    st.markdown("Use **Play** (sidebar) to animate between collapse → emergence.")
+# Plasma Corona
+phi_corona = np.linspace(0, 2*np.pi, 120)
+r_corona = np.linspace(disk_radius * 0.8, disk_radius * 1.3, 2)
+R_c, P_c = np.meshgrid(r_corona, phi_corona)
+x_corona = R_c * np.cos(P_c)
+y_corona = R_c * np.sin(P_c)
+z_corona = 0.2 * np.sin(6 * P_c) + 0.3
+corona_surface = go.Surface(
+    x=x_corona, y=y_corona, z=z_corona,
+    surfacecolor=np.sin(P_c),
+    colorscale=[[0, "rgba(120,0,255,0.0)"], [0.5, "rgba(200,100,255,0.3)"], [1, "rgba(255,255,255,0.6)"]],
+    showscale=False,
+    opacity=0.5,
+    name="Plasma Corona"
+)
+
+# === 3. Animation Frames ===
+frames = []
+for i, angle in enumerate(np.linspace(0, 2*np.pi, frames_count)):
+    pulse = 1.0 + pulse_strength * np.sin(2 * angle)
+    temp_factor = (np.sin(2 * angle) + 1) / 2
+
+    # Disk & corona rotation
+    rot_x_disk = np.cos(angle) * x_disk - np.sin(angle) * y_disk
+    rot_y_disk = np.sin(angle) * x_disk + np.cos(angle) * y_disk
+    rot_x_corona = np.cos(angle) * x_corona - np.sin(angle) * y_corona
+    rot_y_corona = np.sin(angle) * x_corona + np.cos(angle) * y_corona
+
+    frames.append(
+        go.Frame(
+            name=f"frame{i}",
+            data=[
+                make_core(core_scale * pulse, temperature_factor=temp_factor),
+                horizon_surface,
+                go.Surface(x=rot_x_disk, y=rot_y_disk, z=z_disk, surfacecolor=np.cos(P),
+                           colorscale="Inferno", showscale=False, opacity=0.9),
+                go.Surface(x=rot_x_corona, y=rot_y_corona, z=z_corona, surfacecolor=np.sin(P_c),
+                           colorscale=[[0, "rgba(120,0,255,0.0)"],
+                                       [0.5, "rgba(200,100,255,0.3)"],
+                                       [1, "rgba(255,255,255,0.6)"]],
+                           showscale=False, opacity=0.5)
+            ],
+        )
+    )
+
+# === 4. Figure ===
+fig = go.Figure(
+    data=[make_core(core_scale), horizon_surface, disk_surface, corona_surface],
+    frames=frames,
+    layout=go.Layout(
+        title="Fractal Singularity — Event Horizon, Accretion Disk, and Plasma Corona",
+        paper_bgcolor="black",
+        scene=dict(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            aspectmode="data",
+            bgcolor="black"
+        ),
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            x=0.05, y=0.05,
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 1000/rotation_speed, "redraw": True},
+                                  "fromcurrent": True, "mode": "immediate"}]),
+                dict(label="⏸ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+            ]
+        )],
+    ),
+)
+
+# === 5. Display in Streamlit ===
+st.plotly_chart(fig, use_container_width=True)
