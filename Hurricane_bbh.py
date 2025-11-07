@@ -145,24 +145,6 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=0, b=0),
 )
 
-# --- Scene setup
-scene = dict(
-    xaxis=dict(showbackground=False, visible=False),
-    yaxis=dict(showbackground=False, visible=False),
-    zaxis=dict(showbackground=False, visible=False),
-    aspectmode="data"
-)
-
-# --- Build base figure
-fig = go.Figure(data=[stars, disk, horizon, ring, core])
-fig.update_layout(
-    paper_bgcolor="black",
-    scene=scene,
-    margin=dict(l=0, r=0, t=0, b=0),
-    autosize=True,
-    showlegend=show_labels
-)
-
 # --- Smooth camera animation
 if live_mode:
     frames = []
