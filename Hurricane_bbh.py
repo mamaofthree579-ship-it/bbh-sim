@@ -179,27 +179,3 @@ else:
         rotation_speed, show_energy, show_labels
     )
     st.empty().plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
-
-# Provide a small legend / controls footer
-with st.expander("Legend & Notes", expanded=False):
-    st.markdown("""
-    - **Field lines** are colored by a simple energy-like scalar (brighter = stronger).  
-    - **Time evolution** cycles: 0.0 (collapse) → 0.5 (stasis) → 1.0 (emergence).  
-    - This is a phenomenological visualization — parameters are for exploration, not exact GR/quantum solutions.
-    """)
-    st.markdown("**Tip:** Toggle `Color by energy-density` to see constant-color flow instead.")
-
-# Small buttons to step the phase manually (handy for testing)
-col_a, col_b, col_c = st.columns(3)
-with col_a:
-    if st.button("Step →"):
-        st.session_state.time_phase = min(1.0, st.session_state.time_phase + 0.05)
-        st.experimental_rerun()
-with col_b:
-    if st.button("Step ←"):
-        st.session_state.time_phase = max(0.0, st.session_state.time_phase - 0.05)
-        st.experimental_rerun()
-with col_c:
-    if st.button("Reset Phase"):
-        st.session_state.time_phase = 0.0
-        st.experimental_rerun()
