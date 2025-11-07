@@ -81,60 +81,35 @@ def generate_field_lines(n_lines=28, points_per_line=160, outward=False, time_ph
         lines.append({"x": x, "y": y, "z": z, "energy": energy})
     return lines
 
-# Plot builder
-def build_figure(core_mode, fractal_detail, field_strength, outward_default, time_phase, angle, rotation_speed, show_energy, show_labels):
-    fig = go.Figure()
+# Build initial grid
+theta = np.linspace(0, np.pi, 50)
+phi = np.linspace(0, 2*np.pi, 50)
+x = np.outer(np.sin(theta), np.cos(phi))
+y = np.outer(np.sin(theta), np.sin(phi))
+z = np.outer(np.cos(theta), np.ones_like(phi))
 
-    # Event horizon (semi-opaque sphere)
-    detail = 40
-    theta, phi = np.mgrid[0:np.pi:detail*1j, 0:2*np.pi:detail*1j]
-    r_event = 0.6
-    hx = r_event * np.sin(theta) * np.cos(phi)
-    hy = r_event * np.sin(theta) * np.sin(phi)
-    hz = r_event * np.cos(theta)
-    fig.add_surface(x=hx, y=hy, z=hz,
-                    surfacecolor=np.ones_like(hx),
-                    colorscale=[[0, 'rgb(100,20,120)'], [1, 'rgb(40,0,80)']],
-                    showscale=False, opacity=0.95, name="Event Horizon")
+# Core frame 0
+surface = go.Surface(x=x, y=y, z=z, colorscale="Inferno", showscale=False)
 
-    # Core
-    core_x, core_y, core_z = build_core_mesh(core_radius=0.26, detail=60, fractal_detail=fractal_detail, core_mode=core_mode)
-    core_color = "rgb(180,110,255)" if core_mode == "Quantum Fractal Core" else "rgb(110,40,160)"
-    fig.add_surface(x=core_x, y=core_y, z=core_z,
-                    surfacecolor=np.ones_like(core_x),
-                    colorscale=[[0, core_color], [1, core_color]],
-                    showscale=False, opacity=0.9, name="Singularity Core")
+# Animation frames – rotate around z axis
+frames = []
+for angle in np.linspace(0, 2*np.pi, 40):
+    rot_x = np.cos(angle)*x - np.sin(angle)*y
+    rot_y = np.sin(angle)*x + np.cos(angle)*y
+    frames.append(go.Frame(data=[go.Surface(x=rot_x, y=rot_y, z=z,
+                                            colorscale="Inferno", showscale=False)]))
 
-    # Accretion disk (simple torus-ish)
-    phi_d = np.linspace(0, 2 * np.pi, 120)
-    r_d = np.linspace(0.7, 1.55, 36)
-    R, PHI = np.meshgrid(r_d, phi_d)
-    disk_x = R * np.cos(PHI)
-    disk_y = R * np.sin(PHI)
-    disk_z = 0.04 * np.sin(8 * PHI) * (0.4 + 0.6 * field_strength)
-    fig.add_surface(x=disk_x, y=disk_y, z=disk_z,
-                    surfacecolor=disk_z,
-                    colorscale="YlOrRd",
-                    showscale=False, opacity=0.72, name="Accretion Disk")
+fig = go.Figure(
+    data=[surface],
+    frames=frames,
+    layout=go.Layout(
+        scene=dict(aspectmode="data"),
+        updatemenus=[dict(type="buttons", showactive=False,
+            buttons=[dict(label="Play", method="animate", args=[None, {"frame": {"duration": 50, "redraw": True}, "fromcurrent": True}]),
+                     dict(label="Pause", method="animate", args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}])])]
+    )
+)
 
-    # Field lines (generate colored lines)
-    outward = outward_default
-    lines = generate_field_lines(n_lines=36, points_per_line=240, outward=outward, time_phase=time_phase, field_strength=field_strength)
-    for ln in lines:
-        # Plotly supports coloring a line by array using line.color and colorscale
-        fig.add_trace(go.Scatter3d(
-            x=ln["x"], y=ln["y"], z=ln["z"],
-            mode="lines",
-            line=dict(
-                width=3,
-                color=ln["energy"] if show_energy else (field_strength * 50),
-                colorscale="Viridis",
-                cmin=0.0,
-                cmax=1.5 * field_strength * 10  # scale for visual contrast
-            ),
-            hoverinfo="skip",
-            showlegend=False
-        ))
 
     # Optional labels
     if show_labels:
@@ -172,7 +147,6 @@ with col2:
     st.write(" ")
     st.markdown("Use **Play** (sidebar) to animate between collapse → emergence.")
 
-# Animation loop / update
 # Animation loop / update
 st.session_state.playing = bool(play)
 
