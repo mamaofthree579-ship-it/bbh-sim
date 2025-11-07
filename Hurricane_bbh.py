@@ -50,23 +50,45 @@ y_disk = r_d * np.sin(phi_d)
 # --- Initialize figure ---
 fig = go.Figure()
 
-# --- Distant star field (fixed skybox style) ---
-Nstars = 1800
-np.random.seed(42)
-r_starfield = 100 * r_disk_outer
-theta_s = np.random.uniform(0, np.pi, Nstars)
-phi_s = np.random.uniform(0, 2*np.pi, Nstars)
-mask = np.random.choice([True, False], Nstars, p=[0.7, 0.3])
-r_starfield = np.where(mask, r_starfield * 1.2, r_starfield * 0.8)
-star_x = r_starfield * np.sin(theta_s) * np.cos(phi_s)
-star_y = r_starfield * np.sin(theta_s) * np.sin(phi_s)
-star_z = r_starfield * np.cos(theta_s) - (0.5 * r_starfield)
+# --- Define visual scales ---
+r_core = 1.0
+r_nebula = 10.0   # disk-like structure
+r_starfield = 120.0
+
+# --- Nebula (flattened disk around singularity) ---
+if show_nebula:
+    Nneb = 800
+    theta = np.random.uniform(0, 2 * np.pi, Nneb)
+    r = r_nebula * np.sqrt(np.random.rand(Nneb))
+    x_neb = r * np.cos(theta)
+    y_neb = r * np.sin(theta)
+    z_neb = np.random.normal(0, 0.5, Nneb)  # slight vertical thickness
+
+    fig.add_trace(go.Scatter3d(
+        x=x_neb, y=y_neb, z=z_neb,
+        mode="markers",
+        marker=dict(size=2, color="orange", opacity=0.3),
+        name="Accretion Nebula"
+    ))
+
+# --- Starfield (far background) ---
+Nstars = 2000
+phi = np.random.uniform(0, 2 * np.pi, Nstars)
+costheta = np.random.uniform(-1, 1, Nstars)
+u = np.random.uniform(0, 1, Nstars)
+
+theta = np.arccos(costheta)
+r = r_starfield * (u ** (1/3))
+
+x_star = r * np.sin(theta) * np.cos(phi)
+y_star = r * np.sin(theta) * np.sin(phi)
+z_star = r * np.cos(theta)
 
 fig.add_trace(go.Scatter3d(
-    x=star_x, y=star_y, z=star_z,
+    x=x_star, y=y_star, z=z_star,
     mode="markers",
-    marker=dict(size=2, color="white", opacity=0.8),
-    name="Stars"
+    marker=dict(size=1, color="white", opacity=0.7),
+    name="Starfield Background"
 ))
 
 # --- Optional cosmic haze / nebula ---
