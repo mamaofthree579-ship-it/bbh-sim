@@ -131,7 +131,8 @@ fig.update_layout(scene=dict(
         aspectmode="auto"
     ), scene_camera=cam,
         paper_bgcolor="black", plot_bgcolor="black",
-        margin=dict(l=0, r=0, t=0, b=0))
+        margin=dict(l=0, r=0, t=0,
+b=0))
     return fig
 
 # UI presentation (main column)
