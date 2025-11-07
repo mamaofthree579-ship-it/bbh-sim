@@ -72,17 +72,11 @@ fig.add_trace(go.Scatter3d(
 # --- Optional cosmic haze / nebula ---
 if show_nebula:
     Nneb = 400
-    neb_x = np.random.uniform(-r_starfield, r_starfield, Nneb)
-    neb_y = np.random.uniform(-r_starfield, r_starfield, Nneb)
-    neb_z = np.random.uniform(-r_starfield, -0.2 * r_starfield, Nneb)
+    neb_radius = np.mean(r_starfield)  # use scalar average radius for nebula bounds
+    neb_x = np.random.uniform(-neb_radius, neb_radius, Nneb)
+    neb_y = np.random.uniform(-neb_radius, neb_radius, Nneb)
+    neb_z = np.random.uniform(-neb_radius, -0.2 * neb_radius, Nneb)
 
-    fig.add_trace(go.Scatter3d(
-        x=neb_x, y=neb_y, z=neb_z,
-        mode="markers",
-        marker=dict(size=6, color="rgba(120,170,255,0.05)", opacity=0.05),
-        hoverinfo="skip",
-        name="Nebula"
-    ))
 
 # --- Event horizon ---
 fig.add_surface(
