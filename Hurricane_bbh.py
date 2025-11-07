@@ -77,24 +77,37 @@ core = go.Surface(
 )
 
 # --- Gravitational Lensing Field (background stars)
-Nstars = 400
+Nstars = 500
 np.random.seed(42)
 star_x = np.random.uniform(-5*r_outer, 5*r_outer, Nstars)
 star_y = np.random.uniform(-5*r_outer, 5*r_outer, Nstars)
 star_z = np.random.uniform(-5*r_outer, 5*r_outer, Nstars)
 
-# Simple lensing deflection — bend light near photon sphere
+# distance from origin
 r_dist = np.sqrt(star_x**2 + star_y**2 + star_z**2)
-deflect_factor = 0.8 * np.exp(-((r_dist - r_photon)**2)/(0.2))
-star_x_lensed = star_x + 0.2 * deflect_factor * (star_x / (r_dist + 1e-6))
-star_y_lensed = star_y + 0.2 * deflect_factor * (star_y / (r_dist + 1e-6))
+
+# define region where light bends noticeably
+mask = (r_dist > 1.2*r_s) & (r_dist < 1.8*r_s)
+deflection_strength = 0.25 * np.exp(-((r_dist - 1.5*r_s)**2) / (0.05*r_s)**2)
+
+# apply only within that mask
+star_x_lensed = star_x.copy()
+star_y_lensed = star_y.copy()
+star_z_lensed = star_z.copy()
+
+star_x_lensed[mask] += deflection_strength[mask] * (star_x[mask] / r_dist[mask])
+star_y_lensed[mask] += deflection_strength[mask] * (star_y[mask] / r_dist[mask])
+# small outward offset to create ring rather than collapse
+star_x_lensed[mask] += 0.2 * (star_x[mask] / r_dist[mask])
+star_y_lensed[mask] += 0.2 * (star_y[mask] / r_dist[mask])
 
 stars = go.Scatter3d(
-    x=star_x_lensed, y=star_y_lensed, z=star_z,
+    x=star_x_lensed, y=star_y_lensed, z=star_z_lensed,
     mode="markers",
     marker=dict(size=2, color="white", opacity=0.6),
     name="Background Stars"
 )
+
 
 # --- Scene setup
 scene = dict(
