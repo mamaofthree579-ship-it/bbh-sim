@@ -24,7 +24,7 @@ follows the pulse parameters.
 with st.sidebar:
     st.header("Controls")
     mode = st.selectbox("Mode", ["Classical Anatomy", "Hurricane Singularity Mode"])
-    mass = st.slider("Mass (visual scale, M☉)", min_value=1e3, max_value=1e8, value=4_300_000, step=1000, format="%d")
+    mass = st.slider("Mass (visual scale, M☉)", min_value=1000, max_value=100_000_000, value=4_300_000, step=1000, format="%d")
     pulse_rate = st.slider("Pulse rate (Hz, visual)", min_value=0.1, max_value=4.0, value=0.8, step=0.05)
     pulse_strength = st.slider("Pulse strength", min_value=0.0, max_value=1.0, value=0.6, step=0.05)
     vortex_strength = st.slider("Vortex strength (spiral tightness)", min_value=0.2, max_value=2.5, value=1.0, step=0.05)
