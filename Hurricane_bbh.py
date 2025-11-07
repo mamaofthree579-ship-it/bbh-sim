@@ -110,8 +110,8 @@ fig = go.Figure(
     )
 )
 
- # Optional labels
-    if show_labels:
+# Optional labels
+if show_labels:
         fig.add_trace(go.Scatter3d(
             x=[0.0, 0.0, 1.1],
             y=[0.0, 0.0, 0.0],
