@@ -9,3 +9,4 @@ gwpy
 scikit-image
 anywidget
 soundfile
+sounddevice
