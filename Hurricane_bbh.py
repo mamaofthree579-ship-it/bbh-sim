@@ -121,7 +121,7 @@ if st.button("Play / Live Motion"):
 else:
     plot_container.plotly_chart(fig, use_container_width=True)
                                         transition=dict(duration=0),
-                                                                 fromcurrent=True, mode="immediate")]),
+                                                                 fromcurrent=True, mode="immediate",
             dict(label="Pause", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False),
                                                                     transition=dict(duration=0),
                                                                     mode="immediate")])
