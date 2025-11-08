@@ -125,7 +125,7 @@ else:
             dict(label="Pause", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False),
                                                                     transition=dict(duration=0),
                                                                     mode="immediate")])
-        ]
+)
     )],
     sliders=[dict(steps=[dict(method="animate", args=[[f.name],
                                                       dict(mode="immediate", frame=dict(duration=0, redraw=True),
