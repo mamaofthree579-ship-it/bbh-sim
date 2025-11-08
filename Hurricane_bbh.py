@@ -51,21 +51,21 @@ fig.add_surface(
     name="Singularity Core"
 )
 
-# --- Accretion disk particles ---
-Nneb = nebula_density
-theta = np.random.uniform(0, 2 * np.pi, Nneb)
-r = nebula_spread * np.sqrt(np.random.rand(Nneb))
-x_neb = r * np.cos(theta)
-y_neb = r * np.sin(theta)
-z_neb = np.random.normal(0, 0.2, Nneb)
+# --- Accretion disk surface instead of particle cloud ---
+r_disk = np.linspace(0.5, nebula_spread, 100)
+theta_disk = np.linspace(0, 2*np.pi, 200)
+R, T = np.meshgrid(r_disk, theta_disk)
+Xdisk = R * np.cos(T)
+Ydisk = R * np.sin(T)
+Zdisk = 0.2 * np.sin(3 * T) * np.exp(-R/nebula_spread)  # small turbulence waves
 
-fig.add_trace(go.Scatter3d(
-    x=x_neb, y=y_neb, z=z_neb,
-    mode="markers",
-    marker=dict(size=2, color="rgba(255,160,60,0.25)"),
-    name="Accretion Disk"
-))
-
+fig.add_surface(
+    x=Xdisk, y=Ydisk, z=Zdisk,
+    colorscale=[[0, "rgba(255,160,60,0.2)"], [1, "rgba(255,80,0,0.6)"]],
+    showscale=False,
+    opacity=0.8,
+    name="Accretion Disk Surface"
+)
 # =======================================================
 # Layout
 # =======================================================
