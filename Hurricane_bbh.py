@@ -5,10 +5,10 @@ import time
 
 st.set_page_config(page_title="Black Hole Anatomy Simulator", layout="wide")
 
-st.title("🌀 Immersive Black Hole Anatomy Visualizer")
+st.title("🌀 Realistic Black Hole Anatomy — Cosmic Cavity Edition")
 st.markdown("""
-This module shows a **realistic, immersive perspective** — you are *inside* the cosmos,
-watching the singularity, its accretion disk, and surrounding starfield.
+This simulation places you *inside the cosmos*, showing a black hole surrounded by a realistic starfield.
+Nearby space is cleared by gravitational scattering, letting you clearly view the singularity and accretion disk.
 """)
 
 # Sidebar controls
@@ -18,22 +18,30 @@ mass_scale = st.sidebar.slider("Singularity Scale", 0.5, 3.0, 1.0, 0.1)
 nebula_density = st.sidebar.slider("Nebula Density", 500, 3000, 1000, 100)
 nebula_spread = st.sidebar.slider("Nebula Spread", 5.0, 20.0, 10.0, 0.5)
 star_density = st.sidebar.slider("Starfield Density", 1000, 8000, 4000, 200)
+inner_clear = st.sidebar.slider("Cavity Radius", 20.0, 80.0, 45.0, 1.0)
+outer_space = st.sidebar.slider("Starfield Radius", 100.0, 300.0, 200.0, 10.0)
 
 # Create figure
 fig = go.Figure()
 
 # =======================================================
-# STARFIELD — viewer is *inside* it
+# STARFIELD — stars only *beyond* the cavity radius
 # =======================================================
 Nstars = star_density
 phi = np.random.uniform(0, 2 * np.pi, Nstars)
 theta = np.random.uniform(0, np.pi, Nstars)
-R_bg = 150  # large radius — far away from black hole center
 
-# stars positioned around the camera (you’re inside this sphere)
-x_star = R_bg * np.sin(theta) * np.cos(phi)
-y_star = R_bg * np.sin(theta) * np.sin(phi)
-z_star = R_bg * np.cos(theta)
+# Distance from center — stars appear farther away
+r_stars = np.random.uniform(inner_clear, outer_space, Nstars)
+
+# Apply slight repulsion gradient (denser at large r)
+weights = (r_stars - inner_clear) / (outer_space - inner_clear)
+r_stars = r_stars * (0.8 + 0.4 * weights)
+
+# Convert to Cartesian coordinates
+x_star = r_stars * np.sin(theta) * np.cos(phi)
+y_star = r_stars * np.sin(theta) * np.sin(phi)
+z_star = r_stars * np.cos(theta)
 
 fig.add_trace(go.Scatter3d(
     x=x_star, y=y_star, z=z_star,
@@ -60,7 +68,7 @@ fig.add_trace(go.Scatter3d(
 ))
 
 # =======================================================
-# SINGULARITY CORE — fractal crystalline quantum structure
+# SINGULARITY CORE — crystalline fractal center
 # =======================================================
 u = np.linspace(0, 2 * np.pi, 80)
 v = np.linspace(0, np.pi, 80)
@@ -95,18 +103,18 @@ fig.update_layout(
 )
 
 # =======================================================
-# Live motion: rotate camera *inside* the starfield
+# Live motion: orbit the camera gently
 # =======================================================
 if motion:
     plot_area = st.empty()
     for frame in range(300):
         angle = frame * 0.02
         fig.update_layout(scene_camera=dict(
-            eye=dict(x=4 * np.sin(angle), y=4 * np.cos(angle), z=1.5 * np.sin(angle / 3))
+            eye=dict(x=5 * np.sin(angle), y=5 * np.cos(angle), z=2.5 * np.sin(angle / 3))
         ))
         plot_area.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         time.sleep(0.03)
 else:
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-st.caption("Immersive simulation — you are within the starfield, observing the crystalline singularity and its plasma disk.")
+st.caption("You are within the cleared cavity of the black hole’s gravity well, surrounded by distant stars and the glowing accretion plasma.")
