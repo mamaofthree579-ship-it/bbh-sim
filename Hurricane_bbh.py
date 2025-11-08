@@ -168,7 +168,7 @@ fig.update_layout(
 
 # Add a slider for manual scrubbing
 sliders = [dict(steps=[
-    dict(method='animate', args=[[f.name], dict(mode='immediate', frame=dict(duration=0, redraw=True), transition=dict(duration=0)]),
+    dict(method='animate', args=[[f.name], dict(mode='immediate', frame=dict(duration=0, redraw=True), transition=dict(duration=0))),
          label=str(i))
     for i, f in enumerate(frames)
 ], active=0, x=0.05, y=0, xanchor='left', yanchor='top')]
