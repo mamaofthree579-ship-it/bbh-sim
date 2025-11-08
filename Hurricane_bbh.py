@@ -131,7 +131,6 @@ else:
                                                       dict(mode="immediate", frame=dict(duration=0, redraw=True),
                                                            transition=dict(duration=0))],
                               label=str(k)) for k, f in enumerate(frames)], active=0)]
-)
 
 fig.update_layout(
     scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
