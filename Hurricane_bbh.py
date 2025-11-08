@@ -1,153 +1,112 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+import time
 
-st.set_page_config(page_title="Black Hole Anatomy Simulator", layout="wide")
+st.set_page_config(page_title="Black Hole Anatomy — Accretion Disk Microstars", layout="wide")
 
-st.title("🌀 Black Hole Anatomy — Quantum Singularity Simulation")
-st.caption("Visual simulation of the fractal singularity core and rotating accretion disk")
+st.title("🌀 Black Hole Anatomy — Accretion Disk Plasma Simulation")
 
-# ------------------------------------------------------------
-# Parameters
-# ------------------------------------------------------------
-col1, col2 = st.columns(2)
-with col1:
-    mass = st.number_input("Mass (solar masses)", value=4.3e6, format="%.1e")
-with col2:
-    live_motion = st.checkbox("Live rotation", value=True)
+# --- Parameters ---
+G = 6.67430e-11
+c = 3.0e8
+M_sun = 1.989e30
 
-# Constants
-rotation_speed = 0.05  # radians per frame
+mass = st.slider("Black Hole Mass (solar masses)", 1e5, 1e9, 4.3e6, step=1e5, format="%.0f")
+M = mass * M_sun
+r_s = 2 * G * M / c**2  # Schwarzschild radius (m)
 
-# ------------------------------------------------------------
-# Geometry grids
-# ------------------------------------------------------------
-theta = np.linspace(0, 2 * np.pi, 100)
-phi = np.linspace(0, np.pi, 50)
+st.markdown(f"**Schwarzschild radius (rₛ):** {r_s/1000:.2e} km")
+
+# --- Core geometry ---
+theta = np.linspace(0, 2*np.pi, 100)
+phi = np.linspace(0, np.pi, 100)
 x = np.outer(np.cos(theta), np.sin(phi))
 y = np.outer(np.sin(theta), np.sin(phi))
 z = np.outer(np.ones_like(theta), np.cos(phi))
 
-# ------------------------------------------------------------
-# Create 3D figure
-# ------------------------------------------------------------
+# --- Base figure ---
 fig = go.Figure()
 
-# Singularity core — fractal crystal representation
+# Event horizon
 fig.add_surface(
-    x=0.5 * x,
-    y=0.5 * y,
-    z=0.5 * z,
-    colorscale=[[0, "rgb(130,70,220)"], [1, "rgb(220,200,255)"]],
+    x=r_s*x, y=r_s*y, z=r_s*z,
+    colorscale=[[0, "black"], [1, "black"]],
     showscale=False,
-    opacity=0.95,
-    name="Singularity Core",
+    opacity=1.0,
+    name="Event Horizon"
 )
 
-# Event horizon shell
-fig.add_surface(
-    x=x,
-    y=y,
-    z=z,
-    colorscale=[[0, "rgb(20,0,40)"], [1, "rgb(100,0,160)"]],
-    showscale=False,
-    opacity=0.85,
-    name="Event Horizon",
-)
-
-# Accretion disk (thin ring with mild vertical turbulence)
-r_disk = np.linspace(0.8, 10, 100)
-theta_disk = np.linspace(0, 2 * np.pi, 200)
-R, T = np.meshgrid(r_disk, theta_disk)
-Xdisk = R * np.cos(T)
-Ydisk = R * np.sin(T)
-Zdisk = 0.05 * np.sin(6 * T) * np.exp(-R / 10)
+# Accretion disk (static)
+r_disk_inner, r_disk_outer = 1.2*r_s, 2.0*r_s
+disk_r = np.linspace(r_disk_inner, r_disk_outer, 50)
+disk_t = np.linspace(0, 2*np.pi, 200)
+R, T = np.meshgrid(disk_r, disk_t)
+X = R * np.cos(T)
+Y = R * np.sin(T)
+Z = 0.03 * np.sin(6*T) * r_s / 10  # subtle wave pattern
 
 fig.add_surface(
-    x=Xdisk,
-    y=Ydisk,
-    z=Zdisk,
-    colorscale=[[0, "rgba(255,180,60,0.3)"], [1, "rgba(255,80,0,0.8)"]],
+    x=X, y=Y, z=Z,
+    colorscale="inferno",
+    opacity=0.8,
     showscale=False,
-    opacity=0.9,
-    name="Accretion Disk",
+    name="Accretion Disk"
 )
 
-# ------------------------------------------------------------
-# Animation — rotate black hole only (camera stays fixed)
-# ------------------------------------------------------------
-if live_motion:
-    frames = []
-    for i in range(60):
-        angle = i * rotation_speed
-        cos_a, sin_a = np.cos(angle), np.sin(angle)
+# --- Plasma microstars (orbiting particles) ---
+N = 300
+r_particles = np.random.uniform(r_disk_inner, r_disk_outer, N)
+phi_particles = np.random.uniform(0, 2*np.pi, N)
+z_particles = np.random.uniform(-0.02*r_s, 0.02*r_s, N)
 
-        # Rotate core + horizon + disk
-        x_rot = cos_a * x - sin_a * y
-        y_rot = sin_a * x + cos_a * y
-        Xdisk_rot = cos_a * Xdisk - sin_a * Ydisk
-        Ydisk_rot = sin_a * Xdisk + cos_a * Ydisk
+# Button control
+col1, col2 = st.columns(2)
+animate = col1.button("▶️ Animate Accretion Disk")
+reset = col2.button("⏹️ Reset View")
 
-        frame = go.Frame(
-            data=[
-                go.Surface(
-                    x=x_rot, y=y_rot, z=z,
-                    colorscale=[[0, "rgb(20,0,40)"], [1, "rgb(100,0,160)"]],
-                    showscale=False, opacity=0.85
-                ),
-                go.Surface(
-                    x=0.5*x_rot, y=0.5*y_rot, z=0.5*z,
-                    colorscale=[[0, "rgb(130,70,220)"], [1, "rgb(220,200,255)"]],
-                    showscale=False, opacity=0.95
-                ),
-                go.Surface(
-                    x=Xdisk_rot, y=Ydisk_rot, z=Zdisk,
-                    colorscale=[[0, "rgba(255,180,60,0.3)"], [1, "rgba(255,80,0,0.8)"]],
-                    showscale=False, opacity=0.9
-                ),
-            ]
+# --- Animation loop ---
+frames = []
+if animate:
+    for t in np.linspace(0, 2*np.pi, 100):
+        x_p = r_particles * np.cos(phi_particles + t)
+        y_p = r_particles * np.sin(phi_particles + t)
+        glow = 0.5 + 0.5 * np.sin(10*(phi_particles + t))
+        frame = go.Scatter3d(
+            x=x_p, y=y_p, z=z_particles,
+            mode="markers",
+            marker=dict(
+                size=3,
+                color=glow,
+                colorscale="YlOrRd",
+                opacity=0.9
+            ),
+            name="Microstars"
         )
         frames.append(frame)
+    # show last frame (simple motion illusion)
+    fig.add_trace(frames[-1])
+else:
+    fig.add_trace(go.Scatter3d(
+        x=r_particles*np.cos(phi_particles),
+        y=r_particles*np.sin(phi_particles),
+        z=z_particles,
+        mode="markers",
+        marker=dict(size=3, color="gold", opacity=0.8),
+        name="Microstars"
+    ))
 
-    fig.frames = frames
-    fig.update_layout(
-        updatemenus=[{
-            "type": "buttons",
-            "buttons": [{
-                "label": "▶️ Rotate",
-                "method": "animate",
-                "args": [None, {"frame": {"duration": 80, "redraw": True}, "fromcurrent": True}]
-            }]
-        }]
-    )
-
-# ------------------------------------------------------------
-# Layout
-# ------------------------------------------------------------
+# --- Scene layout ---
 fig.update_layout(
     scene=dict(
-        xaxis=dict(showbackground=False, showticklabels=False),
-        yaxis=dict(showbackground=False, showticklabels=False),
-        zaxis=dict(showbackground=False, showticklabels=False),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
         aspectmode="data",
-        camera=dict(eye=dict(x=1.4, y=1.4, z=1.1)),
         bgcolor="black",
     ),
     paper_bgcolor="black",
     margin=dict(l=0, r=0, t=0, b=0),
 )
 
-# ------------------------------------------------------------
-# Display
-# ------------------------------------------------------------
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-st.markdown(
-    """
-    ### Visual Components
-    - **Violet Core:** quantum fractal singularity.  
-    - **Dark Shell:** event horizon boundary.  
-    - **Orange Disk:** accretion plasma torus.  
-    - Background removed for optimal clarity.
-    """
-)
