@@ -8,3 +8,4 @@ pyyaml
 gwpy
 scikit-image
 anywidget
+io, base64, soundfile
