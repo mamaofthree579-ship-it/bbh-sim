@@ -95,11 +95,32 @@ fig.frames = frames
 # Layout / Animation settings
 frame_duration_ms = int(1000 * animation_seconds / frames_count)
 fig.update_layout(
-    updatemenus=[dict(
-        type="buttons", showactive=False, y=1.05, x=0.0, xanchor="left", yanchor="top",
-        buttons=[
-            dict(label="Play", method="animate", args=[None, dict(frame=dict(duration=frame_duration_ms, redraw=True),
-                                                                 transition=dict(duration=0),
+    import time
+
+# Create a container to hold the animated plot
+plot_container = st.empty()
+
+if st.button("Play / Live Motion"):
+    st.write("🌀 Simulating black hole rotation...")
+
+    for frame in range(180):
+        angle = frame * 2  # degrees per frame
+        camera = dict(
+            eye=dict(
+                x=1.5 * np.sin(np.radians(angle)),
+                y=1.5 * np.cos(np.radians(angle)),
+                z=0.3
+            )
+        )
+        fig.update_layout(scene_camera=camera)
+
+        # Update the plot in-place
+        plot_container.plotly_chart(fig, use_container_width=True)
+        time.sleep(0.05)  # control rotation speed
+
+else:
+    plot_container.plotly_chart(fig, use_container_width=True)
+                                        transition=dict(duration=0),
                                                                  fromcurrent=True, mode="immediate")]),
             dict(label="Pause", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False),
                                                                     transition=dict(duration=0),
