@@ -1,144 +1,178 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-import time
 
-st.set_page_config(page_title="Black Hole Anatomy — Quantum Accretion Disk", layout="wide")
+st.set_page_config(page_title="Black Hole — Client-side Animation", layout="wide")
 
-st.title("🌀 Black Hole Anatomy — Quantum Accretion Disk Turbulence Model")
+st.title("🌀 Black Hole — Accretion Plasma (Client-side Animation)")
 
-# --- Constants ---
+# Physical / UI controls
+mass = st.slider("Black Hole Mass (M☉, visual scale)", min_value=1e5, max_value=1e9, value=4.3e6, step=1e5, format="%.0f")
+mass_label = f"{mass:,.0f} M☉"
+st.markdown(f"**Mass:** {mass_label}")
+
+r_Q_factor = st.slider("Quantum radius scale (× rₛ)", 0.5, 5.0, 1.5, step=0.1)
+
+# Visual tuning
+num_particles = int(st.slider("Number of plasma particles (for animation)", 100, 1200, 400, step=50))
+frames_count  = int(st.slider("Animation frames (smoothness)", 20, 120, 60, step=4))
+animation_seconds = float(st.slider("Animation duration (s)", 1.0, 10.0, 4.0, step=0.5))
+
+# Constants (visual / toy)
 G = 6.67430e-11
-c = 3.0e8
-M_sun = 1.989e30
-
-# --- User controls ---
-mass = st.slider("Black Hole Mass (solar masses)", 1e5, 1e9, 4.3e6, step=1e5, format="%.0f")
+c = 2.99792458e8
+M_sun = 1.98847e30
 M = mass * M_sun
-r_s = 2 * G * M / c**2  # Schwarzschild radius (m)
+r_s = 2 * G * M / c**2  # Schwarzschild radius (meters)
+r_Q = r_Q_factor * r_s
 
-st.markdown(f"**Schwarzschild radius (rₛ):** {r_s/1000:.2e} km")
+st.write(f"Schwarzschild radius (visual): {r_s:.3e} m (used as scale)")
 
-# Quantum gravity radius scale
-r_Q = st.slider("Quantum Gravity Radius Scale (× rₛ)", 0.5, 5.0, 1.5)
-r_Q *= r_s
+# Geometry: normalized to r_s to keep numbers sane for plotting
+r_disk_inner = 1.2 * r_s
+r_disk_outer = 2.5 * r_s
 
-# --- Core geometry (event horizon sphere) ---
-theta = np.linspace(0, 2*np.pi, 100)
-phi = np.linspace(0, np.pi, 100)
-x = np.outer(np.cos(theta), np.sin(phi))
-y = np.outer(np.sin(theta), np.sin(phi))
-z = np.outer(np.ones_like(theta), np.cos(phi))
+# Precompute particle base values (in units of meters)
+rng = np.random.default_rng(42)
+r_particles = rng.uniform(r_disk_inner, r_disk_outer, size=num_particles)
+phi_particles = rng.uniform(0, 2*np.pi, size=num_particles)
+z_particles = rng.uniform(-0.015*r_s, 0.015*r_s, size=num_particles)
 
-# --- Figure setup ---
+# Quantum Gravity Compression (toy) - used for color/brightness mapping
+def F_QG_scalar(r, m=M, r_Q=r_Q):
+    # avoid divide by zero
+    r_safe = np.maximum(r, 1e-12)
+    return (G * m / (r_safe**2)) * np.exp(-r_safe / r_Q)
+
+F_vals = F_QG_scalar(r_particles)
+# Normalize to [0,1] for color mapping (avoid degenerate)
+F_min, F_max = F_vals.min(), F_vals.max()
+if F_max > F_min:
+    F_norm = (F_vals - F_min) / (F_max - F_min)
+else:
+    F_norm = np.zeros_like(F_vals)
+
+# Build static figure: event horizon + accretion disk (one-time)
+theta = np.linspace(0, 2*np.pi, 80)
+phi = np.linspace(0, np.pi, 40)
+th_mesh, ph_mesh = np.meshgrid(theta, phi)
+x_sphere = np.cos(th_mesh) * np.sin(ph_mesh)
+y_sphere = np.sin(th_mesh) * np.sin(ph_mesh)
+z_sphere = np.cos(ph_mesh)
+
 fig = go.Figure()
 
-# Event horizon
-fig.add_surface(
-    x=r_s*x, y=r_s*y, z=r_s*z,
-    colorscale=[[0, "black"], [1, "black"]],
+# Event horizon (draw as purple-ish sphere, slightly translucent to keep hotspot visible)
+fig.add_trace(go.Surface(
+    x=r_s * x_sphere,
+    y=r_s * y_sphere,
+    z=r_s * z_sphere,
+    colorscale=[[0, 'rgb(25,8,40)'], [1, 'rgb(70,30,120)']],
     showscale=False,
-    opacity=1.0,
-    name="Event Horizon"
-)
+    opacity=0.95,
+    name='Event Horizon'
+))
 
-# Accretion disk geometry
-r_disk_inner, r_disk_outer = 1.2*r_s, 2.5*r_s
+# Accretion disk surface (thin)
 disk_r = np.linspace(r_disk_inner, r_disk_outer, 60)
 disk_t = np.linspace(0, 2*np.pi, 240)
-R, T = np.meshgrid(disk_r, disk_t)
-X = R * np.cos(T)
-Y = R * np.sin(T)
-Z = 0.03 * np.sin(6*T) * r_s / 10
-
-fig.add_surface(
+R, Tm = np.meshgrid(disk_r, disk_t)
+X = R * np.cos(Tm)
+Y = R * np.sin(Tm)
+# slight vertical perturbation for visual texture (small amplitude)
+Z = 0.03 * np.sin(6 * Tm) * (r_s / 10)
+fig.add_trace(go.Surface(
     x=X, y=Y, z=Z,
-    colorscale="inferno",
-    opacity=0.6,
+    colorscale='Inferno',
     showscale=False,
-    name="Accretion Disk"
+    opacity=0.62,
+    name='Accretion Disk'
+))
+
+# Helper to create a Scatter3d trace (particles)
+def scatter3d_for_positions(xp, yp, zp, cvals, size=3):
+    return go.Scatter3d(
+        x=xp, y=yp, z=zp,
+        mode='markers',
+        marker=dict(size=size, color=cvals, colorscale='YlOrRd', cmin=0, cmax=1, opacity=0.9),
+        hoverinfo='none',
+        showlegend=False
+    )
+
+# Initial particle positions (first frame)
+x0 = r_particles * np.cos(phi_particles)
+y0 = r_particles * np.sin(phi_particles)
+z0 = z_particles
+fig.add_trace(scatter3d_for_positions(x0, y0, z0, F_norm, size=3))
+
+# Build frames for client-side animation
+frames = []
+for frame_idx in range(frames_count):
+    t = (frame_idx / frames_count) * (2 * np.pi)  # phase
+    # particles orbit and wobble with phase; adjust amplitude so motion is visible but subtle
+    x_p = r_particles * np.cos(phi_particles + 0.6 * t)
+    y_p = r_particles * np.sin(phi_particles + 0.6 * t)
+    z_p = z_particles + 0.012 * r_s * np.sin(5 * t + r_particles / r_s)
+    # color modulation (turbulence)
+    color_mod = np.clip(F_norm * (1 + 0.22 * np.sin(6 * t + r_particles / r_s)), 0, 1)
+    # frame only needs the particle trace (index -1 in fig.data)
+    frames.append(go.Frame(data=[scatter3d_for_positions(x_p, y_p, z_p, color_mod, size=3)], name=f"f{frame_idx}"))
+
+fig.frames = frames
+
+# Animation settings: duration per frame in ms
+frame_duration_ms = max(10, int(1000 * animation_seconds / frames_count))
+
+# Add play/pause button (Plotly built-in)
+fig.update_layout(
+    updatemenus=[
+        dict(
+            type="buttons",
+            showactive=False,
+            y=1.05,
+            x=0.0,
+            xanchor="left",
+            yanchor="top",
+            pad=dict(t=0, r=10),
+            buttons=[
+                dict(label="Play",
+                     method="animate",
+                     args=[None, dict(frame=dict(duration=frame_duration_ms, redraw=True),
+                                      transition=dict(duration=0),
+                                      fromcurrent=True,
+                                      mode="immediate")]),
+                dict(label="Pause",
+                     method="animate",
+                     args=[[None], dict(frame=dict(duration=0, redraw=False),
+                                        transition=dict(duration=0),
+                                        mode="immediate",
+                                        showlegend=False)])
+            ]
+        )
+    ]
 )
 
-# --- Plasma micro-particles ---
-N = 400
-r_particles = np.random.uniform(r_disk_inner, r_disk_outer, N)
-phi_particles = np.random.uniform(0, 2*np.pi, N)
-z_particles = np.random.uniform(-0.015*r_s, 0.015*r_s, N)
+# Layout tweaks: hide axis lines, set black background
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
+        aspectmode='data',
+        bgcolor='black'
+    ),
+    paper_bgcolor="black",
+    margin=dict(l=0, r=0, t=30, b=0),
+    title=f"Black Hole visual — Mass {mass_label} (animation client-side)"
+)
 
-# --- Quantum Gravity Compression Field ---
-def F_QG(r, m=M, r_Q=r_Q):
-    return (G*m / r**2) * np.exp(-r / r_Q)
+# Add a slider for manual scrubbing
+sliders = [dict(steps=[
+    dict(method='animate', args=[[f.name], dict(mode='immediate', frame=dict(duration=0, redraw=True), transition=dict(duration=0)]),
+         label=str(i))
+    for i, f in enumerate(frames)
+], active=0, x=0.05, y=0, xanchor='left', yanchor='top')]
+fig.update_layout(sliders=sliders)
 
-# Normalize for brightness
-F_vals = F_QG(r_particles)
-F_norm = (F_vals - F_vals.min()) / (F_vals.max() - F_vals.min())
-
-# --- UI Controls ---
-col1, col2 = st.columns(2)
-animate = col1.button("▶️ Animate Turbulence Disk")
-reset = col2.button("⏹️ Reset View")
-
-# --- Animation loop ---
-if animate:
-    # Continuous live animation
-    placeholder = st.empty()
-    t = 0
-    while t < 10:
-        phase = t
-        # Simulate turbulence as brightness oscillation
-        temp_turb = F_norm * (1 + 0.2 * np.sin(6*phase + r_particles/r_s))
-        color_vals = np.clip(temp_turb, 0, 1)
-
-        x_p = r_particles * np.cos(phi_particles + 0.5*phase)
-        y_p = r_particles * np.sin(phi_particles + 0.5*phase)
-        z_p = z_particles + 0.01*r_s*np.sin(5*phase + r_particles/r_s)
-
-        fig2 = go.Figure(fig)
-        fig2.add_trace(go.Scatter3d(
-            x=x_p, y=y_p, z=z_p,
-            mode="markers",
-            marker=dict(
-                size=3,
-                color=color_vals,
-                colorscale="YlOrRd",
-                opacity=0.9
-            ),
-            name="Plasma Turbulence"
-        ))
-        fig2.update_layout(
-            scene=dict(
-                xaxis=dict(visible=False),
-                yaxis=dict(visible=False),
-                zaxis=dict(visible=False),
-                aspectmode="data",
-                bgcolor="black",
-            ),
-            paper_bgcolor="black",
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
-
-        placeholder.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-        time.sleep(0.1)
-        t += 0.1
-else:
-    # Static frame
-    fig.add_trace(go.Scatter3d(
-        x=r_particles*np.cos(phi_particles),
-        y=r_particles*np.sin(phi_particles),
-        z=z_particles,
-        mode="markers",
-        marker=dict(size=3, color=F_norm, colorscale="YlOrRd", opacity=0.8),
-        name="Quantum Plasma"
-    ))
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False),
-            zaxis=dict(visible=False),
-            aspectmode="data",
-            bgcolor="black",
-        ),
-        paper_bgcolor="black",
-        margin=dict(l=0, r=0, t=0, b=0),
-    )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+# Render the figure once — animation runs entirely client-side in the browser
+st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
