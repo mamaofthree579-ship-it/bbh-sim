@@ -1,22 +1,25 @@
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+import io
+import base64
+import soundfile as sf
 
 st.set_page_config(page_title="Hurricane Black Hole", layout="wide")
 st.title("🌀 Black Hole Anatomy — Hurricane Dynamics Simulator")
-st.markdown(
-    """
-Interactive 3D visualization of a black hole’s anatomy, showing the singularity and swirling accretion disk.  
-The rotation is now handled **natively by Plotly**, eliminating frame flashing.
-"""
-)
+
+st.markdown("""
+Explore the anatomy of a spinning black hole.  
+Visuals simulate the **singularity** and **accretion disk**, while the sound recreates the deep *whirlpool–hurricane-like rumble* theorized to represent quantum plasma flow near the event horizon.
+""")
 
 # --- Parameters ---
 mass = st.slider("Black Hole Mass (M☉, visual scale)", 1_000, 10_000_000, 4_300_000, step=1_000)
 spin = st.slider("Spin Intensity", 0.1, 1.0, 0.6, 0.05)
+sound_duration = st.slider("Sound Duration (seconds)", 2, 20, 8)
 st.write(f"Visualizing for mass: {mass:,} M☉")
 
-# --- Core geometry ---
+# --- Generate the black hole visual ---
 theta = np.linspace(0, 2 * np.pi, 150)
 phi = np.linspace(0, np.pi, 75)
 x = np.outer(np.cos(theta), np.sin(phi))
@@ -24,7 +27,6 @@ y = np.outer(np.sin(theta), np.sin(phi))
 z = np.outer(np.ones(np.size(theta)), np.cos(phi))
 core_radius = 0.30
 
-# --- Figure setup ---
 fig = go.Figure()
 
 # Singularity Core
@@ -101,5 +103,26 @@ fig.update_layout(
     ],
 )
 
-# --- Display ---
+# --- Display 3D plot ---
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+# --- Quantum hurricane sound synthesis ---
+st.markdown("### 🌌 Generate Theoretical Black Hole Rumble")
+sample_rate = 44100
+t = np.linspace(0, sound_duration, int(sample_rate * sound_duration))
+
+# Layered turbulent waveform
+# Combination of deep base, vortex modulation, and random wind-like noise
+base = np.sin(2 * np.pi * 20 * t)  # deep rumble
+vortex = np.sin(2 * np.pi * (5 + 15 * np.sin(2 * np.pi * 0.2 * t)) * t)  # whirlpool modulation
+noise = 0.4 * np.random.randn(len(t))  # chaotic turbulence
+sound = (0.6 * base + 0.4 * vortex + 0.2 * noise) * np.exp(-0.0004 * t * sample_rate)  # fade-out envelope
+sound /= np.max(np.abs(sound))  # normalize
+
+# --- Convert to playable audio ---
+buffer = io.BytesIO()
+sf.write(buffer, sound, sample_rate, format="WAV")
+b64_audio = base64.b64encode(buffer.getvalue()).decode()
+
+st.audio(f"data:audio/wav;base64,{b64_audio}", format="audio/wav")
+st.caption("The sound is a synthesized model — representing gravitational plasma turbulence and accretion flow dynamics.")
