@@ -223,9 +223,9 @@ if logging_enabled:
         # Manual fallback (for environments without the package)
         if st.button("🔁 Refresh Manually"):
            try:
-        st.rerun()  # ✅ modern Streamlit versions
-    except Exception:
-        try:
+            st.rerun()  # ✅ modern Streamlit versions
+        except Exception:
+           try:
             st.experimental_rerun()  # 🧩 backward compatibility
         except Exception as e:
             st.error(f"Unable to refresh automatically: {e}")
