@@ -19,7 +19,7 @@ st.title("Black-Hole Multi-band Audio Synth — Pure Synthesis (Option 1)")
 with st.sidebar:
     st.header("Synthesis Controls")
     # Visual-style controls which influence audio parameters:
-    mass_scale = st.slider("Mass (visual scale, affects low-band)", min_value=1e3, max_value=1e8, value=4_300_000, step=1000, format="%d")
+    mass_scale = st.slider("Mass (visual scale, affects low-band)", min_value=1000, max_value=1_000_000, value=4_300_000, step=1000, format="%d")
     spin = st.slider("Spin (a*, affects modulation)", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
     duration = st.slider("Duration (s)", min_value=0.8, max_value=8.0, value=3.0, step=0.2)
     gain_db = st.slider("Master gain (dB)", min_value=-24, max_value=6, value=-6, step=1)
