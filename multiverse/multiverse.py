@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import time
 
-st.set_page_config(page_title="Fractal Conscious Cosmos — v2", layout="wide")
+st.set_page_config(page_title="Fractal Conscious Cosmos — v3", layout="wide")
 st.title("🌌 Fractal Conscious Cosmos — Live Visualization")
 
 st.sidebar.header("Controls")
@@ -19,7 +19,7 @@ html_code = f"""
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fractal Conscious Cosmos v2</title>
+<title>Fractal Conscious Cosmos v3</title>
 <style>
 html, body {{
   margin: 0; padding: 0; overflow: hidden; background: black; height: 100%;
@@ -50,7 +50,6 @@ try {{
   const BRIGHTNESS = {brightness};
   const REGEN_TOKEN = "{regen_token}";
 
-  // Scene setup
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
   camera.position.z = 120;
@@ -67,7 +66,6 @@ try {{
   point.position.set(30,30,50);
   scene.add(point);
 
-  // Generate fractal points
   function gen(level, size, pos) {{
     const points = [];
     if (level <= 0) return points;
@@ -121,7 +119,6 @@ try {{
   const pointsObj = new THREE.Points(geom, mat);
   scene.add(pointsObj);
 
-  // Animation
   let t = 0;
   function animate() {{
     requestAnimationFrame(animate);
@@ -136,11 +133,11 @@ try {{
 
   document.getElementById('debug').innerText = "✅ WebGL Ready — Nodes: "+NODE_COUNT+", Depth: "+FRACTAL_DEPTH;
 
-  window.addEventListener('resize', ()=>{
+  window.addEventListener('resize', ()=>{{
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
-  });
+  }});
 
 }} catch(err) {{
   document.getElementById('debug').innerText = "❌ Error: " + err.message;
