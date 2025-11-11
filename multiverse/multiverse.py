@@ -65,23 +65,28 @@ const light = new THREE.PointLight(0xffffff, 1.5);
 light.position.set(10,10,10);
 scene.add(light);
 
-// === FRACTAL GEOMETRY ===
-function generateFractalNodes(level, size, parentPos) {{
+// === FRACTAL GEOMETRY (true branching) ===
+function generateFractalNodes(level, size, parentPos, spread=1.8) {
     const nodes = [];
     if (level <= 0) return nodes;
-    const n = Math.pow(2, level);
-    for (let i = 0; i < n; i++) {{
-        const angle = i * (Math.PI * 2 / n);
-        const pos = new THREE.Vector3(
-            parentPos.x + Math.cos(angle) * size,
-            parentPos.y + Math.sin(angle) * size,
-            parentPos.z + (Math.random() - 0.5) * size
+
+    const branches = 3 + Math.floor(Math.random() * 3); // randomize branching (3–6)
+    for (let i = 0; i < branches; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const distance = size * (0.6 + Math.random() * 0.4);
+        const offset = new THREE.Vector3(
+            Math.sin(phi) * Math.cos(theta) * distance * spread,
+            Math.sin(phi) * Math.sin(theta) * distance * spread,
+            Math.cos(phi) * distance
         );
-        nodes.push(pos);
-        nodes.push(...generateFractalNodes(level - 1, size / 2, pos));
-    }}
+        const newPos = parentPos.clone().add(offset);
+        nodes.push(newPos);
+        // Recursively build sub-branches
+        nodes.push(...generateFractalNodes(level - 1, size * 0.6, newPos, spread * 0.9));
+    }
     return nodes;
-}}
+}
 
 // === NODE CREATION ===
 let spheres = [];
