@@ -5,32 +5,22 @@ import pandas as pd
 import time
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Fractal Conscious Cosmos Simulator",
-                   page_icon="🌀",
-                   layout="wide")
+st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", page_icon="🌀", layout="wide")
 
-st.title("🌀 Fractal Conscious Cosmos Simulator")
+st.title("🌀 Fractal Conscious Cosmos Simulator — Conscious Network Mapper")
 st.markdown("""
-### Conscious Network Mapper
-Explore how harmonic frequencies, phase coupling, and energy coherence form
-a **self-organizing conscious topology** — where each node represents a localized
-conscious interaction between energy and matter.
+**Visualize the dynamic harmony of conscious energy nodes.**
+Each node represents an oscillating consciousness field; their couplings simulate coherence across the fractal cosmos.
 """)
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("Simulation Controls")
 k_val = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.25, 0.01)
 freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0, 0.01)
-node_count = st.sidebar.slider("Node Count", 10, 40, 20, 1)
-update_interval = st.sidebar.slider("Update Interval (sec)", 1, 10, 3, 1)
-show_network = st.sidebar.checkbox("Show Conscious Network Graph", True)
-logging_enabled = st.sidebar.checkbox("Enable Real-Time Metrics", True)
+node_count = st.sidebar.slider("Node Count", 10, 50, 20, 1)
+show_metrics = st.sidebar.checkbox("Show Real-Time Metrics", True)
 
-# --- RERUN BUTTON ---
-if st.sidebar.button("🔁 Restart Simulation"):
-    st.rerun()
-
-# --- THREE.JS SIMULATION SCENE ---
+# --- 3D GRAPH EMBED ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -38,74 +28,76 @@ html_code = f"""
 <meta charset="UTF-8">
 <title>Fractal Conscious Cosmos Simulator</title>
 <style>
-body {{ margin: 0; overflow: hidden; background-color: #000; }}
-#ui {{ position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }}
-label {{ display: block; margin-top: 5px; }}
+  body {{
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #00111a, #000000);
+    color: white;
+    font-family: sans-serif;
+  }}
+  #graph {{
+    width: 100%;
+    height: 100vh;
+  }}
 </style>
 </head>
 <body>
-<div id="ui">
-  <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="{k_val}"></label>
-  <label>Frequency Scale: <input type="range" id="freqSlider" min="0.1" max="2" step="0.01" value="{freq_scale}"></label>
-</div>
+<div id="graph"></div>
+
+<!-- Load Dependencies -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.71.0/dist/3d-force-graph.min.js"></script>
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.z = 60;
-const renderer = new THREE.WebGLRenderer({{antialias:true}});
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+<script>
+document.addEventListener('DOMContentLoaded', () => {{
+    const N = {node_count};
+    const nodes = [...Array(N).keys()].map(i => {{
+        return {{ id: i, group: Math.floor(Math.random()*3) }};
+    }});
 
-// --- MAIN FRACTAL NODES ---
-const nodes = [];
-const links = [];
-for (let i=0; i<{node_count}; i++) {{
-  nodes.push({{id: i, group: Math.floor(Math.random()*3)}});
-}}
-// Create coupling connections
-for (let i=0; i<nodes.length; i++) {{
-  for (let j=i+1; j<nodes.length; j++) {{
-    if (Math.random() < 0.15) {{
-      links.push({{source: i, target: j, value: Math.random()*{k_val}}});
+    const links = [];
+    for (let i=0; i<N; i++) {{
+        for (let j=i+1; j<N; j++) {{
+            if (Math.random() < 0.15) {{
+                links.push({{ source: i, target: j, value: Math.random()*{k_val} }});
+            }}
+        }}
     }}
-  }}
-}}
 
-// --- NETWORK VISUALIZATION ---
-const Graph = ForceGraph3D()
-  (document.body)
-  .graphData({{nodes, links}})
-  .nodeAutoColorBy('group')
-  .linkWidth(l => 2*l.value)
-  .linkOpacity(0.5)
-  .nodeThreeObject(node => {{
-    const geometry = new THREE.SphereGeometry(1, 12, 12);
-    const material = new THREE.MeshBasicMaterial({{color: node.color || 0x00ffff}});
-    return new THREE.Mesh(geometry, material);
-  }})
-  .onNodeClick(node => {{
-    const dist = 40;
-    const distRatio = 1 + dist/Math.hypot(node.x, node.y, node.z);
-    camera.position.x = node.x * distRatio;
-    camera.position.y = node.y * distRatio;
-    camera.position.z = node.z * distRatio;
-    camera.lookAt(node.x, node.y, node.z);
-  }});
-
+    const elem = document.getElementById('graph');
+    const Graph = ForceGraph3D()(elem)
+        .graphData({{ nodes, links }})
+        .nodeAutoColorBy('group')
+        .backgroundColor('black')
+        .linkWidth(l => 1 + l.value*2)
+        .linkOpacity(0.6)
+        .linkDirectionalParticles(2)
+        .linkDirectionalParticleSpeed(0.005)
+        .nodeThreeObject(node => {{
+            const geometry = new THREE.SphereGeometry(1.2, 12, 12);
+            const material = new THREE.MeshBasicMaterial({{ color: node.color }});
+            return new THREE.Mesh(geometry, material);
+        }})
+        .onNodeClick(node => {{
+            const distance = 40;
+            const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+            Graph.cameraPosition(
+                {{ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }},
+                node,
+                1500
+            );
+        }});
+}});
 </script>
 </body>
 </html>
 """
 
-components.html(html_code, height=800, width=1200)
+components.html(html_code, height=800)
 
-# --- SIMULATED METRICS PANEL ---
-if logging_enabled:
-    st.markdown("### 📈 Real-Time Conscious Metrics")
-    st.caption("Simulated dynamic data from harmonic coupling topology")
-
+# --- REAL-TIME METRICS PANEL ---
+if show_metrics:
+    st.subheader("📈 Real-Time Conscious Metrics")
     chart_placeholder = st.empty()
 
     amp_data, coh_data, entropy_data = [], [], []
@@ -125,9 +117,7 @@ if logging_enabled:
         })
 
         chart_placeholder.line_chart(df)
-        time.sleep(update_interval)
+        time.sleep(1)
 
-# --- FOOTER ---
 st.markdown("---")
-st.markdown("**Version 3.0 — Conscious Network Mapper Upgrade**")
-st.caption("Developed to visualize coupling harmony, coherence, and fractal energy balance across universes.")
+st.caption("v3.1 – Fixed renderer and lighting | Developed for the Beyond Time & Space Research Series")
