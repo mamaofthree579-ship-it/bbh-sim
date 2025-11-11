@@ -1,277 +1,148 @@
 import streamlit as st
 import numpy as np
+import plotly.graph_objects as go
+import soundfile as sf
 import io
+import base64
 import time
-import matplotlib.pyplot as plt
 
-# Prefer soundfile if available for WAV writing; otherwise fallback to scipy
-try:
-    import soundfile as sf
-    HAS_SF = True
-except Exception:
-    from scipy.io import wavfile
-    HAS_SF = False
+st.set_page_config(page_title="Hurricane Black Hole", layout="wide")
 
-st.set_page_config(page_title="BBH Audio Synth", layout="wide")
+# --- SIDEBAR CONTROLS ---
+st.sidebar.title("Black Hole Control Panel 🌌")
 
-st.title("Black-Hole Multi-band Audio Synth — Pure Synthesis (Option 1)")
-
-with st.sidebar:
-    st.header("Synthesis Controls")
-    # Visual-style controls which influence audio parameters:
-    mass_scale = st.slider("Mass (visual scale, affects low-band)", min_value=1000, max_value=1_000_000, value=4_300_000, step=1000, format="%d")
-    spin = st.slider("Spin (a*, affects modulation)", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
-    duration = st.slider("Duration (s)", min_value=0.8, max_value=8.0, value=3.0, step=0.2)
-    gain_db = st.slider("Master gain (dB)", min_value=-24, max_value=6, value=-6, step=1)
-    seed = st.number_input("Random seed (for turbulence)", value=12345, step=1)
-
-st.markdown(
-    """
-**Concept:** we synthesize three bands and mix them:
-
-- **Low (20–80 Hz)** — deep rolling rumble. Frequency & amplitude scale with `mass_scale`.
-- **Mid (200–800 Hz)** — turbulent plasma band: filtered noise modulated by slow LFO (spin).
-- **High (1–4 kHz)** — pulsed/tonal "crystal resonance" band: short pulses + FM influenced by spin.
-
-Use **Play** to generate and listen, and watch the waveform playhead move while audio is playing.
-"""
+mass_scale = st.sidebar.slider(
+    "Mass (visual scale, affects low-band)",
+    min_value=1000,
+    max_value=100_000_000,
+    value=4_300_000,
+    step=1000,
+    format="%d"
 )
 
-# Helpers
-def db_to_gain(db):
-    return 10.0 ** (db / 20.0)
+rotation_speed = st.sidebar.slider(
+    "Rotation Speed (a*)",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.7,
+    step=0.01
+)
 
-def normalize(buf):
-    peak = np.max(np.abs(buf)) if buf.size else 1.0
-    if peak < 1e-9:
-        return buf
-    return buf / peak
+st.sidebar.markdown("---")
+st.sidebar.subheader("Audio Controls")
+sound_intensity = st.sidebar.slider("Sound Intensity", 0.1, 2.0, 1.0, step=0.1)
+play_sound = st.sidebar.button("🔊 Play Black Hole Sound")
 
-def make_low_band(t, mass_scale, spin, sr):
-    """
-    Low band: sine-ish rumble with slow frequency modulation.
-    mass_scale affects base frequency (larger = lower fundamental).
-    """
-    # map mass_scale (1e3..1e8) to freq range 20..80: heavier -> lower
-    mnorm = (np.log10(mass_scale) - 3) / (8 - 3)  # roughly 0..1
-    base = 80 - 60 * mnorm  # 20..80
-    # slow FM by spin and a low-frequency noise component
-    lfo = 0.5 * np.sin(2 * np.pi * (0.1 + 0.2*spin) * t)  # slow LFO
-    # small random micro-mod
-    micro = 0.4 * np.sin(2 * np.pi * (0.4 + 0.6*spin) * t * (1 + 0.1*np.sin(2*np.pi*0.07*t)))
-    freq = base * (1 + 0.08 * lfo + 0.02 * micro)
-    phase = 2 * np.pi * np.cumsum(freq) / sr
-    sig = 0.8 * np.sin(phase)
-    # apply gentle exponential amplitude envelope (fade-in/out)
-    env = np.minimum(1.0, (t / 0.15)) * np.minimum(1.0, ((duration - t) / 0.15))
-    return sig * env
+st.sidebar.markdown("---")
+st.sidebar.subheader("Simulation")
+animate = st.sidebar.button("▶️ Live Motion")
 
-def make_mid_band(t, spin, sr):
-    """
-    Mid band: turbulent plasma — band-limited noise with amplitude modulation.
-    We'll generate noise and bandpass by simple FFT filtering (cheap).
-    """
-    # create pink-leaning noise by summing a few random low-rate sinusoids + white noise
-    rng = np.random.RandomState(int(seed))
-    # base white noise
-    white = rng.normal(size=t.shape)
-    # add slow sinusoids to create swirling turbulence
-    swirl = 0.6 * np.sin(2*np.pi*(0.8 + 1.2*spin) * t) + 0.4 * np.sin(2*np.pi*(1.6 + 2.4*spin) * t*0.5)
-    raw = white * 0.7 + swirl * 0.6
-    # simple bandpass via FFT: keep 180..900 Hz
-    N = len(raw)
-    spec = np.fft.rfft(raw)
-    freqs = np.fft.rfftfreq(N, 1/sr)
-    band = (freqs > 180) & (freqs < 900)
-    # apply soft rolloffs
-    window = np.zeros_like(spec, dtype=float)
-    window[band] = 1.0
-    # soft edges
-    low_edge = (freqs > 150) & (freqs <= 180)
-    high_edge = (freqs >= 900) & (freqs < 980)
-    window[low_edge] = (freqs[low_edge] - 150) / (180 - 150)
-    window[high_edge] = (980 - freqs[high_edge]) / (980 - 900)
-    spec = spec * window
-    mid = np.fft.irfft(spec, n=N)
-    # amplitude modulation by spin-driven LFO (faster for higher spin)
-    am = 0.5 + 0.5 * np.sin(2*np.pi*(0.6 + 2.0*spin) * t)
-    return mid * am * 0.8
+# --- 3D GEOMETRY FOR BLACK HOLE ---
+theta = np.linspace(0, 2 * np.pi, 100)
+phi = np.linspace(0, np.pi, 100)
+r_event = 1.0
+x = r_event * np.outer(np.cos(theta), np.sin(phi))
+y = r_event * np.outer(np.sin(theta), np.sin(phi))
+z = r_event * np.outer(np.ones(np.size(theta)), np.cos(phi))
 
-def make_high_band(t, spin, sr):
-    """
-    High band: pulsed shimmering band — short FM pulses that simulate 'crystal resonances'.
-    We'll build a pulse train whose pulse rate & FM depend on spin.
-    """
-    rng = np.random.RandomState(int(seed)+7)
-    base_freq = 1200 + 2000 * spin  # 1200..3200 Hz
-    pulse_rate = 6 + 12*spin        # pulses per second
-    N = len(t)
-    sig = np.zeros_like(t)
-    # create pulses at regular intervals but jittered slightly
-    intervals = np.arange(0, duration, 1.0/pulse_rate)
-    for idx, start in enumerate(intervals):
-        # pulse envelope (short)
-        start_i = int(start * sr)
-        pulse_len = int(0.06 * sr)  # ~60 ms
-        if start_i >= N: break
-        end_i = min(N, start_i + pulse_len)
-        tt = np.arange(end_i - start_i) / sr
-        # FM inside pulse
-        fm = base_freq * (1 + 0.05 * np.sin(2*np.pi*(2.0 + 4.0*spin) * tt + rng.uniform(-1,1)))
-        phase = 2*np.pi * np.cumsum(fm) / sr
-        envelope = np.exp(-12 * tt) * (np.sin(np.pi * (tt / (pulse_len/sr))))
-        sig[start_i:end_i] += envelope * 1.0 * np.sin(phase)
-    # add faint noise shimmer
-    sig += 0.12 * rng.normal(size=N) * np.exp(-6*(t/duration))
-    return sig * 0.9
+# --- ACCRETION DISK ---
+r_disk = np.linspace(1.2, 2.5, 80)
+theta_disk = np.linspace(0, 2 * np.pi, 180)
+rd, td = np.meshgrid(r_disk, theta_disk)
+x_disk = rd * np.cos(td)
+y_disk = rd * np.sin(td)
+z_disk = 0.1 * np.sin(3 * td)
 
-# Main synth & play routine
-def synth_and_package(mass_scale, spin, duration, sr=44100, gain_db=-6):
-    t = np.linspace(0, duration, int(sr*duration), endpoint=False)
-    low = make_low_band(t, mass_scale, spin, sr)
-    mid = make_mid_band(t, spin, sr)
-    high = make_high_band(t, spin, sr)
-    mix = normalize(0.8*low + 0.7*mid + 0.9*high)
-    # apply master gain
-    mix *= db_to_gain(gain_db)
-    # convert to 32-bit float PCM for smooth playback
-    audio = mix.astype(np.float32)
-    # package into BytesIO as WAV
-    bio = io.BytesIO()
-    if HAS_SF:
-        sf.write(bio, audio, sr, format='WAV', subtype='FLOAT')
-    else:
-        # scipy wants int16; scale and write
-        wav = np.int16(np.clip(audio, -1, 1) * 32767)
-        wavfile.write(bio, sr, wav)
-    bio.seek(0)
-    return bio, audio, sr
+# --- FRACTAL CORE (SINGULARITY) ---
+r_core = 0.3
+theta_core = np.linspace(0, 2 * np.pi, 50)
+phi_core = np.linspace(0, np.pi, 50)
+xc = r_core * np.outer(np.cos(theta_core), np.sin(phi_core))
+yc = r_core * np.outer(np.sin(theta_core), np.sin(phi_core))
+zc = r_core * np.outer(np.ones(np.size(theta_core)), np.cos(phi_core))
 
-# UI controls: generate & play
-col1, col2 = st.columns([1,2])
-with col1:
-    if st.button("Generate & Prepare Audio"):
-        # generate and store in session_state
-        bio, audio_arr, sr = synth_and_package(mass_scale, spin, duration, sr=44100, gain_db=gain_db)
-        st.session_state['audio_bytes'] = bio.getvalue()
-        st.session_state['audio_array'] = audio_arr
-        st.session_state['audio_sr'] = sr
-        st.success("Audio generated and ready. Press Play to listen.")
-    play = st.button("Play")
-    stop = st.button("Stop")
+# --- BUILD PLOTLY FIGURE ---
+fig = go.Figure()
 
-with col2:
-    st.empty()  # placeholder for layout balance
+# Event horizon (black sphere)
+fig.add_surface(
+    x=x, y=y, z=z,
+    colorscale=[[0, "black"], [1, "black"]],
+    showscale=False,
+    opacity=1.0
+)
 
-# Show generated waveform preview (static)
-if 'audio_array' in st.session_state:
-    audio_array = st.session_state['audio_array']
-    sr = st.session_state['audio_sr']
-    fig_wav, ax = plt.subplots(figsize=(9,2))
-    # downsample for display if too long
-    N = len(audio_array)
-    display_samples = 4000
-    if N > display_samples:
-        step = N // display_samples
-        display = audio_array[::step]
-        xs = np.linspace(0, duration, len(display))
-        ax.plot(xs, display, linewidth=0.6)
-    else:
-        xs = np.linspace(0, duration, N)
-        ax.plot(xs, audio_array, linewidth=0.6)
-    ax.set_xlim(0, duration)
-    ax.set_ylim(-1.05, 1.05)
-    ax.set_xlabel("Time (s)"); ax.set_ylabel("Amplitude")
-    ax.set_title("Generated waveform (preview)")
-    plt.tight_layout()
-    st.pyplot(fig_wav)
+# Accretion disk
+fig.add_surface(
+    x=x_disk, y=y_disk, z=z_disk,
+    surfacecolor=np.log(rd),
+    colorscale="Inferno",
+    showscale=False,
+    opacity=0.95
+)
+
+# Fractal-like singularity core
+fig.add_surface(
+    x=xc, y=yc, z=zc,
+    surfacecolor=np.abs(np.sin(xc * 10) * np.cos(yc * 10)),
+    colorscale="Electric",
+    showscale=False,
+    opacity=0.85
+)
+
+fig.update_layout(
+    title="Hurricane Black Hole Visualization",
+    margin=dict(l=0, r=0, t=40, b=0),
+    scene=dict(
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        zaxis=dict(visible=False),
+        aspectmode="cube",
+        bgcolor="black"
+    ),
+    paper_bgcolor="black"
+)
+
+# --- ANIMATION (FRAME-ONLY REFRESH-FIXED) ---
+plot_area = st.empty()
+rotation = 0
+
+if animate:
+    for _ in range(150):
+        rotation += rotation_speed * 3
+        fig.update_layout(scene_camera=dict(
+            eye=dict(x=2.5*np.cos(rotation/50), y=2.5*np.sin(rotation/50), z=0.8)
+        ))
+        plot_area.plotly_chart(fig, use_container_width=True)
+        time.sleep(0.05)
 else:
-    st.info("Click **Generate & Prepare Audio** to create the synthesized audio (then press Play).")
+    plot_area.plotly_chart(fig, use_container_width=True)
 
-# Playback & playhead animation
-play_placeholder = st.empty()
-progress_placeholder = st.empty()
-playhead_canvas = st.empty()
+# --- SOUND GENERATION ---
+if play_sound:
+    sample_rate = 44100
+    duration = 6  # seconds
+    t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
 
-def run_playback():
-    # get audio bytes and array
-    audio_bytes = st.session_state.get('audio_bytes', None)
-    audio_array = st.session_state.get('audio_array', None)
-    sr = st.session_state.get('audio_sr', 44100)
-    if audio_bytes is None or audio_array is None:
-        st.warning("No audio generated yet. Click Generate first.")
-        return
+    # Whirling + hurricane sound layers
+    base = np.sin(2 * np.pi * 30 * t) * np.exp(-0.0001 * t * mass_scale / 1e6)
+    swirl = np.sin(2 * np.pi * (0.5 * np.sin(t * 0.2) + 1) * 100 * t)
+    roar = np.random.normal(0, 0.2, len(t))
+    sound = sound_intensity * (0.6 * base + 0.3 * swirl + 0.1 * roar)
 
-    # render audio player
-    play_placeholder.audio(audio_bytes, format='audio/wav')
+    # Normalize sound
+    sound = sound / np.max(np.abs(sound))
 
-    # animate playhead on waveform while audio plays
-    total_ms = int(duration * 1000)
-    start_time = time.time()
-    last_idx = -1
+    buf = io.BytesIO()
+    sf.write(buf, sound, sample_rate, format='WAV')
+    buf.seek(0)
+    audio_base64 = base64.b64encode(buf.read()).decode()
 
-    # We'll update roughly 20 times per second
-    update_interval = 0.05
-    while True:
-        elapsed = time.time() - start_time
-        if elapsed * 1000 >= total_ms:
-            # final update & break
-            prog = 1.0
-        else:
-            prog = elapsed / duration
-
-        # draw a small waveform with playhead
-        fig, ax = plt.subplots(figsize=(9,2))
-        N = len(audio_array)
-        # sample for display
-        display_samples = 3000
-        if N > display_samples:
-            step = N // display_samples
-            display = audio_array[::step]
-            xs = np.linspace(0, duration, len(display))
-            ax.plot(xs, display, linewidth=0.6, color="#a64dff")
-        else:
-            xs = np.linspace(0, duration, N)
-            ax.plot(xs, audio_array, linewidth=0.6, color="#a64dff")
-
-        # playhead line
-        px = prog * duration
-        ax.axvline(px, color='red', linewidth=1.2, alpha=0.9)
-        ax.set_xlim(0, duration); ax.set_ylim(-1.05, 1.05)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(f"Playback — {px:.2f}s / {duration:.2f}s")
-        plt.tight_layout()
-        playhead_canvas.pyplot(fig)
-        plt.close(fig)
-
-        if prog >= 1.0:
-            break
-        # allow user to stop by clicking Stop button
-        if stop:
-            break
-        time.sleep(update_interval)
-
-# Button actions
-# We need to ensure click on Play triggers generation if not present
-if play:
-    if 'audio_bytes' not in st.session_state:
-        bio, audio_arr, sr = synth_and_package(mass_scale, spin, duration, sr=44100, gain_db=gain_db)
-        st.session_state['audio_bytes'] = bio.getvalue()
-        st.session_state['audio_array'] = audio_arr
-        st.session_state['audio_sr'] = sr
-    # run playback loop (this will block until audio length; it's fine for small durations)
-    run_playback()
-
-if stop:
-    # Clear audio player and playhead (soft stop)
-    play_placeholder.empty()
-    playhead_canvas.empty()
-    progress_placeholder.empty()
-    st.experimental_rerun()
-
-# Small export option
-st.markdown("---")
-if 'audio_bytes' in st.session_state:
-    st.download_button("Download WAV", data=st.session_state['audio_bytes'], file_name="bbh_synthesis.wav", mime="audio/wav")
-    st.caption("WAV exported from mathematical synthesis (float32).")
+    st.markdown(
+        f"""
+        <audio controls autoplay>
+        <source src="data:audio/wav;base64,{audio_base64}" type="audio/wav">
+        </audio>
+        """,
+        unsafe_allow_html=True
+    )
