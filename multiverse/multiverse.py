@@ -4,31 +4,33 @@ import numpy as np
 import pandas as pd
 import time
 
-# --- PAGE CONFIGURATION ---
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="Fractal Conscious Cosmos Simulator",
                    page_icon="🌀",
                    layout="wide")
 
-# --- HEADER ---
 st.title("🌀 Fractal Conscious Cosmos Simulator")
 st.markdown("""
-#### Dynamic Visualization of Coupling, Conscious Frequencies & Dark Matter Diffusion
-This upgraded version not only displays the 3D fractal structure but also **monitors real-time simulation metrics** —
-amplitude variance, synchronization levels, and harmonic energy transfer across nodes.
+### Conscious Network Mapper
+Explore how harmonic frequencies, phase coupling, and energy coherence form
+a **self-organizing conscious topology** — where each node represents a localized
+conscious interaction between energy and matter.
 """)
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("Simulation Controls")
-k_val = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.2, 0.01)
+k_val = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.25, 0.01)
 freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0, 0.01)
-update_interval = st.sidebar.slider("Update Interval (seconds)", 1, 10, 3, 1)
-logging_enabled = st.sidebar.checkbox("Enable Real-Time Metrics", value=True)
+node_count = st.sidebar.slider("Node Count", 10, 40, 20, 1)
+update_interval = st.sidebar.slider("Update Interval (sec)", 1, 10, 3, 1)
+show_network = st.sidebar.checkbox("Show Conscious Network Graph", True)
+logging_enabled = st.sidebar.checkbox("Enable Real-Time Metrics", True)
 
-# --- REFRESH ---
-if st.sidebar.button("🔁 Refresh Simulation"):
+# --- RERUN BUTTON ---
+if st.sidebar.button("🔁 Restart Simulation"):
     st.rerun()
 
-# --- WEBGL SIMULATOR (Three.js) ---
+# --- THREE.JS SIMULATION SCENE ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -46,49 +48,8 @@ label {{ display: block; margin-top: 5px; }}
   <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="{k_val}"></label>
   <label>Frequency Scale: <input type="range" id="freqSlider" min="0.1" max="2" step="0.01" value="{freq_scale}"></label>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-<script>
-const NODE_COUNT = 20;
-const SUB_NODE_COUNT = 5;
-const GRID_SIZE = 50;
-const DT = 0.01;
-let K = {k_val};
-let FREQ_SCALE = {freq_scale};
-
-class SubNode {{
-    constructor(parent) {{
-        this.parent = parent;
-        this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
-        this.A = Math.random() * 0.5 + 0.5;
-        this.phi = Math.random() * 2 * Math.PI;
-        this.mesh = null;
-    }}
-    updatePhase(dt) {{ this.phi += this.omega * dt; }}
-    amplitudeAt(t) {{ return this.A * Math.cos(this.omega * t + this.phi); }}
-}}
-
-class Node {{
-    constructor(id) {{
-        this.id = id;
-        this.K = K;
-        this.mesh = null;
-        this.subNodes = [];
-        for (let i=0; i<SUB_NODE_COUNT; i++) this.subNodes.push(new SubNode(this));
-        this.neighbors = [];
-    }}
-    update(dt) {{
-        this.subNodes.forEach(sn => sn.updatePhase(dt));
-        let dphi = 0;
-        for (let n of this.neighbors) {{
-            dphi += n.K * Math.sin(n.subNodes[0].phi - this.subNodes[0].phi);
-        }}
-        this.subNodes.forEach(sn => sn.phi += dphi * dt);
-    }}
-    amplitudeAt(t) {{
-        return this.subNodes.reduce((sum, sn) => sum + sn.amplitudeAt(t), 0) / this.subNodes.length;
-    }}
-}}
+<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.71.0/dist/3d-force-graph.min.js"></script>
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -97,48 +58,42 @@ const renderer = new THREE.WebGLRenderer({{antialias:true}});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// --- MAIN FRACTAL NODES ---
 const nodes = [];
-for (let i=0; i<NODE_COUNT; i++){{
-    const node = new Node(i);
-    const geometry = new THREE.SphereGeometry(1, 8, 8);
-    const material = new THREE.MeshBasicMaterial({{color:0x00ffff}});
-    const mesh = new THREE.Mesh(geometry, material);
-    node.mesh = mesh;
-    mesh.position.x = (Math.random() - 0.5) * 50;
-    mesh.position.y = (Math.random() - 0.5) * 50;
-    scene.add(mesh);
-    node.subNodes.forEach(sn => {{
-        const g = new THREE.SphereGeometry(0.3, 6, 6);
-        const m = new THREE.MeshBasicMaterial({{color: 0xff00ff}});
-        const meshSN = new THREE.Mesh(g, m);
-        meshSN.position.x = mesh.position.x + (Math.random()-0.5)*3;
-        meshSN.position.y = mesh.position.y + (Math.random()-0.5)*3;
-        scene.add(meshSN);
-        sn.mesh = meshSN;
-    }});
-    nodes.push(node);
+const links = [];
+for (let i=0; i<{node_count}; i++) {{
+  nodes.push({{id: i, group: Math.floor(Math.random()*3)}});
 }}
-nodes.forEach(node => {{
-    node.neighbors = nodes.sort(() => Math.random()-0.5).slice(0, 3);
-}});
-let t=0;
-function animate() {{
-    requestAnimationFrame(animate);
-    nodes.forEach(node => {{
-        node.update(DT);
-        const amp = node.amplitudeAt(t);
-        node.mesh.scale.set(amp+0.5, amp+0.5, amp+0.5);
-        node.mesh.material.color.setHSL((amp+1)/2, 1, 0.5);
-        node.subNodes.forEach(sn => {{
-            const ampSN = sn.amplitudeAt(t);
-            sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
-            sn.mesh.material.color.setHSL((ampSN+1)/2, 1, 0.5);
-        }});
-    }});
-    renderer.render(scene, camera);
-    t += DT;
+// Create coupling connections
+for (let i=0; i<nodes.length; i++) {{
+  for (let j=i+1; j<nodes.length; j++) {{
+    if (Math.random() < 0.15) {{
+      links.push({{source: i, target: j, value: Math.random()*{k_val}}});
+    }}
+  }}
 }}
-animate();
+
+// --- NETWORK VISUALIZATION ---
+const Graph = ForceGraph3D()
+  (document.body)
+  .graphData({{nodes, links}})
+  .nodeAutoColorBy('group')
+  .linkWidth(l => 2*l.value)
+  .linkOpacity(0.5)
+  .nodeThreeObject(node => {{
+    const geometry = new THREE.SphereGeometry(1, 12, 12);
+    const material = new THREE.MeshBasicMaterial({{color: node.color || 0x00ffff}});
+    return new THREE.Mesh(geometry, material);
+  }})
+  .onNodeClick(node => {{
+    const dist = 40;
+    const distRatio = 1 + dist/Math.hypot(node.x, node.y, node.z);
+    camera.position.x = node.x * distRatio;
+    camera.position.y = node.y * distRatio;
+    camera.position.z = node.z * distRatio;
+    camera.lookAt(node.x, node.y, node.z);
+  }});
+
 </script>
 </body>
 </html>
@@ -146,31 +101,33 @@ animate();
 
 components.html(html_code, height=800, width=1200)
 
-# --- SIMULATED METRICS (Python-side) ---
+# --- SIMULATED METRICS PANEL ---
 if logging_enabled:
-    st.markdown("### 📊 Real-Time Simulation Metrics")
-    st.caption("Approximate live data from harmonic resonance model")
+    st.markdown("### 📈 Real-Time Conscious Metrics")
+    st.caption("Simulated dynamic data from harmonic coupling topology")
 
     chart_placeholder = st.empty()
 
-    amplitude_history = []
-    coherence_history = []
-    diffusion_energy = []
+    amp_data, coh_data, entropy_data = [], [], []
 
-    for _ in range(20):
-        amp = np.random.normal(loc=1.0, scale=0.1)
-        coh = np.clip(np.sin(time.time() * 0.2) + np.random.normal(0, 0.05), 0, 1)
-        diff = np.abs(np.cos(time.time() * 0.3)) * np.random.uniform(0.8, 1.2)
-
-        amplitude_history.append(amp)
-        coherence_history.append(coh)
-        diffusion_energy.append(diff)
+    for _ in range(25):
+        amp = np.random.normal(loc=1.0, scale=0.08)
+        coh = np.clip(np.sin(time.time() * 0.25) + np.random.normal(0, 0.05), 0, 1)
+        entropy = np.abs(np.sin(time.time() * 0.15)) * np.random.uniform(0.9, 1.3)
+        amp_data.append(amp)
+        coh_data.append(coh)
+        entropy_data.append(entropy)
 
         df = pd.DataFrame({
-            "Amplitude Variance": amplitude_history,
-            "Coherence": coherence_history,
-            "Dark Matter Diffusion": diffusion_energy
+            "Amplitude Variance": amp_data[-20:],
+            "Coherence": coh_data[-20:],
+            "Entropy (Dark Matter Diffusion)": entropy_data[-20:]
         })
 
         chart_placeholder.line_chart(df)
         time.sleep(update_interval)
+
+# --- FOOTER ---
+st.markdown("---")
+st.markdown("**Version 3.0 — Conscious Network Mapper Upgrade**")
+st.caption("Developed to visualize coupling harmony, coherence, and fractal energy balance across universes.")
