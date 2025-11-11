@@ -224,10 +224,10 @@ if logging_enabled:
         if st.button("🔁 Refresh Manually"):
            try:
             st.rerun()  # ✅ modern Streamlit versions
-        except Exception:
+            except Exception:
            try:
             st.experimental_rerun()  # 🧩 backward compatibility
-        except Exception as e:
+            except Exception as e:
             st.error(f"Unable to refresh automatically: {e}")
 
     # Example metric placeholders (can be replaced by your actual data)
