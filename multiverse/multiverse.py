@@ -4,8 +4,7 @@ import pandas as pd
 import time
 import os
 import sys
-import st_autorefresh
-
+ 
 st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide")
 
 st.title("🌀 Fractal Conscious Cosmos Simulator")
