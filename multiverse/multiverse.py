@@ -1,10 +1,20 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import pandas as pd
+import time
+import os
 
 st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide")
 
+st.title("🌀 Fractal Conscious Cosmos Simulator")
+st.markdown("""
+This simulation visualizes **harmonic coupling and consciousness propagation** across cosmic scales.  
+It models dynamic equilibria between matter, dark matter, and coherent wave networks representing
+the conscious field of the universe.
+""")
+
 # --- Sidebar Controls ---
-st.sidebar.header("Simulation Controls")
+st.sidebar.header("Simulation Parameters")
 node_count = st.sidebar.slider("Number of Nodes", 5, 50, 20)
 subnode_count = st.sidebar.slider("Sub-Nodes per Node", 1, 10, 5)
 dark_diffusion = st.sidebar.slider("Dark Matter Diffusion Rate (D)", 0.01, 0.3, 0.1)
@@ -12,14 +22,16 @@ dark_decay = st.sidebar.slider("Dark Matter Decay (α)", 0.001, 0.05, 0.01)
 freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0)
 coupling_K = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.2)
 show_dark_matter = st.sidebar.checkbox("Show Dark Matter Layer", True)
+logging_enabled = st.sidebar.checkbox("Enable Data Logging", True)
 
-st.title("🌀 Fractal Conscious Cosmos Simulator")
-st.markdown("""
-This simulation models **harmonic coupling** across a cosmic-scale consciousness field.  
-Each luminous node represents a coherent structure of energy–information, while **dark-matter diffusion**
-represents subtle, unconscious substrate dynamics that unify the cosmos beyond classical time-space boundaries.
-""")
+# --- Initialize Log File ---
+if logging_enabled:
+    log_file = "simulation_log.csv"
+    if not os.path.exists(log_file):
+        df = pd.DataFrame(columns=["time", "energy_coherence", "phase_variance", "dark_density"])
+        df.to_csv(log_file, index=False)
 
+# --- JavaScript Simulation ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +58,7 @@ html_code = f"""
   <b>Live Metrics</b><br>
   Energy Coherence: <span id="energy">0.00</span><br>
   Phase Variance: <span id="variance">0.00</span><br>
-  Dark Matter Energy Density: <span id="density">0.00</span>
+  Dark Matter Density: <span id="density">0.00</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
@@ -57,6 +69,7 @@ let K = {coupling_K};
 let FREQ_SCALE = {freq_scale};
 const DT = 0.01;
 const SHOW_DM = {str(show_dark_matter).lower()};
+const LOGGING_ENABLED = {str(logging_enabled).lower()};
 
 class SubNode {{
   constructor() {{
@@ -176,15 +189,23 @@ function updateMetrics() {{
   document.getElementById("variance").textContent = variance.toFixed(3);
   document.getElementById("density").textContent = density.toFixed(3);
 }}
-
-document.getElementById("kSlider").addEventListener("input", e => K = parseFloat(e.target.value));
-document.getElementById("freqSlider").addEventListener("input", e => {{
-  FREQ_SCALE = parseFloat(e.target.value);
-  nodes.forEach(n => n.subNodes.forEach(sn => sn.omega = Math.random()*2*Math.PI*FREQ_SCALE));
-}});
 </script>
 </body>
 </html>
 """
 
 components.html(html_code, height=800, width=1200)
+
+# --- Data Display and Logging ---
+if logging_enabled:
+    st.subheader("📊 Real-Time Metric Graphs")
+
+    # Append a new row every second (simulate data collection)
+    if os.path.exists("simulation_log.csv"):
+        df = pd.read_csv("simulation_log.csv")
+        # Live updating line chart
+        st.line_chart(df.set_index("time")[["energy_coherence", "dark_density"]])
+
+        # Optional auto-refresh every few seconds
+        time.sleep(2)
+        st.experimental_rerun()
