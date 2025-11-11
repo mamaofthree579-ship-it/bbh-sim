@@ -3,6 +3,8 @@ import streamlit.components.v1 as components
 import pandas as pd
 import time
 import os
+import sys
+!{sys.executable} -m pip install streamlit-autorefresh
 
 st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide")
 
