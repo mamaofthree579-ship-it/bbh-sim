@@ -222,7 +222,7 @@ if logging_enabled:
 
         # Manual fallback (for environments without the package)
         if st.button("🔁 Refresh Manually"):
-    try:
+        try:
         st.rerun()  # ✅ modern Streamlit versions
     except Exception:
         try:
