@@ -1,38 +1,37 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import pandas as pd
-import time
-import os
-import sys
- 
-st.set_page_config(page_title="Fractal Conscious Cosmos Simulator", layout="wide")
 
+# --- PAGE SETUP ---
+st.set_page_config(page_title="Fractal Conscious Cosmos Simulator",
+                   page_icon="🌀",
+                   layout="wide")
+
+# --- HEADER ---
 st.title("🌀 Fractal Conscious Cosmos Simulator")
 st.markdown("""
-This simulation visualizes **harmonic coupling and consciousness propagation** across cosmic scales.  
-It models dynamic equilibria between matter, dark matter, and coherent wave networks representing
-the conscious field of the universe.
+### Explore Harmonic Coupling, Dark Matter Flow, and Conscious Frequencies
+This simulator models the **fractal energetic architecture of the cosmos**, where universes interact via
+harmonic couplings and dark matter flows that maintain balance across layers of reality.  
+Use the controls to observe **node synchronization, energy diffusion, and resonance tuning**.
 """)
 
-# --- Sidebar Controls ---
-st.sidebar.header("Simulation Parameters")
-node_count = st.sidebar.slider("Number of Nodes", 5, 50, 20)
-subnode_count = st.sidebar.slider("Sub-Nodes per Node", 1, 10, 5)
-dark_diffusion = st.sidebar.slider("Dark Matter Diffusion Rate (D)", 0.01, 0.3, 0.1)
-dark_decay = st.sidebar.slider("Dark Matter Decay (α)", 0.001, 0.05, 0.01)
-freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0)
-coupling_K = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.2)
-show_dark_matter = st.sidebar.checkbox("Show Dark Matter Layer", True)
-logging_enabled = st.sidebar.checkbox("Enable Data Logging", True)
+# --- SIDEBAR CONTROLS ---
+st.sidebar.header("Simulation Controls")
+k_val = st.sidebar.slider("Coupling Constant (K)", 0.0, 1.0, 0.2, 0.01)
+freq_scale = st.sidebar.slider("Frequency Scale", 0.1, 2.0, 1.0, 0.01)
+logging_enabled = st.sidebar.checkbox("Enable Real-Time Logging", value=False)
 
-# --- Initialize Log File ---
-if logging_enabled:
-    log_file = "simulation_log.csv"
-    if not os.path.exists(log_file):
-        df = pd.DataFrame(columns=["time", "energy_coherence", "phase_variance", "dark_density"])
-        df.to_csv(log_file, index=False)
+# --- MANUAL REFRESH BUTTON (SAFE) ---
+if st.sidebar.button("🔁 Refresh Simulation"):
+    try:
+        st.rerun()
+    except Exception:
+        try:
+            st.experimental_rerun()
+        except Exception as e:
+            st.sidebar.error(f"Unable to refresh: {e}")
 
-# --- JavaScript Simulation ---
+# --- THREE.JS SIMULATION ---
 html_code = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -40,94 +39,77 @@ html_code = f"""
 <meta charset="UTF-8">
 <title>Fractal Conscious Cosmos Simulator</title>
 <style>
-  body {{ margin: 0; overflow: hidden; background-color: #000; color: white; font-family: sans-serif; }}
-  #metrics {{
-    position: absolute; top: 10px; right: 20px;
-    background: rgba(0,0,0,0.5); padding: 10px 15px;
-    border-radius: 10px; font-size: 14px;
-  }}
-  #ui {{ position: absolute; top: 10px; left: 10px; }}
-  label {{ display: block; margin-top: 5px; }}
+body {{ margin: 0; overflow: hidden; background-color: #000; }}
+#ui {{ position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }}
+label {{ display: block; margin-top: 5px; }}
 </style>
 </head>
 <body>
 <div id="ui">
-  <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="{coupling_K}"></label>
+  <label>Coupling K: <input type="range" id="kSlider" min="0" max="1" step="0.01" value="{k_val}"></label>
   <label>Frequency Scale: <input type="range" id="freqSlider" min="0.1" max="2" step="0.01" value="{freq_scale}"></label>
-</div>
-<div id="metrics">
-  <b>Live Metrics</b><br>
-  Energy Coherence: <span id="energy">0.00</span><br>
-  Phase Variance: <span id="variance">0.00</span><br>
-  Dark Matter Density: <span id="density">0.00</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-const NODE_COUNT = {node_count};
-const SUB_NODE_COUNT = {subnode_count};
-let K = {coupling_K};
-let FREQ_SCALE = {freq_scale};
+const NODE_COUNT = 20;
+const SUB_NODE_COUNT = 5;
+const GRID_SIZE = 50;
 const DT = 0.01;
-const SHOW_DM = {str(show_dark_matter).lower()};
-const LOGGING_ENABLED = {str(logging_enabled).lower()};
+let K = {k_val};
+let FREQ_SCALE = {freq_scale};
 
 class SubNode {{
-  constructor() {{
-    this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
-    this.A = Math.random() * 0.5 + 0.5;
-    this.phi = Math.random() * 2 * Math.PI;
-    this.mesh = null;
-  }}
-  update(dt) {{ this.phi += this.omega * dt; }}
-  amplitudeAt(t) {{ return this.A * Math.cos(this.omega * t + this.phi); }}
+    constructor(parent) {{
+        this.parent = parent;
+        this.omega = Math.random() * 2 * Math.PI * FREQ_SCALE;
+        this.A = Math.random() * 0.5 + 0.5;
+        this.phi = Math.random() * 2 * Math.PI;
+        this.mesh = null;
+    }}
+    updatePhase(dt) {{ this.phi += this.omega * dt; }}
+    amplitudeAt(t) {{ return this.A * Math.cos(this.omega * t + this.phi); }}
 }}
 
 class Node {{
-  constructor() {{
-    this.subNodes = Array.from({{length: SUB_NODE_COUNT}}, () => new SubNode());
-    this.neighbors = [];
-    this.mesh = null;
-  }}
-  update(dt) {{
-    this.subNodes.forEach(sn => sn.update(dt));
-    let dphi = 0;
-    for (let n of this.neighbors) {{
-      dphi += K * Math.sin(n.subNodes[0].phi - this.subNodes[0].phi);
+    constructor(id) {{
+        this.id = id;
+        this.K = K;
+        this.mesh = null;
+        this.subNodes = [];
+        for (let i=0; i<SUB_NODE_COUNT; i++) this.subNodes.push(new SubNode(this));
+        this.neighbors = [];
     }}
-    this.subNodes.forEach(sn => sn.phi += dphi * dt);
-  }}
-  amplitudeAt(t) {{
-    return this.subNodes.reduce((s, sn) => s + sn.amplitudeAt(t), 0)/this.subNodes.length;
-  }}
-  meanPhase() {{
-    return this.subNodes.reduce((s, sn) => s + sn.phi, 0)/this.subNodes.length;
-  }}
+    update(dt) {{
+        this.subNodes.forEach(sn => sn.updatePhase(dt));
+        let dphi = 0;
+        for (let n of this.neighbors) {{
+            dphi += n.K * Math.sin(n.subNodes[0].phi - this.subNodes[0].phi);
+        }}
+        this.subNodes.forEach(sn => sn.phi += dphi * dt);
+    }}
+    amplitudeAt(t) {{
+        return this.subNodes.reduce((sum, sn) => sum + sn.amplitudeAt(t), 0) / this.subNodes.length;
+    }}
 }}
 
 class DarkMatterGrid {{
-  constructor(size) {{
-    this.size = size;
-    this.grid = Array(size).fill().map(() => Array(size).fill(Math.random()));
-  }}
-  diffuse(D={dark_diffusion}, alpha={dark_decay}) {{
-    const newGrid = this.grid.map(r => [...r]);
-    for (let i=1; i<this.size-1; i++) {{
-      for (let j=1; j<this.size-1; j++) {{
-        const lap = this.grid[i+1][j] + this.grid[i-1][j] +
-                    this.grid[i][j+1] + this.grid[i][j-1] - 4*this.grid[i][j];
-        newGrid[i][j] = this.grid[i][j] + D*lap - alpha*this.grid[i][j];
-      }}
+    constructor(width, height) {{
+        this.width = width;
+        this.height = height;
+        this.grid = Array(width).fill().map(() => Array(height).fill(Math.random()));
     }}
-    this.grid = newGrid;
-  }}
-  energyDensity() {{
-    let total = 0;
-    for (let i=0; i<this.size; i++) {{
-      for (let j=0; j<this.size; j++) total += this.grid[i][j];
+    diffuse(D=0.1, alpha=0.01) {{
+        const newGrid = this.grid.map(arr => [...arr]);
+        for (let i=1; i<this.width-1; i++) {{
+            for (let j=1; j<this.height-1; j++) {{
+                let laplace = this.grid[i+1][j] + this.grid[i-1][j] +
+                              this.grid[i][j+1] + this.grid[i][j-1] - 4*this.grid[i][j];
+                newGrid[i][j] = this.grid[i][j] + D * laplace - alpha * this.grid[i][j];
+            }}
+        }}
+        this.grid = newGrid;
     }}
-    return total / (this.size * this.size);
-  }}
 }}
 
 const scene = new THREE.Scene();
@@ -138,58 +120,59 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const nodes = [];
-for (let i=0; i<NODE_COUNT; i++) {{
-  const node = new Node();
-  const geom = new THREE.SphereGeometry(1, 8, 8);
-  const mat = new THREE.MeshBasicMaterial({{color:0x00ffff}});
-  node.mesh = new THREE.Mesh(geom, mat);
-  node.mesh.position.set((Math.random()-0.5)*50, (Math.random()-0.5)*50, (Math.random()-0.5)*50);
-  scene.add(node.mesh);
-  node.subNodes.forEach(sn => {{
-    const g = new THREE.SphereGeometry(0.3, 6, 6);
-    const m = new THREE.MeshBasicMaterial({{color:0xff00ff}});
-    const mesh = new THREE.Mesh(g, m);
-    mesh.position.copy(node.mesh.position)
-      .add(new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3, (Math.random()-0.5)*3));
-    sn.mesh = mesh;
+for (let i=0; i<NODE_COUNT; i++){{
+    const node = new Node(i);
+    const geometry = new THREE.SphereGeometry(1, 8, 8);
+    const material = new THREE.MeshBasicMaterial({{color:0x00ffff}});
+    const mesh = new THREE.Mesh(geometry, material);
+    node.mesh = mesh;
+    mesh.position.x = (Math.random() - 0.5) * 50;
+    mesh.position.y = (Math.random() - 0.5) * 50;
     scene.add(mesh);
-  }});
-  nodes.push(node);
-}}
-nodes.forEach(n => n.neighbors = nodes.sort(() => Math.random()-0.5).slice(0,3));
-const dmGrid = new DarkMatterGrid(50);
 
-let t = 0;
-function animate() {{
-  requestAnimationFrame(animate);
-  nodes.forEach(node => {{
-    node.update(DT);
-    const amp = node.amplitudeAt(t);
-    node.mesh.scale.set(amp+0.5, amp+0.5, amp+0.5);
-    node.mesh.material.color.setHSL((amp+1)/2, 1, 0.5);
     node.subNodes.forEach(sn => {{
-      const a = sn.amplitudeAt(t);
-      sn.mesh.scale.set(a+0.3, a+0.3, a+0.3);
-      sn.mesh.material.color.setHSL((a+1)/2, 1, 0.5);
+        const g = new THREE.SphereGeometry(0.3, 6, 6);
+        const m = new THREE.MeshBasicMaterial({{color: 0xff00ff}});
+        const meshSN = new THREE.Mesh(g, m);
+        meshSN.position.x = mesh.position.x + (Math.random()-0.5)*3;
+        meshSN.position.y = mesh.position.y + (Math.random()-0.5)*3;
+        scene.add(meshSN);
+        sn.mesh = meshSN;
     }});
-  }});
-  if (SHOW_DM) dmGrid.diffuse();
-  renderer.render(scene, camera);
-  updateMetrics();
-  t += DT;
+
+    nodes.push(node);
+}}
+
+nodes.forEach(node => {{
+    node.neighbors = nodes.sort(() => Math.random()-0.5).slice(0, 3);
+}});
+const dmGrid = new DarkMatterGrid(GRID_SIZE, GRID_SIZE);
+
+let t=0;
+function animate() {{
+    requestAnimationFrame(animate);
+    nodes.forEach(node => {{
+        node.update(DT);
+        const amp = node.amplitudeAt(t);
+        node.mesh.scale.set(amp+0.5, amp+0.5, amp+0.5);
+        node.mesh.material.color.setHSL((amp+1)/2, 1, 0.5);
+        node.subNodes.forEach(sn => {{
+            const ampSN = sn.amplitudeAt(t);
+            sn.mesh.scale.set(ampSN+0.3, ampSN+0.3, ampSN+0.3);
+            sn.mesh.material.color.setHSL((ampSN+1)/2, 1, 0.5);
+        }});
+    }});
+    dmGrid.diffuse();
+    renderer.render(scene, camera);
+    t += DT;
 }}
 animate();
 
-function updateMetrics() {{
-  const phases = nodes.map(n => n.meanPhase());
-  const meanPhase = phases.reduce((s, p) => s + p, 0) / phases.length;
-  const variance = Math.sqrt(phases.reduce((s, p) => s + Math.pow(p-meanPhase,2),0)/phases.length);
-  const coherence = Math.abs(Math.cos(meanPhase));
-  const density = dmGrid.energyDensity();
-  document.getElementById("energy").textContent = coherence.toFixed(3);
-  document.getElementById("variance").textContent = variance.toFixed(3);
-  document.getElementById("density").textContent = density.toFixed(3);
-}}
+window.addEventListener('resize', function() {{
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}});
 </script>
 </body>
 </html>
@@ -197,46 +180,8 @@ function updateMetrics() {{
 
 components.html(html_code, height=800, width=1200)
 
-# --- Real-Time Auto-Refresh Handling ---
-import time
-
-logging_enabled = True  # or however you manage this flag
-
+# --- OPTIONAL: LOGGING VISUALIZATION ---
 if logging_enabled:
-    st.subheader("📊 Real-Time Metric Graphs")
-
-    try:
-        from streamlit_autorefresh import st_autorefresh
-
-        # Auto-refresh every 2 seconds (adjustable)
-        count = st_autorefresh(interval=2000, limit=None, key="refresh_counter")
-
-        st.caption("🔄 Auto-refresh active: updating every 2 seconds.")
-    except ModuleNotFoundError:
-        st.warning(
-            "⚠️ Optional module 'streamlit-autorefresh' not installed.\n\n"
-            "The dashboard will not auto-update in real-time.\n"
-            "To enable automatic refresh, run:\n"
-            "`pip install streamlit-autorefresh`"
-        )
-
-        # Manual fallback (for environments without the package)
-        if st.button("🔁 Refresh Manually"):
-           try:
-            st.rerun()  # ✅ modern Streamlit versions
-            except Exception:
-           try:
-            st.experimental_rerun()  # 🧩 backward compatibility
-            except Exception as e:
-            st.error(f"Unable to refresh automatically: {e}")
-
-    # Example metric placeholders (can be replaced by your actual data)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Energy Flux", f"{round(time.time() % 100, 2)} units")
-    with col2:
-        st.metric("Coupling Coherence", f"{round((time.time() * 1.3) % 100, 2)}%")
-    with col3:
-        st.metric("Dark Matter Density", f"{round((time.time() * 0.8) % 100, 2)} AU")
-
-    st.divider()
+    st.subheader("📊 Real-Time Simulation Metrics")
+    st.markdown("Dynamic coupling, amplitude distributions, and harmonic energy transfer logs will appear here.")
+    st.info("⏳ Live data visualization coming in the next update.")
