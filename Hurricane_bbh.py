@@ -9,15 +9,15 @@ st.set_page_config(page_title="Hurricane Black Hole", layout="wide")
 st.title("🌀 Black Hole Anatomy — Hurricane Dynamics Simulator")
 
 st.markdown("""
-Explore the anatomy of a spinning black hole.  
-Visuals simulate the **singularity** and **accretion disk**, while the sound recreates the deep *whirlpool–hurricane-like rumble* theorized to represent quantum plasma flow near the event horizon.
+Experience the **quantum hurricane** — a theoretical black hole modeled as a spinning vortex of plasma and energy.  
+The **sound** evolves with spin intensity, blending the deep rumble of gravity with the turbulence of a hurricane and the pull of a cosmic whirlpool.
 """)
 
 # --- Parameters ---
 mass = st.slider("Black Hole Mass (M☉, visual scale)", 1_000, 10_000_000, 4_300_000, step=1_000)
 spin = st.slider("Spin Intensity", 0.1, 1.0, 0.6, 0.05)
 sound_duration = st.slider("Sound Duration (seconds)", 2, 20, 8)
-st.write(f"Visualizing for mass: {mass:,} M☉")
+st.write(f"Visualizing for mass: {mass:,} M☉ — Spin factor: {spin:.2f}")
 
 # --- Generate the black hole visual ---
 theta = np.linspace(0, 2 * np.pi, 150)
@@ -25,7 +25,7 @@ phi = np.linspace(0, np.pi, 75)
 x = np.outer(np.cos(theta), np.sin(phi))
 y = np.outer(np.sin(theta), np.sin(phi))
 z = np.outer(np.ones(np.size(theta)), np.cos(phi))
-core_radius = 0.30
+core_radius = 0.3
 
 fig = go.Figure()
 
@@ -42,11 +42,11 @@ fig.add_surface(
 )
 
 # Accretion Disk Spiral
-r = np.linspace(core_radius * 1.5, 1.2, 300)
-theta_disk = np.linspace(0, 50 * np.pi, 300)
+r = np.linspace(core_radius * 1.5, 1.2, 400)
+theta_disk = np.linspace(0, 60 * np.pi, 400)
 x_disk = r * np.cos(theta_disk)
 y_disk = r * np.sin(theta_disk)
-z_disk = 0.05 * np.sin(3 * theta_disk)
+z_disk = 0.06 * np.sin(3 * theta_disk)
 
 fig.add_trace(
     go.Scatter3d(
@@ -59,9 +59,9 @@ fig.add_trace(
     )
 )
 
-# --- Camera animation frames ---
+# --- Camera rotation frames ---
 frames = []
-for angle in np.linspace(0, 360, 120):
+for angle in np.linspace(0, 360, 180):
     camera = dict(
         eye=dict(
             x=2.0 * np.sin(np.radians(angle)),
@@ -103,26 +103,33 @@ fig.update_layout(
     ],
 )
 
-# --- Display 3D plot ---
+# --- Display 3D visualization ---
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-# --- Quantum hurricane sound synthesis ---
-st.markdown("### 🌌 Generate Theoretical Black Hole Rumble")
+# --- Dynamic Quantum Hurricane Sound ---
+st.markdown("### 🌪️ Generate Black Hole Rumble (Spin-Responsive Sound)")
+
 sample_rate = 44100
 t = np.linspace(0, sound_duration, int(sample_rate * sound_duration))
 
-# Layered turbulent waveform
-# Combination of deep base, vortex modulation, and random wind-like noise
-base = np.sin(2 * np.pi * 20 * t)  # deep rumble
-vortex = np.sin(2 * np.pi * (5 + 15 * np.sin(2 * np.pi * 0.2 * t)) * t)  # whirlpool modulation
-noise = 0.4 * np.random.randn(len(t))  # chaotic turbulence
-sound = (0.6 * base + 0.4 * vortex + 0.2 * noise) * np.exp(-0.0004 * t * sample_rate)  # fade-out envelope
-sound /= np.max(np.abs(sound))  # normalize
+# Dynamic frequencies tied to spin
+base_freq = 20 + 30 * spin           # deeper rumbles at low spin, higher at high spin
+vortex_freq = 5 + 60 * spin          # faster whirlpool modulation with spin
+noise_amp = 0.3 + 0.7 * spin         # turbulence intensity increases with spin
 
-# --- Convert to playable audio ---
+# Generate sound layers
+base = np.sin(2 * np.pi * base_freq * t)
+vortex = np.sin(2 * np.pi * (vortex_freq + 15 * np.sin(2 * np.pi * 0.2 * t)) * t)
+noise = noise_amp * np.random.randn(len(t))
+
+# Composite and dampen
+sound = (0.5 * base + 0.4 * vortex + 0.3 * noise) * np.exp(-0.0003 * t * sample_rate)
+sound /= np.max(np.abs(sound))
+
+# Convert to playable WAV
 buffer = io.BytesIO()
 sf.write(buffer, sound, sample_rate, format="WAV")
 b64_audio = base64.b64encode(buffer.getvalue()).decode()
 
 st.audio(f"data:audio/wav;base64,{b64_audio}", format="audio/wav")
-st.caption("The sound is a synthesized model — representing gravitational plasma turbulence and accretion flow dynamics.")
+st.caption("Sound spectrum adapts to spin — low spin = deep rumble, high spin = chaotic plasma turbulence.")
