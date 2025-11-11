@@ -200,12 +200,14 @@ components.html(html_code, height=800, width=1200)
 if logging_enabled:
     st.subheader("📊 Real-Time Metric Graphs")
 
-    # Append a new row every second (simulate data collection)
+    from streamlit_autorefresh import st_autorefresh
+
+    # Auto-refresh every 2 seconds (adjustable)
+    count = st_autorefresh(interval=2000, limit=None, key="refresh_counter")
+
     if os.path.exists("simulation_log.csv"):
         df = pd.read_csv("simulation_log.csv")
-        # Live updating line chart
-        st.line_chart(df.set_index("time")[["energy_coherence", "dark_density"]])
-
-        # Optional auto-refresh every few seconds
-        time.sleep(2)
-        st.experimental_rerun()
+        if not df.empty:
+            st.line_chart(df.set_index("time")[["energy_coherence", "dark_density"]])
+        else:
+            st.info("Waiting for simulation data to log...")
