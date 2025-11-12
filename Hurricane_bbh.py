@@ -292,6 +292,3 @@ with col2:
 
 # done
 st.caption("Ray-bending mapping: scientific approximation — tuned for clarity and presentation. For full GR ray-tracing use geodesic integration / numerical ray-tracer.")
-
-
----
