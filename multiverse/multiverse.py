@@ -159,7 +159,29 @@ if use_autorefresh:
         step_sim(st.session_state.steps_per_update)
 elif st.session_state.run:
     st.info("Auto-run requested")
+    
+# --- 3D Visualizer (Bright Universe Edition, safe + self-contained) ---
 st.subheader("3D Visualizer — Bright Universe Edition (mobile optimized)")
+
+# --- Ensure snapshot data exists ---
+try:
+    _ = snapshot
+except NameError:
+    # create example snapshot data if not defined
+    import numpy as np, json
+    N = 20
+    snapshot = {
+        "time": 0.0,
+        "N": N,
+        "node_amp": np.random.uniform(-1, 1, N).tolist(),
+        "node_phase": np.random.uniform(-np.pi, np.pi, N).tolist(),
+        "pos": np.random.uniform(-50, 50, (N, 2)).tolist(),
+        "sub_inst": [[np.random.uniform(-1, 1) for _ in range(np.random.randint(2, 6))] for _ in range(N)],
+        "dm_grid": (np.random.rand(64, 64) * 0.8).tolist()
+    }
+snapshot_json = json.dumps(snapshot)
+
+# --- visualization HTML ---
 html = f"""<!doctype html>
 <html>
 <head>
