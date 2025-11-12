@@ -9,7 +9,7 @@ import wave
 
 st.set_page_config(layout="wide", page_title="BH Anatomy — Ray-Bending (Scientific Approx.)")
 
-st.title("🔭 Black Hole Anatomy — Scientific Ray-Bending Approximation (Option B)")
+st.title("🔭 Black Hole Anatomy — Scientific Ray-Bending Approximation")
 
 #
 # --- Controls (left column)
