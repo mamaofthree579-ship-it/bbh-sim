@@ -63,7 +63,7 @@ with overview_tab:
     st.markdown("## 🌌 Overview — Black Hole Anatomy (live audio + visual)")
     col_left, col_right = st.columns([3,1])
     with col_left:
-        st.markdown("Adjust speed, trail length, hotspot radius, and color. Press **Play Audio** to hear the live synth driven by the visual energy readout.")
+        st.markdown("Adjust speed, trail length, hotspot radius, and color. Press **Play Audio** in the panel to start the WebAudio synth (browser gesture required).")
         speed = st.slider("Hotspot speed", min_value=0.0, max_value=1.2, value=0.26, step=0.01)
         trail_len = st.slider("Trail length (points)", min_value=3, max_value=30, value=8, step=1)
         hotspot_radius = st.slider("Hotspot orbit radius (visual)", min_value=50, max_value=180, value=110, step=2)
@@ -76,22 +76,23 @@ with overview_tab:
             "accent": bh_color
         }
 
-        # Client HTML: canvas visual + WebAudio synth (Play/Stop)
-        html = f"""
+        # Build HTML template but avoid Python f-strings so JS braces are safe.
+        cfg_json = json.dumps(config)
+        html_template = r"""
         <!doctype html>
         <html>
         <head>
           <meta charset="utf-8" />
           <style>
-            body{{margin:0;background:transparent;color:#eae6ff;font-family:Inter,Arial,Helvetica,sans-serif}}
-            #wrap{{display:flex;flex-direction:column;align-items:center;padding:10px}}
-            canvas{{border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.6);background: radial-gradient(circle at center,#14001a 0%, #05000a 100%);}}
-            .legend{{margin-top:8px;display:flex;align-items:center;gap:8px}}
-            .colorbar{{width:18px;height:180px;border-radius:6px;background:linear-gradient(to top, rgba(255,180,80,0.95), rgba(140,80,255,0.95));box-shadow:inset 0 0 8px rgba(0,0,0,0.4)}}
-            .controls{{margin-top:10px;display:flex;gap:8px;align-items:center}}
-            .btn{{padding:6px 10px;border-radius:6px;border:none;background:#7a3bff;color:white;cursor:pointer}}
-            .readout{{margin-top:10px;font-weight:700;color:#ffd;}}
-            .muted{{color:#cfc3ff;font-weight:400;font-size:0.95rem}}
+            body{margin:0;background:transparent;color:#eae6ff;font-family:Inter,Arial,Helvetica,sans-serif}
+            #wrap{display:flex;flex-direction:column;align-items:center;padding:10px}
+            canvas{border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.6);background: radial-gradient(circle at center,#14001a 0%, #05000a 100%)}
+            .legend{margin-top:8px;display:flex;align-items:center;gap:8px}
+            .colorbar{width:18px;height:180px;border-radius:6px;background:linear-gradient(to top, rgba(255,180,80,0.95), rgba(140,80,255,0.95));box-shadow:inset 0 0 8px rgba(0,0,0,0.4)}
+            .controls{margin-top:10px;display:flex;gap:8px;align-items:center}
+            .btn{padding:6px 10px;border-radius:6px;border:none;background:#7a3bff;color:white;cursor:pointer}
+            .readout{margin-top:10px;font-weight:700;color:#ffd}
+            .muted{color:#cfc3ff;font-weight:400;font-size:0.95rem}
           </style>
         </head>
         <body>
@@ -115,7 +116,7 @@ with overview_tab:
          </div>
 
          <script>
-           const cfg = {json.dumps(config)};
+           const cfg = __CFG__;
            const canvas = document.getElementById('bh');
            const ctx = canvas.getContext('2d');
            const W = canvas.width, H = canvas.height;
@@ -129,13 +130,13 @@ with overview_tab:
            let masterGain = null;
            let oscLow = null;    // base low rumble
            let oscHarm = null;   // harmonic tone
-           let noiseNode = null; // brown-ish noise via ScriptProcessor (fallback)
+           let noiseNode = null; // brown-ish noise
            let noiseGain = null;
            let lpFilter = null;
            let running = false;
 
            function createSynth(){
-             audioCtx = :new (window.AudioContext || window.webkitAudioContext)();
+             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
              masterGain = audioCtx.createGain(); masterGain.gain.value = 0.0;
              masterGain.connect(audioCtx.destination);
 
@@ -153,8 +154,7 @@ with overview_tab:
              const bufferSize = 4096;
              const noiseProc = audioCtx.createScriptProcessor(bufferSize, 1, 1);
              let lastOut = 0.0;
-             noiseProc.onaudioprocess = function(e)
-               {
+             noiseProc.onaudioprocess = function(e){
                const out = e.outputBuffer.getChannelData(0);
                for(let i=0;i<bufferSize;i++){
                  const white = Math.random() * 2 - 1;
@@ -168,17 +168,14 @@ with overview_tab:
 
              // lowpass filter to shape noise timbre
              lpFilter = audioCtx.createBiquadFilter(); lpFilter.type = 'lowpass'; lpFilter.frequency.value = 400;
-             // route master -> filter -> destination for a separate path (optional)
-             // but for simplicity, filter inserted on noise path already connecting to masterGain
 
-             // connect oscillators
+             // start oscillators
              oscLow.start();
              oscHarm.start();
            }
 
            function startAudio(){
              if(!audioCtx) createSynth();
-             // resume context if suspended
              if(audioCtx.state === 'suspended') audioCtx.resume();
              running = true;
              document.getElementById('audioState').textContent = 'Audio: playing';
@@ -186,8 +183,7 @@ with overview_tab:
 
            function stopAudio(){
              running = false;
-             // ramp gain down gently
-             if(masterGain){
+             if(masterGain && audioCtx) {
                masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
                masterGain.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime + 0.08);
              }
@@ -204,41 +200,31 @@ with overview_tab:
            // mapping: energy -> synth params
            function applyEnergyToSynth(energy){
              if(!audioCtx || !running) return;
-             // energy in [0,1]
              const e = Math.max(0, Math.min(1, energy));
-             // drive master gain (soft)
              masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
              masterGain.gain.linearRampToValueAtTime(0.02 + 0.45 * e, audioCtx.currentTime + 0.04);
 
-             // low oscillator frequency (rumble) map 20-120 Hz
              if(oscLow) {
                const lowFreq = 20 + 100 * Math.pow(e, 0.6);
                oscLow.frequency.exponentialRampToValueAtTime(lowFreq, audioCtx.currentTime + 0.02);
              }
-             // harmonic frequency (for texture) map to 1.5x-3.5x low
              if(oscHarm && oscLow) {
                const harmFreq = (20 + 100 * Math.pow(e, 0.6)) * (1.8 + 1.7 * e);
                oscHarm.frequency.exponentialRampToValueAtTime(harmFreq, audioCtx.currentTime + 0.02);
              }
-             // noise gain (hurricane texture)
              if(noiseGain){
-               const ng = 0.002 + 0.08 * (e ** 1.4);
+               const ng = 0.002 + 0.08 * Math.pow(e, 1.4);
                noiseGain.gain.cancelScheduledValues(audioCtx.currentTime);
                noiseGain.gain.linearRampToValueAtTime(ng, audioCtx.currentTime + 0.02);
              }
-             // filter cutoff to brighten with energy
-             if(lpFilter){
-               const cutoff = 200 + 3000 * (e ** 1.8);
+             if(lpFilter && audioCtx){
+               const cutoff = 200 + 3000 * Math.pow(e, 1.8);
                lpFilter.frequency.exponentialRampToValueAtTime(cutoff, audioCtx.currentTime + 0.03);
-               // route noise through filter when present
                try {
-                 // connect noiseNode -> noiseGain -> lpFilter -> masterGain
                  noiseGain.disconnect();
                  noiseGain.connect(lpFilter);
                  lpFilter.connect(masterGain);
-               } catch(err){
-                 // ignore if already connected
-               }
+               } catch(err) {}
              }
            }
 
@@ -255,7 +241,7 @@ with overview_tab:
              for(let i=0;i<36;i++){
                ctx.beginPath();
                ctx.arc(cx,cy,horizonR+6 + i*3,0,Math.PI*2);
-               ctx.strokeStyle = `rgba(255,180,80,${0.003 + i*0.0006})`;
+               ctx.strokeStyle = 'rgba(255,180,80,' + (0.003 + i*0.0006) + ')';
                ctx.lineWidth = 1;
                ctx.stroke();
              }
@@ -263,20 +249,20 @@ with overview_tab:
              // horizon outline and slightly purple fill
              ctx.beginPath(); ctx.arc(cx,cy,horizonR,0,Math.PI*2);
              ctx.strokeStyle = 'rgba(140,80,255,0.35)'; ctx.lineWidth=2; ctx.stroke();
-             ctx.beginPath(); ctx.arc(cx,cy,horizonR-1,0,Math.PI*2); ctx.fillStyle='rgba(16,6,22,0.98)'; ctx.fill();
+             ctx.beginPath(); ctx.arc(cx,cy,horizonR-1,0,Math.PI*2); ctx.fillStyle='rgba(24,6,45,0.96)'; ctx.fill();
 
              // hotspot + trail
              const orbitR = cfg.hotspot_radius;
              const hx = cx + Math.cos(angle) * orbitR;
              const hy = cy + Math.sin(angle) * orbitR * 0.32;
-             trail.push({x:hx,y:hy});
+             trail.push({'x':hx,'y':hy});
              while(trail.length > cfg.trail_len) trail.shift();
 
              for(let k=0;k<trail.length;k++){
                const p = trail[k]; const a = (k+1)/trail.length;
                ctx.beginPath();
                ctx.arc(p.x,p.y, Math.max(1.8, 4 - (trail.length - k)*0.4), 0, Math.PI*2);
-               ctx.fillStyle = `rgba(255,220,180,${0.12 * a})`; ctx.fill();
+               ctx.fillStyle = 'rgba(255,220,180,' + (0.12 * a) + ')'; ctx.fill();
              }
              ctx.beginPath(); ctx.arc(hx,hy,6,0,Math.PI*2); ctx.fillStyle='#ffcc99'; ctx.fill();
 
@@ -288,17 +274,24 @@ with overview_tab:
              document.getElementById('energyVal').textContent = energy.toFixed(3);
 
              // apply to synth (if running)
-             try { applyEnergyToSynth(energy); } catch(e){ /* ignore in no-audio state */ }
+             try { applyEnergyToSynth(energy); } catch(e){}
 
              angle += cfg.speed;
              requestAnimationFrame(draw);
            }
+           // replace the placeholder with the actual JSON config
+           const configStr = '__CFG__';
+           const parsed = JSON.parse(configStr);
+           window.cfg = parsed;
+           // copy cfg into local cfg variable expected above
+           const cfg = parsed;
            draw();
-
          </script>
         </body>
         </html>
         """
+        # insert JSON safely by replacing marker
+        html = html_template.replace("__CFG__", cfg_json)
 
         st.components.v1.html(html, height=720, scrolling=False)
 
