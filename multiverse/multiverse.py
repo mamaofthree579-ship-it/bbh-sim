@@ -218,7 +218,11 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHei
 camera.position.z = window.innerWidth < 700 ? 60 : 100;
 
 // ✅ Correctly define antialias option here:
-const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+const renderer = new // Source - https://stackoverflow.com/a
+// Posted by Wilt, modified by community. See post 'Timeline' for change history
+// Retrieved 2025-11-12, License - CC BY-SA 3.0
+
+renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
