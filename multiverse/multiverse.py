@@ -225,14 +225,16 @@ const snapshot = {snapshot_json};
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.z = 90;
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth*0.95, window.innerHeight*0.85);
+const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+renderer.setSize(window.innerWidth * 0.95, window.innerHeight * 0.85);
 document.body.appendChild(renderer.domElement);
 
 // lights
 const ambient = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambient);
-const dir = new THREE.DirectionalLight(0xffffff, 0.5); dir.position.set(50,50,100); scene.add(dir);
+const dir = new THREE.DirectionalLight(0xffffff, 0.5); 
+dir.position.set(50, 50, 100); 
+scene.add(dir);
 
 // draw dark matter grid as texture plane
 function drawDMGrid(dm) {{
@@ -241,10 +243,10 @@ function drawDMGrid(dm) {{
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
     const img = ctx.createImageData(size, size);
-    for (let y=0; y<size; y++) {{
-        for (let x=0; x<size; x++) {{
+    for (let y = 0; y < size; y++) {{
+        for (let x = 0; x < size; x++) {{
             const v = Math.max(0, Math.min(1, dm[y][x]));
-            const idx = (y*size + x)*4;
+            const idx = (y * size + x) * 4;
             img.data[idx] = Math.floor(30 + 220 * v);
             img.data[idx+1] = Math.floor(10 + 80 * v);
             img.data[idx+2] = Math.floor(60 + 120 * (1 - v));
@@ -253,21 +255,24 @@ function drawDMGrid(dm) {{
     }}
     ctx.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(canvas);
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.6}}));
-    plane.position.set(0,0,-10);
+    const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(160, 160), 
+        new THREE.MeshBasicMaterial({{ map: tex, transparent: true, opacity: 0.6 }})
+    );
+    plane.position.set(0, 0, -10);
     scene.add(plane);
 }}
 
 // create nodes
 const nodes = [];
-(function createNodes(){{
+(function createNodes() {{
     const N = snapshot.N;
-    for (let i=0;i<N;i++) {{
+    for (let i = 0; i < N; i++) {{
         const amp = snapshot.node_amp[i];
         const phase = snapshot.node_phase[i];
-        const hue = (phase + Math.PI) / (2*Math.PI);
+        const hue = (phase + Math.PI) / (2 * Math.PI);
         const color = new THREE.Color().setHSL(hue, 0.9, 0.5);
-        const geometry = new THREE.SphereGeometry(1.5 + Math.abs(amp)*2.0, 20, 20);
+        const geometry = new THREE.SphereGeometry(1.5 + Math.abs(amp) * 2.0, 20, 20);
         const material = new THREE.MeshStandardMaterial({{ color: color, emissive: color, emissiveIntensity: 0.25 }});
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.x = snapshot.pos[i][0];
@@ -276,13 +281,13 @@ const nodes = [];
         scene.add(mesh);
         // small sub nodes
         const subMeshes = [];
-        for (let j=0;j<snapshot.sub_inst[i].length;j++) {{
+        for (let j = 0; j < snapshot.sub_inst[i].length; j++) {{
             const sAmp = snapshot.sub_inst[i][j];
-            const sg = new THREE.SphereGeometry(0.45 + Math.abs(sAmp)*0.3, 8, 8);
+            const sg = new THREE.SphereGeometry(0.45 + Math.abs(sAmp) * 0.3, 8, 8);
             const smat = new THREE.MeshStandardMaterial({{ color: color, emissive: color, emissiveIntensity: 0.1 }});
             const sMesh = new THREE.Mesh(sg, smat);
-            sMesh.position.x = mesh.position.x + (Math.random()-0.5)*3;
-            sMesh.position.y = mesh.position.y + (Math.random()-0.5)*3;
+            sMesh.position.x = mesh.position.x + (Math.random() - 0.5) * 3;
+            sMesh.position.y = mesh.position.y + (Math.random() - 0.5) * 3;
             scene.add(sMesh);
             subMeshes.push(sMesh);
         }}
@@ -303,15 +308,19 @@ controls.autoRotate = false;
 let t = 0;
 function animate() {{
     requestAnimationFrame(animate);
-    for (let i=0;i<nodes.length;i++) {{
+    for (let i = 0; i < nodes.length; i++) {{
         const n = nodes[i];
         const baseAmp = snapshot.node_amp[i];
-        const glow = 1.0 + 0.12*Math.sin(t*2.5 + i);
-        n.mesh.scale.set(glow*(1+Math.abs(baseAmp)), glow*(1+Math.abs(baseAmp)), glow*(1+Math.abs(baseAmp)));
-        n.mesh.material.emissiveIntensity = 0.2 + 0.6*Math.abs(Math.sin(t*1.5 + i));
-        for (let j=0;j<n.subs.length;j++) {{
+        const glow = 1.0 + 0.12 * Math.sin(t * 2.5 + i);
+        n.mesh.scale.set(
+            glow * (1 + Math.abs(baseAmp)), 
+            glow * (1 + Math.abs(baseAmp)), 
+            glow * (1 + Math.abs(baseAmp))
+        );
+        n.mesh.material.emissiveIntensity = 0.2 + 0.6 * Math.abs(Math.sin(t * 1.5 + i));
+        for (let j = 0; j < n.subs.length; j++) {{
             const s = n.subs[j];
-            const flick = 0.7 + 0.6*Math.abs(Math.sin(t*4 + i + j));
+            const flick = 0.7 + 0.6 * Math.abs(Math.sin(t * 4 + i + j));
             s.scale.set(flick, flick, flick);
         }}
     }}
@@ -322,8 +331,8 @@ function animate() {{
 animate();
 
 // resize
-window.addEventListener('resize', ()=> {{
-    renderer.setSize(window.innerWidth*0.95, window.innerHeight*0.85);
+window.addEventListener('resize', () => {{
+    renderer.setSize(window.innerWidth * 0.95, window.innerHeight * 0.85);
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 }});
