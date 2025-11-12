@@ -2,61 +2,46 @@ import streamlit as st
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 import io, math, time, base64
-import wave
 
-st.set_page_config(layout="wide", page_title="BH Anatomy — Bilinear Ray-Bending (Option B)")
+st.set_page_config(layout="wide", page_title="BH Anatomy — Bilinear Remap (Fixed)")
 
-st.title("🔭 Black Hole Anatomy — Scientific Ray-Bending (Bilinear sampling)")
+st.title("🔭 Black Hole Anatomy — Bilinear Remapping (edge-case fix)")
 
-#
-# --- Controls (left column)
-#
+# --- Controls
 col1, col2 = st.columns([1, 2])
-
 with col1:
     st.markdown("### Controls")
     mass_solar = st.slider("Mass (M☉)", min_value=1e3, max_value=1e8, value=4_300_000.0, step=1_000.0, format="%.0f")
     spin = st.slider("Spin asymmetry (visual)", min_value=0.0, max_value=1.0, value=0.35, step=0.01)
-    lensing_strength = st.slider("Lensing strength (scale)", min_value=0.0, max_value=4.0, value=1.0, step=0.05)
-    hotspot_speed = st.slider("Hotspot speed (visual)", min_value=0.0, max_value=2.0, value=0.9, step=0.01)
-    visual_scale = st.slider("Visual scale (zoom)", min_value=0.6, max_value=2.2, value=1.0, step=0.05)
+    lensing_strength = st.slider("Lensing strength", 0.0, 4.0, 1.0, step=0.05)
+    hotspot_speed = st.slider("Hotspot speed", 0.0, 2.0, 0.9, step=0.01)
+    visual_scale = st.slider("Visual scale (zoom)", 0.6, 2.2, 1.0, step=0.05)
     show_disk = st.checkbox("Show accretion disk", value=True)
     show_hotspot = st.checkbox("Show hotspot & trail", value=True)
     show_ring_overlay = st.checkbox("Enhance photon ring", value=True)
-    play_audio = st.checkbox("Enable ambient audio (whirlpool + hurricane)", value=False)
+    play_audio = st.checkbox("Enable ambient audio", value=False)
 
-    st.markdown("---")
-    st.markdown("**Notes:** This uses a Schwarzschild-based, approximate remap and **bilinear** sampling for smoother output. Not a full GR ray-tracer — it's a fast visual approximation.")
-
-#
-# --- Derived physical quantity (display)
-#
+# --- Derived numbers
 G = 6.67430e-11
 c = 2.99792458e8
 M_kg = mass_solar * 1.98847e30
 r_s = 2 * G * M_kg / (c**2)
 
 with col1:
-    st.markdown("### Physical numbers (derived)")
+    st.markdown("### Physical numbers")
     st.write(f"Mass: **{mass_solar:,.0f} M☉**  ({M_kg:.3e} kg)")
     st.write(f"Schwarzschild radius rₛ ≈ **{r_s:.3e} m**")
-    st.write("Photon sphere (≈ 1.5 rₛ) shown in visual scale.")
 
-#
-# --- Image generation parameters ---
-#
-WIDTH = int(720 * visual_scale)
-HEIGHT = int(720 * visual_scale)
+# --- Image dims
+BASE = 720
+WIDTH = max(200, int(BASE * visual_scale))
+HEIGHT = max(200, int(BASE * visual_scale))
 CENTER_X = WIDTH // 2
 CENTER_Y = HEIGHT // 2
 
-# deterministic randomness
-SEED = 42
-rng = np.random.RandomState(SEED)
+rng = np.random.RandomState(42)
 
-#
-# --- Starfield generator (kept but subdued) ---
-#
+# --- Starfield
 def make_starfield(w, h, n_stars=600, nebula=False):
     img = Image.new("RGB", (w, h), (5, 2, 10))
     draw = ImageDraw.Draw(img)
@@ -65,24 +50,22 @@ def make_starfield(w, h, n_stars=600, nebula=False):
     mags = rng.uniform(0.35, 1.0, size=n_stars)
     for x, y, m in zip(xs, ys, mags):
         r = max(1, int(1.2 * m * visual_scale))
-        color_fac = int(200 * m)
-        draw.ellipse([x - r, y - r, x + r, y + r], fill=(color_fac, color_fac, color_fac))
+        val = int(200 * m)
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=(val, val, val))
     img = img.filter(ImageFilter.GaussianBlur(radius=0.6 * visual_scale))
     if nebula:
         neb = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         nd = ImageDraw.Draw(neb)
-        for i in range(5):
+        for i in range(4):
             rx = rng.randint(0, w)
             ry = rng.randint(0, h)
-            color = (150 + rng.randint(0,100), 90 + rng.randint(0,90), 220, int(10 + 20 * rng.rand()))
-            rad = int(160 * visual_scale * rng.rand() + 90 * visual_scale)
+            color = (150 + rng.randint(0, 100), 90 + rng.randint(0, 90), 220, int(12 + 24 * rng.rand()))
+            rad = int(120 * visual_scale * rng.rand() + 80 * visual_scale)
             nd.ellipse([rx - rad, ry - rad, rx + rad, ry + rad], fill=color)
         img = Image.alpha_composite(img.convert("RGBA"), neb).convert("RGB")
     return img
 
-#
-# --- Accretion disk painter
-#
+# --- Accretion disk painting
 def paint_accretion_disk(base_img, center, inner_r, outer_r, color=(255,180,80)):
     w, h = base_img.size
     disk = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -91,15 +74,13 @@ def paint_accretion_disk(base_img, center, inner_r, outer_r, color=(255,180,80))
     rings = int((outer_r - inner_r) / 3) + 10
     for i in range(rings):
         r = inner_r + (outer_r - inner_r) * (i / (rings - 1))
-        alpha = int(8 + 150 * (1 - (i / rings))**1.6)
+        alpha = int(6 + 140 * (1 - (i / rings))**1.6)
         col = (color[0], color[1], color[2], max(2, alpha))
         d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=col, width=max(1, int(2 * visual_scale)))
-    disk = disk.filter(ImageFilter.GaussianBlur(radius=2.6 * visual_scale))
+    disk = disk.filter(ImageFilter.GaussianBlur(radius=2.2 * visual_scale))
     return Image.alpha_composite(base_img.convert("RGBA"), disk).convert("RGB")
 
-#
-# --- Hotspot + trail painter
-#
+# --- Hotspot painter
 def paint_hotspot(base_img, center, angle, radius, color=(255,220,170)):
     w, h = base_img.size
     hs = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -111,7 +92,7 @@ def paint_hotspot(base_img, center, angle, radius, color=(255,220,170)):
     for k in range(trail_len):
         t = k / trail_len
         rr = max(1, int((5.6 - k*0.5) * visual_scale))
-        a = int(200 * (1 - t)**1.9 * 0.7)
+        a = int(190 * (1 - t)**1.8 * 0.7)
         col = (color[0], color[1], color[2], a)
         tx = cx + math.cos(angle - t * 0.18) * (radius - k * (radius * 0.05))
         ty = cy + math.sin(angle - t * 0.18) * (radius * 0.62 - k * (radius * 0.02))
@@ -120,85 +101,104 @@ def paint_hotspot(base_img, center, angle, radius, color=(255,220,170)):
               fill=(255, 220, 160, 255))
     return Image.alpha_composite(base_img.convert("RGBA"), hs).convert("RGB")
 
-#
-# --- Bilinear sampling remapper (vectorized)
-#
+# --- Bilinear remap with epsilon clipping to avoid out-of-bounds
 def bilinear_remap(src_img, rs_physical, lensing_strength=1.0, spin=0.0):
-    # src_img: Pillow RGB image
     w, h = src_img.size
     src = np.asarray(src_img).astype(np.float32)
-    # normalized coordinates [-1,1]
     xs = np.linspace(-1.0, 1.0, w)
     ys = np.linspace(-1.0, 1.0, h)
     xv, yv = np.meshgrid(xs, ys)
     r = np.sqrt(xv**2 + yv**2) + 1e-12
     theta = np.arctan2(yv, xv)
 
-    # visual scaling constants (tuned)
-    scale = 0.18
-    R_vis = scale
     a = (rs_physical / (1.0 + rs_physical)) * (lensing_strength * 0.5)
 
-    eps = 1e-6
-    r_src = r / (1.0 + a / (r + eps))
+    # mapping (tunable)
+    r_src = r / (1.0 + a / (r + 1e-12))
     theta_src = theta - 0.25 * spin * (1.0 - np.exp(-r*8.0))
 
     x_src = r_src * np.cos(theta_src)
     y_src = r_src * np.sin(theta_src)
 
-    # map [-1,1] to pixel coords (float)
     fx = (x_src + 1.0) * 0.5 * (w - 1)
     fy = (y_src + 1.0) * 0.5 * (h - 1)
 
-    # bilinear interpolation
-    x0 = np.floor(fx).astype(np.int32)
-    x1 = np.clip(x0 + 1, 0, w - 1)
-    y0 = np.floor(fy).astype(np.int32)
-    y1 = np.clip(y0 + 1, 0, h - 1)
+    # IMPORTANT FIX: clamp fx/fy into [0, w-1 - eps] to avoid floor producing w/h
+    eps = 1e-6
+    fx = np.nan_to_num(fx, nan=0.0, posinf=w-1-eps, neginf=0.0)
+    fy = np.nan_to_num(fy, nan=0.0, posinf=h-1-eps, neginf=0.0)
+    fx = np.clip(fx, 0.0, w - 1 - eps)
+    fy = np.clip(fy, 0.0, h - 1 - eps)
 
-    # weights
+    x0 = np.floor(fx).astype(np.int32)
+    x1 = x0 + 1
+    y0 = np.floor(fy).astype(np.int32)
+    y1 = y0 + 1
+
+    # ensure in bounds after floor + 1
+    x0 = np.clip(x0, 0, w - 1)
+    x1 = np.clip(x1, 0, w - 1)
+    y0 = np.clip(y0, 0, h - 1)
+    y1 = np.clip(y1, 0, h - 1)
+
     wx = fx - x0
     wy = fy - y0
 
-    # sample four corners
     Ia = src[y0, x0, :]
     Ib = src[y0, x1, :]
     Ic = src[y1, x0, :]
     Id = src[y1, x1, :]
 
-    # interpolate along x, then y
     Iab = Ia * (1 - wx[..., None]) + Ib * (wx[..., None])
     Icd = Ic * (1 - wx[..., None]) + Id * (wx[..., None])
     I = Iab * (1 - wy[..., None]) + Icd * (wy[..., None])
 
-    # photon-sphere boost band
+    # optional small photon-sphere brightness bump
     if show_ring_overlay:
-        boost = np.zeros((h, w), dtype=np.float32)
-        band = np.logical_and(r > 0.10, r < 0.25)
-        boost_val = (0.25 - np.abs(r - 0.175)) * 2.0  # small positive
-        boost_val = np.clip(boost_val, 0, 0.9) * lensing_strength
-        boost = boost_val
-        I = np.clip(I * (1.0 + boost[..., None]), 0, 255)
+        boost_val = np.clip((0.25 - np.abs(r - 0.175)) * 2.0, 0, 0.9) * lensing_strength
+        I = np.clip(I * (1.0 + boost_val[..., None]), 0, 255)
 
-    I = I.astype(np.uint8)
-    return Image.fromarray(I)
+    return Image.fromarray(I.astype(np.uint8))
 
-#
-# --- Simple FFT lowpass for audio texture (avoid scipy dependency)
-#
+# --- Build base scene
+base = make_starfield(WIDTH, HEIGHT, n_stars=int(520 * visual_scale), nebula=True)
+disk_inner = max(16 * visual_scale, 6 * visual_scale)
+disk_outer = max(200 * visual_scale, 120 * visual_scale)
+
+if show_disk:
+    base = paint_accretion_disk(base, (CENTER_X, CENTER_Y), disk_inner, disk_outer)
+
+angle_now = (time.time() * hotspot_speed) % (2 * math.pi)
+if show_hotspot:
+    base = paint_hotspot(base, (CENTER_X, CENTER_Y), angle_now, radius=(disk_inner + disk_outer) * 0.52)
+
+scaled_rs = (r_s / (1.0 + r_s)) * 1e-7 * (mass_solar / 1e6)
+lensed = bilinear_remap(base, scaled_rs, lensing_strength=lensing_strength, spin=spin)
+
+if show_ring_overlay:
+    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    ring_r = int(0.175 * WIDTH)
+    ring_w = max(1, int(3 * visual_scale))
+    od.ellipse([CENTER_X-ring_r, CENTER_Y-ring_r, CENTER_X+ring_r, CENTER_Y+ring_r],
+               outline=(255,220,180, int(32 * lensing_strength)), width=ring_w)
+    lensed = Image.alpha_composite(lensed.convert("RGBA"), overlay).convert("RGB")
+
+with col2:
+    st.markdown("### Visual preview")
+    st.image(lensed, use_column_width=True)
+    st.markdown("---")
+    st.markdown("Photon sphere proxy shown. Bilinear remap clipped to avoid indexing edge-case.")
+
+# --- Simple ambient audio (optional) ---
 def lowpass_fft(sig, sr, cutoff=800.0):
-    # naive FFT lowpass
     N = sig.shape[0]
     fft = np.fft.rfft(sig)
     freqs = np.fft.rfftfreq(N, 1/sr)
-    mask = freqs <= cutoff
-    fft[~mask] = 0
+    fft[freqs > cutoff] = 0
     out = np.fft.irfft(fft, n=N)
     return out
 
-#
-# --- Ambient audio generator (no scipy)
-#
 def make_ambient_audio(duration_s=4.0, sr=22050, mass_scale=1.0, spin=0.5):
     t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False)
     base = 18.0 * (1.0 / (1.0 + math.log10(max(1e3, mass_scale)) / 6.0))
@@ -220,54 +220,13 @@ def make_ambient_audio(duration_s=4.0, sr=22050, mass_scale=1.0, spin=0.5):
         mem.seek(0)
         return mem
     except Exception:
-        # fallback: return None if soundfile isn't available
         return None
 
-#
-# --- Build scene & remap (single frame)
-#
-base = make_starfield(WIDTH, HEIGHT, n_stars=int(580 * visual_scale), nebula=True)
-
-disk_inner = max(18 * visual_scale, 6 * visual_scale)
-disk_outer = max(220 * visual_scale, 140 * visual_scale)
-
-if show_disk:
-    base = paint_accretion_disk(base, (CENTER_X, CENTER_Y), disk_inner, disk_outer)
-
-angle_now = (time.time() * hotspot_speed) % (2 * math.pi)
-if show_hotspot:
-    base = paint_hotspot(base, (CENTER_X, CENTER_Y), angle_now, radius=(disk_inner + disk_outer) * 0.52)
-
-# scale r_s into a small param for remap (tuned)
-scaled_rs = (r_s / (1.0 + r_s)) * 1e-7 * (mass_solar / 1e6)
-
-lensed = bilinear_remap(base, scaled_rs, lensing_strength=lensing_strength, spin=spin)
-
-if show_ring_overlay:
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    ring_r = int(0.175 * WIDTH)
-    ring_w = max(1, int(3 * visual_scale))
-    od.ellipse([CENTER_X-ring_r, CENTER_Y-ring_r, CENTER_X+ring_r, CENTER_Y+ring_r],
-               outline=(255,220,180, int(38 * lensing_strength)), width=ring_w)
-    lensed = Image.alpha_composite(lensed.convert("RGBA"), overlay).convert("RGB")
-
-#
-# --- Display
-#
-with col2:
-    st.markdown("### Visual preview")
-    st.image(lensed, use_column_width=True)
+if play_audio:
     st.markdown("---")
-    st.markdown("**Photon sphere note:** The bright band is an amplified visual proxy for the photon-sphere; spin produces slight azimuthal brightness asymmetry.")
-
-    if play_audio:
-        st.markdown("---")
-        st.markdown("### Ambient audio (theory-inspired)")
-        audio_buf = make_ambient_audio(duration_s=4.0, sr=22050, mass_scale=mass_solar, spin=spin)
-        if audio_buf:
-            st.audio(audio_buf.read(), format='audio/wav')
-        else:
-            st.info("Audio unavailable: `soundfile` not installed in environment.")
-
-st.caption("Bilinear remapping applied for smoother lens visuals. For higher-physical-fidelity ray tracing use geodesic integration / a GR raytracer.")
+    st.markdown("### Ambient audio")
+    audio_buf = make_ambient_audio(duration_s=4.0, sr=22050, mass_scale=mass_solar, spin=spin)
+    if audio_buf:
+        st.audio(audio_buf.read(), format='audio/wav')
+    else:
+        st.info("Audio unavailable in this environment (soundfile not installed).")
