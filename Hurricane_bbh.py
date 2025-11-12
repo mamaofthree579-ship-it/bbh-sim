@@ -368,7 +368,7 @@ orbit_html_template = """
 st.components.v1.html(orbit_html_template, height=360, scrolling=False)
 
 st.audio(wav_bytes, format='audio/wav')
-    else:
+else:
             waveform_placeholder.info("Click 'Generate waveform & prepare chirp' to create waveform & playable audio.")
 
     with chirp_col2:
