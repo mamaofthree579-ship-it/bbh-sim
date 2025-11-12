@@ -158,7 +158,7 @@ if use_autorefresh:
     if st.session_state.run:
         step_sim(st.session_state.steps_per_update)
 elif st.session_state.run:
-    st.info("Auto-run requested but 'streamlit-autorefresh' not # --- 3D Visualizer (mobile-friendly, bright universe edition) ---
+    st.info(Auto-run requested)
 st.subheader("3D Visualizer — Bright Universe Edition (mobile optimized)")
 html = f"""<!doctype html>
 <html>
