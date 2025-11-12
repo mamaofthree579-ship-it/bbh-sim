@@ -295,11 +295,3 @@ st.caption("Ray-bending mapping: scientific approximation — tuned for clarity 
 
 
 ---
-
-Quick usage tips
-
-Start with lensing_strength ≈ 1.0, spin ≈ 0.2–0.6. For dramatic rings increase lensing_strength.
-
-Mass scales physical numbers shown (the Schwarzschild radius is printed) — because of astronomical scales the visual mapping uses a tuned scaling so you can actually see lensing in a 2D image.
-
-If audio fails to generate due to missing scipy or soundfile on your environment, install them (pip install scipy soundfile) or uncheck the audio box.
