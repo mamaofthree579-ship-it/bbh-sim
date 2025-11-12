@@ -154,7 +154,7 @@ with overview_tab:
              const noiseProc = audioCtx.createScriptProcessor(bufferSize, 1, 1);
              let lastOut = 0.0;
              noiseProc.onaudioprocess = function(e){
-               const out = e.outputBuffer.getChannelData(0);
+               ,const out = e.outputBuffer.getChannelData(0);
                for(let i=0;i<bufferSize;i++){
                  const white = Math.random() * 2 - 1;
                  lastOut = (lastOut + 0.02 * white) / 1.02;
