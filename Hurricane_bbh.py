@@ -1,337 +1,93 @@
 import streamlit as st
 import numpy as np
-import base64
-import json
-import wave
-from io import BytesIO
-import math
-from typing import Tuple
+import plotly.graph_objects as go
+import io, base64, soundfile as sf
 
-st.set_page_config(page_title="BBH Simulator — Overview + Events + Calculators", layout="wide")
+# ==============================================
+# 🔭 App Setup
+# ==============================================
+st.set_page_config(page_title="Quantum Black Hole Simulator", layout="wide")
+st.title("🌀 Quantum Black Hole Dynamics — Fractal Singularity Core")
 
-# --------------------
-# Helper: synthesize chirp (wav bytes) + waveform array for canvas
-# --------------------
-def synthesize_chirp_wav(m1: float, m2: float, spin: float, duration: float = 3.0, sr: int = 44100) -> Tuple[bytes, np.ndarray, int]:
-    """
-    Create a toy chirp waveform (PN-inspired) and return:
-      - wav bytes (16-bit PCM)
-      - normalized float waveform array (for drawing waveform in canvas)
-      - sample rate
-    """
-    N = int(duration * sr)
-    t = np.linspace(0, duration, N, endpoint=False)
-    # chirp mass (toy)
-    Mc = ((m1 * m2) ** (3/5.0)) / ((m1 + m2) ** (1/5.0))
-    f0 = 20.0 + spin * 15.0
-    f1 = 400.0 + (Mc / 30.0) * 200.0
-    # rising frequency law
-    freq = f0 + (t / duration) ** 1.6 * (f1 - f0)
-    env = (t / duration) ** 1.6
-    env *= np.exp(-3.0 * (1 - t / duration))
-    signal = env * np.sin(2 * np.pi * freq * t)
-    # slight harmonic
-    signal += 0.08 * env * np.sin(2 * np.pi * 2.0 * freq * t)
-    maxval = np.max(np.abs(signal)) if np.max(np.abs(signal)) > 0 else 1.0
-    signal_norm = signal / maxval * 0.95
-    pcm = np.int16(signal_norm * 32767)
+# ==============================================
+# 🌌 Parameters
+# ==============================================
+st.sidebar.header("Simulation Parameters")
+mass_scale = st.sidebar.slider(
+    "Mass (visual scale, M☉)", min_value=1000, max_value=100000000,
+    value=4300000, step=1000, format="%d"
+)
+spin = st.sidebar.slider("Spin Rate", 0.0, 5.0, 1.0, 0.1)
+trail_length = st.sidebar.slider("Hotspot Trail Length", 1, 13, 8, 1)
 
-    bio = BytesIO()
-    with wave.open(bio, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sr)
-        wf.writeframes(pcm.tobytes())
-    wav_bytes = bio.getvalue()
+# ==============================================
+# 🌪️ Generate Fractal Core Visualization
+# ==============================================
+theta, phi = np.mgrid[0:2*np.pi:90j, 0:np.pi:45j]
+r_base = 1 + 0.3 * np.sin(3 * theta) * np.cos(2 * phi)
+r = r_base * (1 + 0.2 * np.sin(spin))
+x = r * np.sin(phi) * np.cos(theta)
+y = r * np.sin(phi) * np.sin(theta)
+z = r * np.cos(phi)
 
-    canvas_len = 1600
-    idx = np.round(np.linspace(0, N - 1, canvas_len)).astype(int)
-    canvas_waveform = signal_norm[idx].astype(float)
+# ==============================================
+# 🌀 Plotly 3D Figure
+# ==============================================
+fig = go.Figure()
 
-    return wav_bytes, canvas_waveform, sr
+# Black hole core
+fig.add_surface(
+    x=x, y=y, z=z, colorscale="Viridis", showscale=False,
+    opacity=0.98, name="Singularity Core"
+)
 
-# --------------------
-# Layout: tabs
-# --------------------
-tabs = st.tabs(["Overview", "Events", "Calculators"])
-overview_tab, events_tab, calc_tab = tabs
+# Accretion disk
+disk_r = np.linspace(0.5, 3, 200)
+disk_theta = np.linspace(0, 2*np.pi, 200)
+R, T = np.meshgrid(disk_r, disk_theta)
+X = R * np.cos(T)
+Y = R * np.sin(T)
+Z = 0.05 * np.sin(10*T)  # wave-like distortion
+fig.add_surface(
+    x=X, y=Y, z=Z,
+    colorscale="Inferno", opacity=0.8, showscale=False, name="Accretion Disk"
+)
 
-# --------------------
-# Overview tab: visual + WebAudio synth (client-side)
-# --------------------
-with overview_tab:
-    st.markdown("## 🌌 Overview — Black Hole Anatomy (live audio + visual)")
-    col_left, col_right = st.columns([3,1])
-    with col_left:
-        st.markdown("Adjust speed, trail length, hotspot radius, and color. Press **Play Audio** in the panel to start the WebAudio synth (browser gesture required).")
-        speed = st.slider("Hotspot speed", min_value=0.0, max_value=1.2, value=0.26, step=0.01)
-        trail_len = st.slider("Trail length (points)", min_value=3, max_value=30, value=8, step=1)
-        hotspot_radius = st.slider("Hotspot orbit radius (visual)", min_value=50, max_value=180, value=110, step=2)
-        bh_color = st.color_picker("Accretion accent color (purple → amber)", "#A64DFF")
-        # pack config
-        config = {
-            "speed": float(speed),
-            "trail_len": int(trail_len),
-            "hotspot_radius": int(hotspot_radius),
-            "accent": bh_color
-        }
+fig.update_layout(
+    scene=dict(
+        xaxis_visible=False, yaxis_visible=False, zaxis_visible=False,
+        aspectmode='cube', bgcolor="black"
+    ),
+    margin=dict(l=0, r=0, b=0, t=0),
+)
 
-        # Build HTML template but avoid Python f-strings so JS braces are safe.
-        cfg_json = json.dumps(config)
-        html_template = r"""
-        <!doctype html>
-        <html>
-        <head>
-          <meta charset="utf-8" />
-          <style>
-            body{margin:0;background:transparent;color:#eae6ff;font-family:Inter,Arial,Helvetica,sans-serif}
-            #wrap{display:flex;flex-direction:column;align-items:center;padding:10px}
-            canvas{border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.6);background: radial-gradient(circle at center,#14001a 0%, #05000a 100%)}
-            .legend{margin-top:8px;display:flex;align-items:center;gap:8px}
-            .colorbar{width:18px;height:180px;border-radius:6px;background:linear-gradient(to top, rgba(255,180,80,0.95), rgba(140,80,255,0.95));box-shadow:inset 0 0 8px rgba(0,0,0,0.4)}
-            .controls{margin-top:10px;display:flex;gap:8px;align-items:center}
-            .btn{padding:6px 10px;border-radius:6px;border:none;background:#7a3bff;color:white;cursor:pointer}
-            .readout{margin-top:10px;font-weight:700;color:#ffd}
-            .muted{color:#cfc3ff;font-weight:400;font-size:0.95rem}
-          </style>
-        </head>
-        <body>
-         <div id="wrap">
-          <canvas id="bh" width="880" height="420"></canvas>
-          <div class="legend" aria-hidden="true">
-            <div class="colorbar" title="Energy"></div>
-            <div style="text-align:left">
-              <div style="font-weight:700;color:#e6d8ff">Energy scale</div>
-              <div class="muted">low ↔ high</div>
-            </div>
-          </div>
+# ==============================================
+# 🎵 Generate "Hurricane/Whirlpool" Audio
+# ==============================================
+def generate_whirlpool_sound(duration=4.0, fs=44100, intensity=1.0):
+    t = np.linspace(0, duration, int(fs*duration))
+    low_band = np.sin(2*np.pi*20*t*(1+0.3*np.sin(2*np.pi*0.5*t)))
+    mid_band = np.sin(2*np.pi*80*t*(1+0.5*np.cos(2*np.pi*0.25*t)))
+    high_band = np.random.normal(0, 0.1, len(t))
+    combined = (low_band + 0.4*mid_band + 0.3*high_band)
+    combined *= np.exp(-t/duration*1.5)
+    combined *= intensity
+    return np.float32(combined)
 
-          <div class="controls">
-            <button id="playBtn" class="btn">▶ Play Audio</button>
-            <button id="stopBtn" class="btn" style="background:#444">⏸ Stop</button>
-            <div style="margin-left:12px;color:#ffd" id="audioState">Audio: stopped</div>
-          </div>
+sound_data = generate_whirlpool_sound(intensity=spin*0.2)
+sound_bytes = io.BytesIO()
+sf.write(sound_bytes, sound_data, 44100, format='WAV')
+sound_bytes.seek(0)
 
-          <div id="numeric" class="readout">Energy (local intensity): <span id="energyVal">0.000</span></div>
-         </div>
+# ==============================================
+# 🖼️ Display 3D Visualization
+# ==============================================
+st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-         <script>
-           const cfg = __CFG__;
-           const canvas = document.getElementById('bh');
-           const ctx = canvas.getContext('2d');
-           const W = canvas.width, H = canvas.height;
-           const cx = W/2, cy = H/2;
-           const horizonR = 70;
-           let angle = 0;
-           const trail = [];
-
-           // --- WebAudio synth setup (client-side) ---
-           let audioCtx = null;
-           let masterGain = null;
-           let oscLow = null;    // base low rumble
-           let oscHarm = null;   // harmonic tone
-           let noiseNode = null; // brown-ish noise
-           let noiseGain = null;
-           let lpFilter = null;
-           let running = false;
-
-           function createSynth(){
-             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-             masterGain = audioCtx.createGain(); masterGain.gain.value = 0.0;
-             masterGain.connect(audioCtx.destination);
-
-             // low oscillator
-             oscLow = audioCtx.createOscillator(); oscLow.type = 'sine';
-             const lowGain = audioCtx.createGain(); lowGain.gain.value = 0.0;
-             oscLow.connect(lowGain); lowGain.connect(masterGain);
-
-             // harmonic
-             oscHarm = audioCtx.createOscillator(); oscHarm.type = 'sine';
-             const harmGain = audioCtx.createGain(); harmGain.gain.value = 0.0;
-             oscHarm.connect(harmGain); harmGain.connect(masterGain);
-
-             // brown noise generator
-             const bufferSize = 4096;
-             const noiseProc = audioCtx.createScriptProcessor(bufferSize, 1, 1);
-             let lastOut = 0.0;
-             noiseProc.onaudioprocess = function(e){
-               const out = e.outputBuffer.getChannelData(0);
-               for(let i=0;i<bufferSize;i++){
-                 const white = Math.random() * 2 - 1;
-                 lastOut = (lastOut + 0.02 * white) / 1.02;
-                 out[i] = lastOut * 3.5; // brown-ish
-               }
-             };
-             noiseNode = noiseProc;
-             noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.0;
-             noiseNode.connect(noiseGain); noiseGain.connect(masterGain);
-
-             // lowpass filter to shape noise timbre
-             lpFilter = audioCtx.createBiquadFilter(); lpFilter.type = 'lowpass'; lpFilter.frequency.value = 400;
-
-             // start oscillators
-             oscLow.start();
-             oscHarm.start();
-           }
-
-           function startAudio(){
-             if(!audioCtx) createSynth();
-             if(audioCtx.state === 'suspended') audioCtx.resume();
-             running = true;
-             document.getElementById('audioState').textContent = 'Audio: playing';
-           }
-
-           function stopAudio(){
-             running = false;
-             if(masterGain && audioCtx) {
-               masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-               masterGain.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime + 0.08);
-             }
-             document.getElementById('audioState').textContent = 'Audio: stopped';
-           }
-
-           document.getElementById('playBtn').addEventListener('click', ()=>{
-             startAudio();
-           });
-           document.getElementById('stopBtn').addEventListener('click', ()=>{
-             stopAudio();
-           });
-
-           // mapping: energy -> synth params
-           function applyEnergyToSynth(energy){
-             if(!audioCtx || !running) return;
-             const e = Math.max(0, Math.min(1, energy));
-             masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-             masterGain.gain.linearRampToValueAtTime(0.02 + 0.45 * e, audioCtx.currentTime + 0.04);
-
-             if(oscLow) {
-               const lowFreq = 20 + 100 * Math.pow(e, 0.6);
-               oscLow.frequency.exponentialRampToValueAtTime(lowFreq, audioCtx.currentTime + 0.02);
-             }
-             if(oscHarm && oscLow) {
-               const harmFreq = (20 + 100 * Math.pow(e, 0.6)) * (1.8 + 1.7 * e);
-               oscHarm.frequency.exponentialRampToValueAtTime(harmFreq, audioCtx.currentTime + 0.02);
-             }
-             if(noiseGain){
-               const ng = 0.002 + 0.08 * Math.pow(e, 1.4);
-               noiseGain.gain.cancelScheduledValues(audioCtx.currentTime);
-               noiseGain.gain.linearRampToValueAtTime(ng, audioCtx.currentTime + 0.02);
-             }
-             if(lpFilter && audioCtx){
-               const cutoff = 200 + 3000 * Math.pow(e, 1.8);
-               lpFilter.frequency.exponentialRampToValueAtTime(cutoff, audioCtx.currentTime + 0.03);
-               try {
-                 noiseGain.disconnect();
-                 noiseGain.connect(lpFilter);
-                 lpFilter.connect(masterGain);
-               } catch(err) {}
-             }
-           }
-
-           // --- Canvas visual + energy calculation ---
-           function draw(){
-             ctx.clearRect(0,0,W,H);
-
-             // background radial
-             const g = ctx.createRadialGradient(cx,cy,10,cx,cy,420);
-             g.addColorStop(0,'#070012'); g.addColorStop(1,'#010006');
-             ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-
-             // accretion rings
-             for(let i=0;i<36;i++){
-               ctx.beginPath();
-               ctx.arc(cx,cy,horizonR+6 + i*3,0,Math.PI*2);
-               ctx.strokeStyle = 'rgba(255,180,80,' + (0.003 + i*0.0006) + ')';
-               ctx.lineWidth = 1;
-               ctx.stroke();
-             }
-
-             // horizon outline and slightly purple fill
-             ctx.beginPath(); ctx.arc(cx,cy,horizonR,0,Math.PI*2);
-             ctx.strokeStyle = 'rgba(140,80,255,0.35)'; ctx.lineWidth=2; ctx.stroke();
-             ctx.beginPath(); ctx.arc(cx,cy,horizonR-1,0,Math.PI*2); ctx.fillStyle='rgba(24,6,45,0.96)'; ctx.fill();
-
-             // hotspot + trail
-             const orbitR = cfg.hotspot_radius;
-             const hx = cx + Math.cos(angle) * orbitR;
-             const hy = cy + Math.sin(angle) * orbitR * 0.32;
-             trail.push({'x':hx,'y':hy});
-             while(trail.length > cfg.trail_len) trail.shift();
-
-             for(let k=0;k<trail.length;k++){
-               const p = trail[k]; const a = (k+1)/trail.length;
-               ctx.beginPath();
-               ctx.arc(p.x,p.y, Math.max(1.8, 4 - (trail.length - k)*0.4), 0, Math.PI*2);
-               ctx.fillStyle = 'rgba(255,220,180,' + (0.12 * a) + ')'; ctx.fill();
-             }
-             ctx.beginPath(); ctx.arc(hx,hy,6,0,Math.PI*2); ctx.fillStyle='#ffcc99'; ctx.fill();
-
-             // jet hint
-             ctx.fillStyle='rgba(120,200,255,0.06)'; ctx.fillRect(cx-6, 0, 12, cy-120);
-
-             // compute energy scalar
-             const energy = Math.max(0, 0.20 + 0.80 * Math.abs(Math.sin(angle*1.4)) * ( (orbitR - 50)/160 ));
-             document.getElementById('energyVal').textContent = energy.toFixed(3);
-
-             // apply to synth (if running)
-             try { applyEnergyToSynth(energy); } catch(e){}
-
-             angle += cfg.speed;
-             requestAnimationFrame(draw);
-           }
-           // replace the placeholder with the actual JSON config
-           const configStr = '__CFG__';
-           const parsed = JSON.parse(configStr);
-           window.cfg = parsed;
-           // copy cfg into local cfg variable expected above
-           const cfg = parsed;
-           draw();
-         </script>
-        </body>
-        </html>
-        """
-        # insert JSON safely by replacing marker
-        html = html_template.replace("__CFG__", cfg_json)
-
-        st.components.v1.html(html, height=720, scrolling=False)
-
-    with col_right:
-        st.markdown("### Controls quick summary")
-        st.markdown(f"- Accent color: **{bh_color}**")
-        st.markdown("- Play audio inside the visual panel (Play/Stop).")
-        st.markdown("- Energy readout shown below visual (live).")
-        st.markdown("")
-
-# --------------------
-# Events tab (chirp generation + orbit canvas)
-# --------------------
-with events_tab:
-    st.markdown("## 💫 Events — chirp waveform & orbit demo")
-    ev_col1, ev_col2 = st.columns([2,1])
-
-    with ev_col1:
-        # Event selector & params
-        event_options = {
-            "GW150914": {"m1":36, "m2":29, "spin":0.30},
-            "GW170104": {"m1":31, "m2":19, "spin":0.45},
-            "GW190521": {"m1":85, "m2":66, "spin":0.70},
-            "GW190814": {"m1":23, "m2":2.6, "spin":0.05},
-            "Custom": {}
-        }
-        choice = st.selectbox("Select event", list(event_options.keys()), index=0)
-        if choice != "Custom":
-            params = event_options[choice]
-            m1 = st.number_input("M₁ (M☉)", value=params["m1"], step=0.1)
-            m2 = st.number_input("M₂ (M☉)", value=params["m2"], step=0.1)
-            spin = st.slider("Spin a*", min_value=0.0, max_value=1.0, value=float(params["spin"]), step=0.01)
-        else:
-            m1 = st.number_input("M₁ (M☉)", value=30.0, step=0.1)
-            m2 = st.number_input("M₂ (M☉)", value=30.0, step=0.1)
-            spin = st.slider("Spin a*", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
-
-        run_sim = st.button("Generate waveform & prepare chirp")
-
-        color = "#a64dff"
+# ==============================================
+# 🌌 Dynamic Orbit Overlay (subtle holographic effect)
+# ==============================================
+color = "#a64dff"
 
 orbit_html_template = """
 <canvas id="orbit" width="880" height="320"
@@ -365,48 +121,13 @@ orbit_html_template = """
 </script>
 """.format(color=color, spin=spin)
 
+# Display the overlay animation
 st.components.v1.html(orbit_html_template, height=360, scrolling=False)
 
-st.audio(wav_bytes, format='audio/wav')
-       else:
-            waveform_placeholder.info("Click 'Generate waveform & prepare chirp' to create waveform & playable audio.")
-
-    with chirp_col2:
-        if run_sim:
-            samples = canvas_waveform.tolist()
-            payload = {"params": {"m1": m1, "m2": m2, "spin": spin}, "samples": samples, "sample_rate": 44100}
-            json_bytes = json.dumps(payload, indent=2).encode("utf-8")
-            st.download_button("Export waveform JSON", json_bytes, file_name=f"{choice}_waveform.json", mime="application/json")
-        else:
-            st.write("Export available after generation.")
-
-# --------------------
-# Calculators tab
-# --------------------
-with calc_tab:
-    st.markdown("## 🧮 Calculators — Time dilation & DM effects")
-    st.markdown("Compute the time-dilation factor near Sagittarius A* and a toy DM-modified decay rate.")
-    colA, colB = st.columns([1,2])
-    with colA:
-        r = st.number_input("Radius r (m)", value=7.8e17, format="%.6e")
-        rho_dm = st.number_input("Dark matter density ρ_DM (kg/m³)", value=1e-21, format="%.6e")
-        run_calc = st.button("Run calculator")
-    with colB:
-        out = st.empty()
-        if run_calc:
-            G = 6.67430e-11
-            msun = 1.98847e30
-            M_sgr = 4.3e6 * msun
-            c = 299792458.0
-            rs = 2 * G * M_sgr / (c ** 2)
-            val = 1.0 - (G * M_sgr) / (r * c * c)
-            gamma = math.sqrt(max(0.0, val))
-            alpha = 1e21
-            Gamma_dark = 1.0 * (1.0 + alpha * rho_dm)
-            out.markdown(f"- Schwarzschild radius rₛ ≈ **{rs:.3e} m**  \n- Time dilation factor γ(r) ≈ **{gamma:.9f}**  \n- Toy DM-modified rate Γ_dark ≈ **{Gamma_dark:.3e}**")
-        else:
-            out.info("Enter radius and DM density then click Run calculator.")
-
-# Footer
-st.markdown("---")
-st.markdown("**Notes:** the Overview audio is synthesized client-side (WebAudio). The Events chirp is synthesized server-side and offered as a WAV. Models are pedagogical (toy PN-like templates).")
+# ==============================================
+# 🔊 Sound Toggle
+# ==============================================
+if st.checkbox("Enable Sound", value=True):
+    st.audio(sound_bytes, format="audio/wav")
+else:
+    st.info("Sound disabled.")
