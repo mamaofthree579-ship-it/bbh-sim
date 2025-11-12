@@ -160,14 +160,12 @@ if use_autorefresh:
 elif st.session_state.run:
     st.info("Auto-run requested")
     
-# --- 3D Visualizer (Bright Universe Edition, safe + self-contained) ---
-st.subheader("3D Visualizer — Bright Universe Edition (mobile optimized)")
+# --- 3D Visualizer (antialias fix, mobile safe) ---
+st.subheader("3D Visualizer — Fixed Renderer (antialias defined)")
 
-# --- Ensure snapshot data exists ---
 try:
     _ = snapshot
 except NameError:
-    # create example snapshot data if not defined
     import numpy as np, json
     N = 20
     snapshot = {
@@ -181,7 +179,6 @@ except NameError:
     }
 snapshot_json = json.dumps(snapshot)
 
-# --- visualization HTML ---
 html = f"""<!doctype html>
 <html>
 <head>
@@ -190,7 +187,7 @@ html = f"""<!doctype html>
 <style>
   body {{
     margin: 0;
-    background: radial-gradient(circle at center, #020c1b 0%, #000 90%);
+    background: radial-gradient(circle at center, #000014 0%, #000 100%);
     overflow: hidden;
     color: #fff;
     font-family: sans-serif;
@@ -201,9 +198,8 @@ html = f"""<!doctype html>
     top: 10px;
     color: #0ff;
     font-weight: bold;
-    font-family: monospace;
+    text-shadow: 0 0 6px #0ff;
     z-index: 10;
-    text-shadow: 0 0 5px #0ff;
   }}
 </style>
 </head>
@@ -216,101 +212,102 @@ html = f"""<!doctype html>
 <script>
 const snapshot = {snapshot_json};
 
-// --- scene setup ---
+// --- Scene Setup ---
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 2000);
-const isMobile = window.innerWidth < 700;
-camera.position.z = isMobile ? 55 : 90;
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+camera.position.z = window.innerWidth < 700 ? 60 : 100;
 
-const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+// ✅ Correctly define antialias option here:
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// --- lighting ---
-const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+// --- Lighting ---
+const ambient = new THREE.AmbientLight(0xffffff, 1.0);
 scene.add(ambient);
-const point = new THREE.PointLight(0x88ffff, 1.0, 800);
-point.position.set(0, 0, 200);
-scene.add(point);
+const directional = new THREE.DirectionalLight(0x99ccff, 0.7);
+directional.position.set(50, 50, 100);
+scene.add(directional);
 
-// --- dark matter grid plane ---
+// --- Dark Matter Grid Plane ---
 function drawDMGrid(dm) {{
   const size = dm.length;
   const canvas = document.createElement('canvas');
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(size, size);
-  for (let y=0; y<size; y++) {{
-    for (let x=0; x<size; x++) {{
+  for (let y = 0; y < size; y++) {{
+    for (let x = 0; x < size; x++) {{
       const v = Math.max(0, Math.min(1, dm[y][x]));
       const idx = (y*size + x)*4;
-      img.data[idx] = Math.floor(50 + 205 * v);
-      img.data[idx+1] = Math.floor(100 + 150 * v);
-      img.data[idx+2] = Math.floor(255 * (1 - v));
-      img.data[idx+3] = 180;
+      img.data[idx] = Math.floor(20 + 220 * v);
+      img.data[idx+1] = Math.floor(40 + 160 * v);
+      img.data[idx+2] = Math.floor(100 + 120 * (1 - v));
+      img.data[idx+3] = 200;
     }}
   }}
   ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.MeshBasicMaterial({map: tex, transparent: true, opacity: 0.8});
-  const plane = new THREE.Mesh(new THREE.PlaneGeometry(180,180), mat);
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.7 })
+  );
   plane.position.z = -25;
   scene.add(plane);
 }}
 
-// --- node creation ---
+// --- Nodes ---
 const nodes = [];
 (function createNodes(){{
-  for (let i=0; i<snapshot.N; i++) {{
+  for (let i = 0; i < snapshot.N; i++) {{
     const amp = snapshot.node_amp[i];
     const phase = snapshot.node_phase[i];
     const hue = (phase + Math.PI) / (2*Math.PI);
     const color = new THREE.Color().setHSL(hue, 1.0, 0.55);
-    const geometry = new THREE.SphereGeometry(1.6 + Math.abs(amp)*2.4, 24, 24);
-    const material = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.9, metalness: 0.3, roughness: 0.2 });
+    const geometry = new THREE.SphereGeometry(1.5 + Math.abs(amp)*2.2, 24, 24);
+    const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.7 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.x = snapshot.pos[i][0];
     mesh.position.y = snapshot.pos[i][1];
     scene.add(mesh);
-    const subMeshes = [];
-    for (let j=0; j<snapshot.sub_inst[i].length; j++) {{
+    const subs = [];
+    for (let j = 0; j < snapshot.sub_inst[i].length; j++) {{
       const sAmp = snapshot.sub_inst[i][j];
-      const sGeom = new THREE.SphereGeometry(0.5 + Math.abs(sAmp)*0.3, 12, 12);
-      const sMat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
-      const sMesh = new THREE.Mesh(sGeom, sMat);
-      sMesh.position.x = mesh.position.x + (Math.random()-0.5)*4;
-      sMesh.position.y = mesh.position.y + (Math.random()-0.5)*4;
-      scene.add(sMesh);
-      subMeshes.push(sMesh);
+      const sg = new THREE.SphereGeometry(0.4 + Math.abs(sAmp)*0.3, 12, 12);
+      const sm = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.4 });
+      const smesh = new THREE.Mesh(sg, sm);
+      smesh.position.x = mesh.position.x + (Math.random() - 0.5)*4;
+      smesh.position.y = mesh.position.y + (Math.random() - 0.5)*4;
+      scene.add(smesh);
+      subs.push(smesh);
     }}
-    nodes.push({{ mesh: mesh, subs: subMeshes, amp: amp }});
+    nodes.push({ mesh, subs });
   }}
 }})();
 
-// --- add DM grid ---
 drawDMGrid(snapshot.dm_grid);
 
-// --- controls ---
+// --- Controls ---
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 controls.enablePan = true;
-controls.enableZoom = true;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.6;
+controls.autoRotateSpeed = 0.7;
 
-// --- animation loop ---
+// --- Animation ---
 let t = 0;
 function animate() {{
   requestAnimationFrame(animate);
   t += 0.02;
-  for (let i=0; i<nodes.length; i++) {{
+  for (let i = 0; i < nodes.length; i++) {{
     const n = nodes[i];
-    const pulse = 1.0 + 0.25*Math.sin(t*2.0 + i);
-    n.mesh.scale.set(pulse, pulse, pulse);
-    n.mesh.material.emissiveIntensity = 0.6 + 0.4*Math.sin(t*3.0 + i);
-    for (let j=0; j<n.subs.length; j++) {{
+    const glow = 1.0 + 0.2 * Math.sin(t * 2.0 + i);
+    n.mesh.scale.set(glow, glow, glow);
+    n.mesh.material.emissiveIntensity = 0.5 + 0.5 * Math.sin(t * 3.0 + i);
+    for (let j = 0; j < n.subs.length; j++) {{
       const s = n.subs[j];
-      const flick = 0.9 + 0.5*Math.sin(t*5.0 + i + j);
+      const flick = 0.9 + 0.4 * Math.sin(t * 4.0 + i + j);
       s.scale.set(flick, flick, flick);
     }}
   }}
@@ -319,7 +316,7 @@ function animate() {{
 }}
 animate();
 
-// --- responsive resize ---
+// --- Responsive Resize ---
 window.addEventListener('resize', () => {{
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -330,7 +327,6 @@ window.addEventListener('resize', () => {{
 </html>
 """
 components.html(html, height=800, scrolling=False)
-
 # ---------------------------
 # Metrics + Charts
 # ---------------------------
