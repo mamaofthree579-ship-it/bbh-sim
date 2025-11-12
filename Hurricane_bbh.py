@@ -342,7 +342,7 @@ with events_tab:
           const cA = "{color}", cB = "#33ccff";
           function draw(){
             ctx.clearRect(0,0,canvas.width,canvas.height),
-            = subtle background circles
+            = (subtle background circles)
             for(let i=0;i<4;i++){
               ctx.beginPath(); ctx.arc(cx,cy,80+i*40,0,Math.PI*2);
               ctx.strokeStyle = 'rgba(160,0,255,0.03)'; ctx.stroke();
