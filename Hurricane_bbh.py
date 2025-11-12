@@ -332,75 +332,41 @@ with events_tab:
         run_sim = st.button("Generate waveform & prepare chirp")
 
         color = "#a64dff"
-        orbit_html = f"""
-        <canvas id="orbit" width="880" height="320" style="border-radius:8px;background:radial-gradient(circle at center,#120014,#010006);display:block;margin:10px auto"></canvas>
-        <script>
-          const canvas = document.getElementById('orbit'), ctx = canvas.getContext('2d');
-          const cx = canvas.width/2, cy = canvas.height/2;
-          let angle = 0;
-          const rA = 80, rB = 160;
-          const cA = "{color}", cB = "#33ccff";
-          function draw(){
-            ctx.clearRect(0,0,canvas.width,canvas.height),
-            = subtle background circles
-            for(let i=0;i<4;i++){
-              ctx.beginPath(); ctx.arc(cx,cy,80+i*40,0,Math.PI*2);
-              ctx.strokeStyle = 'rgba(160,0,255,0.03)'; ctx.stroke();
-            }
-            const xA = cx + Math.cos(angle)*rA, yA = cy + Math.sin(angle)*rA;
-            const xB = cx - Math.cos(angle)*rB, yB = cy - Math.sin(angle)*rB;
-            ctx.beginPath(); ctx.arc(xA,yA,12,0,Math.PI*2); ctx.fillStyle = cA; ctx.fill();
-            ctx.beginPath(); ctx.arc(xB,yB,16,0,Math.PI*2); ctx.fillStyle = cB; ctx.fill();
-            angle += 0.02 + ({spin}*0.01);
-            requestAnimationFrame(draw);
-          }
-          draw();
-        </script>
-        """
-        st.components.v1.html(orbit_html, height=360, scrolling=False)
 
-    with ev_col2:
-        st.markdown("**Event info**")
-        chirp_mass = ((m1 * m2) ** (3/5.0)) / ((m1 + m2) ** (1/5.0))
-        st.write(f"Chirp mass ℳ ≈ **{chirp_mass:.2f} M☉**")
-        st.write("Frequency range (approx): **20–400 Hz**")
-        est_h = 4e-21 * (chirp_mass / 30.0) ** (5/3.0)
-        st.write(f"Estimated strain (order): **{est_h:.2e}**")
-        st.write(f"Spin a*: **{spin:.2f}**")
-        st.write("")
+orbit_html_template = """
+<canvas id="orbit" width="880" height="320"
+        style="border-radius:8px;
+               background:radial-gradient(circle at center,#120014,#010006);
+               display:block;margin:10px auto"></canvas>
+<script>
+  const canvas = document.getElementById('orbit'), ctx = canvas.getContext('2d');
+  const cx = canvas.width/2, cy = canvas.height/2;
+  let angle = 0;
+  const rA = 80, rB = 160;
+  const cA = "{color}";
+  const cB = "#33ccff";
+  function draw(){{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // subtle background circles
+    for(let i=0;i<4;i++){{
+      ctx.beginPath();
+      ctx.arc(cx,cy,80+i*40,0,Math.PI*2);
+      ctx.strokeStyle = 'rgba(160,0,255,0.03)';
+      ctx.stroke();
+    }}
+    const xA = cx + Math.cos(angle)*rA, yA = cy + Math.sin(angle)*rA;
+    const xB = cx - Math.cos(angle)*rB, yB = cy - Math.sin(angle)*rB;
+    ctx.beginPath(); ctx.arc(xA,yA,12,0,Math.PI*2); ctx.fillStyle = cA; ctx.fill();
+    ctx.beginPath(); ctx.arc(xB,yB,16,0,Math.PI*2); ctx.fillStyle = cB; ctx.fill();
+    angle += 0.02 + ({spin}*0.01);
+    requestAnimationFrame(draw);
+  }}
+  draw();
+</script>
+""".format(color=color, spin=spin)
 
-    st.markdown("---")
-    chirp_col1, chirp_col2 = st.columns([3,1])
-    with chirp_col1:
-        waveform_placeholder = st.empty()
-        if run_sim:
-            wav_bytes, canvas_waveform, sr = synthesize_chirp_wav(m1, m2, spin, duration=3.0, sr=44100)
-            wf_json = json.dumps([float(x) for x in canvas_waveform.tolist()])
-            html_chirp = f"""
-            <canvas id="chirp" width="880" height="180" style="display:block;margin:6px auto;border-radius:8px;background:linear-gradient(#09000a,#040006)"></canvas>
-            <script>
-              const data = {wf_json};
-              const canvas = document.getElementById('chirp'), ctx = canvas.getContext('2d');
-              const W = canvas.width, H = canvas.height;
-              function draw(idx=-1){
-                ctx.clearRect(0,0,W,H);
-                ctx.beginPath();
-                for(let i=0;i<data.length;i++){
-                  const x = i/data.length * W;
-                  const y = H/2 - data[i]* (H/2) * 0.9;
-                  if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-                }
-                ctx.strokeStyle = "{color}"; ctx.lineWidth=2; ctx.stroke();
-                if(idx>=0){
-                  const px = idx/data.length * W;
-                  ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.strokeStyle='rgba(255,80,80,0.9)'; ctx.lineWidth=1.4; ctx.stroke();
-                }
-              }
-              draw(-1);
-              window.drawChirp = draw;
-            </script>
-            """
-            waveform_placeholder.components.html(html_chirp, height=200, scrolling=False)
+st.components.v1.html(orbit_html_template, height=360, scrolling=False)
+
             st.audio(wav_bytes, format='audio/wav')
         else:
             waveform_placeholder.info("Click 'Generate waveform & prepare chirp' to create waveform & playable audio.")
