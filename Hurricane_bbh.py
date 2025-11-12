@@ -341,7 +341,7 @@ with events_tab:
           const rA = 80, rB = 160;
           const cA = "{color}", cB = "#33ccff";
           function draw(){
-            ctx.clearRect(0,0,canvas.width,canvas.height);,
+            ctx.clearRect(0,0,canvas.width,canvas.height),
             // subtle background circles
             for(let i=0;i<4;i++){
               ctx.beginPath(); ctx.arc(cx,cy,80+i*40,0,Math.PI*2);
