@@ -1,21 +1,34 @@
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
-import io, math, wave
+import math, time, io, wave
 
-st.set_page_config(page_title="Black Hole Animation", layout="wide")
+st.set_page_config(page_title="🌀 Quantum Black Hole Simulator", layout="wide")
 
-st.title("🌀 Black Hole Animated Preview")
+st.title("🌀 Quantum Black Hole — Real-Time Singularity Simulation")
+
+st.markdown(
+"""
+### Description
+This live visualization simulates a **quantum-fractal singularity** with an orbiting hotspot
+and dynamic accretion disk.  
+It represents the flow of gravity and energy near the event horizon — showing your theory’s
+concept of a crystalline, quantum-graviton core.
+"""
+)
 
 # --- Controls
-frames = st.slider("Frames", 12, 60, 30)
-duration_s = st.slider("Animation Duration (s)", 1, 6, 2)
-speed = st.slider("Rotation Speed", 0.05, 0.3, 0.1)
-rings = st.slider("Accretion Disk Rings", 6, 50, 24)
-trail = st.slider("Hotspot Trail Length", 0, 20, 6)
-size = st.slider("Canvas Size (px)", 400, 1000, 700, step=50)
+st.sidebar.header("Simulation Controls")
+speed = st.sidebar.slider("Rotation Speed", 0.02, 0.25, 0.08)
+rings = st.sidebar.slider("Accretion Disk Rings", 6, 50, 24)
+trail = st.sidebar.slider("Hotspot Trail Length", 2, 10, 5)
+blur = st.sidebar.slider("Visual Blur", 0.0, 2.0, 0.6)
+size = st.sidebar.slider("Canvas Size (px)", 400, 1000, 700, step=50)
+show_sound = st.sidebar.checkbox("Enable Ambient Sound")
 
-# --- Draw frame
+run_sim = st.button("▶ Start Live Simulation")
+
+# --- Core rendering
 def draw_frame(angle, trail_points):
     w, h = size, size
     cx, cy = w//2, h//2
@@ -24,72 +37,54 @@ def draw_frame(angle, trail_points):
     img = Image.new("RGBA", (w, h), (0,0,0,255))
     d = ImageDraw.Draw(img, "RGBA")
 
-    # subtle background glow
-    for i in range(8):
+    # soft purple plasma glow
+    for i in range(6):
         alpha = max(0, 100 - i*12)
-        d.ellipse((cx-disk_r*(1+i/10), cy-disk_r*(1+i/10),
-                   cx+disk_r*(1+i/10), cy+disk_r*(1+i/10)),
-                  outline=(40,0,80,alpha))
+        d.ellipse(
+            (cx-disk_r*(1+i/12), cy-disk_r*(1+i/12), cx+disk_r*(1+i/12), cy+disk_r*(1+i/12)),
+            outline=(90, 0, 160, alpha)
+        )
 
     # accretion disk rings
     for i in range(rings):
         r = horizon_r + i*((disk_r - horizon_r)/rings)
-        alpha = int(40 + 160*(1 - i/rings))
-        color = (255, 160 + i%40, 40, alpha)
+        alpha = int(70 + 150*(1 - i/rings))
+        color = (255, 160 + i%40, 60, alpha)
         d.ellipse((cx-r, cy-r, cx+r, cy+r), outline=color)
 
-    # event horizon
-    d.ellipse((cx-horizon_r, cy-horizon_r, cx+horizon_r, cy+horizon_r),
-              fill=(10,0,30,255))
+    # event horizon (black-purple)
+    d.ellipse(
+        (cx-horizon_r, cy-horizon_r, cx+horizon_r, cy+horizon_r),
+        fill=(30, 0, 40, 255)
+    )
 
     # hotspot + trail
-    orbit_r = horizon_r*2.5
+    orbit_r = horizon_r * 2.8
     hx = cx + math.cos(angle)*orbit_r
     hy = cy + math.sin(angle)*orbit_r*0.4
-    trail_points.insert(0,(hx,hy))
-    if len(trail_points)>trail:
+    trail_points.insert(0, (hx, hy))
+    while len(trail_points) > trail:
         trail_points.pop()
-    for i,(tx,ty) in enumerate(trail_points):
-        a = 255 - int((i/trail)*230)
-        r = 6 - i*0.5
-        d.ellipse((tx-r,ty-r,tx+r,ty+r), fill=(255,200,100,a))
 
-    img = img.filter(ImageFilter.GaussianBlur(0.8))
-    return img
+    for i, (tx, ty) in enumerate(trail_points):
+        fade = (1 - i/trail)
+        a = int(200 * fade)
+        r = 6 * fade + 1
+        d.ellipse((tx-r, ty-r, tx+r, ty+r), fill=(255, 180, 80, a))
 
-# --- Make GIF
-def make_gif():
-    frames_list=[]
-    trail_points=[]
-    for i in range(frames):
-        ang = i*2*math.pi/frames*speed*10
-        img = draw_frame(ang, trail_points)
-        frames_list.append(img.convert("P",palette=Image.ADAPTIVE))
-    bio=io.BytesIO()
-    frames_list[0].save(bio, format="GIF", save_all=True,
-                        append_images=frames_list[1:],
-                        duration=int(duration_s*1000/frames),
-                        loop=0)
-    bio.seek(0)
-    return bio
+    return img.filter(ImageFilter.GaussianBlur(blur))
 
-if st.button("🎞 Generate GIF"):
-    gif_bytes=make_gif()
-    st.image(gif_bytes, caption="Rotating Hotspot", use_column_width=True)
-else:
-    st.info("Adjust parameters and click **Generate GIF** to preview motion.")
-
-# --- Optional sound (simple vortex + storm)
+# --- Sound synthesis (optional)
 def synth_audio(duration=3.0, sr=44100):
-    t=np.linspace(0,duration,int(sr*duration),endpoint=False)
-    base=20+10*np.sin(2*np.pi*0.1*t)
-    vortex=np.sin(2*np.pi*base*t)
-    noise=np.random.normal(0,0.3,len(t))
-    out=0.6*vortex+0.8*np.convolve(noise,[0.1,0.2,0.3,0.2,0.1],"same")
-    out/=np.max(np.abs(out))
-    pcm=np.int16(out*32767)
-    bio=io.BytesIO()
-    with wave.open(bio,"wb") as wf:
+    t = np.linspace(0, duration, int(sr*duration), endpoint=False)
+    base = 25 + 10*np.sin(2*np.pi*0.1*t)
+    vortex = np.sin(2*np.pi*base*t)
+    noise = np.random.normal(0, 0.4, len(t))
+    out = 0.6*vortex + 0.8*np.convolve(noise, [0.1,0.2,0.3,0.2,0.1], "same")
+    out /= np.max(np.abs(out))
+    pcm = np.int16(out * 32767)
+    bio = io.BytesIO()
+    with wave.open(bio, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(sr)
@@ -97,5 +92,21 @@ def synth_audio(duration=3.0, sr=44100):
     bio.seek(0)
     return bio
 
-if st.button("🎧 Generate Ambient Audio"):
-    st.audio(synth_audio(), format="audio/wav")
+# --- Display and run
+if run_sim:
+    st.write("Running real-time simulation... Stop it anytime by reloading.")
+    frame_spot = st.empty()
+    trail_points = []
+    start = time.time()
+
+    if show_sound:
+        st.audio(synth_audio(), format="audio/wav")
+
+    # Real-time loop
+    while True:
+        angle = (time.time() - start) * speed * 20
+        img = draw_frame(angle, trail_points)
+        frame_spot.image(img, use_column_width=True)
+        time.sleep(0.05)
+else:
+    st.info("Adjust settings and press **▶ Start Live Simulation** to begin.")
