@@ -158,133 +158,156 @@ if use_autorefresh:
     if st.session_state.run:
         step_sim(st.session_state.steps_per_update)
 elif st.session_state.run:
-    st.info("Auto-run requested but 'streamlit-autorefresh' not installed.")
-
-# ---------------------------
-# Visualizer HTML
-# ---------------------------
-snapshot = create_snapshot()
-snapshot_json = json.dumps(snapshot)
-
-html = f"""
-<!doctype html>
+    st.info("Auto-run requested but 'streamlit-autorefresh' not # --- 3D Visualizer (mobile-friendly, bright universe edition) ---
+st.subheader("3D Visualizer — Bright Universe Edition (mobile optimized)")
+html = f"""<!doctype html>
 <html>
 <head>
-<meta charset='utf-8'>
+<meta charset="utf-8">
 <title>Visualizer</title>
 <style>
-body {{ margin:0; background:linear-gradient(#00111a,#000); color:#fff; overflow:hidden; }}
-#overlay {{ position:absolute; left:10px; top:10px; color:#fff; font-family:sans-serif; z-index:10; }}
+  body {{
+    margin: 0;
+    background: radial-gradient(circle at center, #020c1b 0%, #000 90%);
+    overflow: hidden;
+    color: #fff;
+    font-family: sans-serif;
+  }}
+  #overlay {{
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    color: #0ff;
+    font-weight: bold;
+    font-family: monospace;
+    z-index: 10;
+    text-shadow: 0 0 5px #0ff;
+  }}
 </style>
 </head>
 <body>
-<div id='overlay'>t = {snapshot['time']:.3f} s</div>
-<script src='https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js'></script>
+<div id="overlay">t = {snapshot['time']:.3f} s</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.min.js"></script>
+
 <script>
 const snapshot = {snapshot_json};
+
+// --- scene setup ---
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.z = 90;
-const renderer = new THREE.WebGLRenderer({{ antialias: true }});
-renderer.setSize(window.innerWidth*0.95, window.innerHeight*0.85);
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 2000);
+const isMobile = window.innerWidth < 700;
+camera.position.z = isMobile ? 55 : 90;
+
+const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+
+// --- lighting ---
+const ambient = new THREE.AmbientLight(0xffffff, 1.2);
 scene.add(ambient);
-const dir = new THREE.DirectionalLight(0xffffff, 0.5);
-dir.position.set(50,50,100);
-scene.add(dir);
+const point = new THREE.PointLight(0x88ffff, 1.0, 800);
+point.position.set(0, 0, 200);
+scene.add(point);
 
+// --- dark matter grid plane ---
 function drawDMGrid(dm) {{
-    const size = dm.length;
-    const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const img = ctx.createImageData(size, size);
-    for (let y=0;y<size;y++) {{
-        for (let x=0;x<size;x++) {{
-            const v=Math.max(0,Math.min(1,dm[y][x]));
-            const idx=(y*size+x)*4;
-            img.data[idx]=Math.floor(30+220*v);
-            img.data[idx+1]=Math.floor(10+80*v);
-            img.data[idx+2]=Math.floor(60+120*(1-v));
-            img.data[idx+3]=190;
-        }}
+  const size = dm.length;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let y=0; y<size; y++) {{
+    for (let x=0; x<size; x++) {{
+      const v = Math.max(0, Math.min(1, dm[y][x]));
+      const idx = (y*size + x)*4;
+      img.data[idx] = Math.floor(50 + 205 * v);
+      img.data[idx+1] = Math.floor(100 + 150 * v);
+      img.data[idx+2] = Math.floor(255 * (1 - v));
+      img.data[idx+3] = 180;
     }}
-    ctx.putImageData(img,0,0);
-    const tex=new THREE.CanvasTexture(canvas);
-    const plane=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshBasicMaterial({{map:tex,transparent:true,opacity:0.6}}));
-    plane.position.set(0,0,-10);
-    scene.add(plane);
+  }}
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.MeshBasicMaterial({map: tex, transparent: true, opacity: 0.8});
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(180,180), mat);
+  plane.position.z = -25;
+  scene.add(plane);
 }}
-drawDMGrid(snapshot.dm_grid);
 
-const nodes=[];
+// --- node creation ---
+const nodes = [];
 (function createNodes(){{
-    const N=snapshot.N;
-    for(let i=0;i<N;i++) {{
-        const amp=snapshot.node_amp[i];
-        const phase=snapshot.node_phase[i];
-        const hue=(phase+Math.PI)/(2*Math.PI);
-        const color=new THREE.Color().setHSL(hue,0.9,0.5);
-        const geometry=new THREE.SphereGeometry(1.5+Math.abs(amp)*2.0,20,20);
-        const material=new THREE.MeshStandardMaterial({{color:color,emissive:color,emissiveIntensity:0.25}});
-        const mesh=new THREE.Mesh(geometry,material);
-        mesh.position.x=snapshot.pos[i][0];
-        mesh.position.y=snapshot.pos[i][1];
-        scene.add(mesh);
-        const subs=[];
-        for(let j=0;j<snapshot.sub_inst[i].length;j++) {{
-            const sAmp=snapshot.sub_inst[i][j];
-            const sg=new THREE.SphereGeometry(0.45+Math.abs(sAmp)*0.3,8,8);
-            const smat=new THREE.MeshStandardMaterial({{color:color,emissive:color,emissiveIntensity:0.1}});
-            const sMesh=new THREE.Mesh(sg,smat);
-            sMesh.position.x=mesh.position.x+(Math.random()-0.5)*3;
-            sMesh.position.y=mesh.position.y+(Math.random()-0.5)*3;
-            scene.add(sMesh);
-            subs.push(sMesh);
-        }}
-        nodes.push({{mesh:mesh,subs:subs,amp:amp,phase:phase}});
+  for (let i=0; i<snapshot.N; i++) {{
+    const amp = snapshot.node_amp[i];
+    const phase = snapshot.node_phase[i];
+    const hue = (phase + Math.PI) / (2*Math.PI);
+    const color = new THREE.Color().setHSL(hue, 1.0, 0.55);
+    const geometry = new THREE.SphereGeometry(1.6 + Math.abs(amp)*2.4, 24, 24);
+    const material = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.9, metalness: 0.3, roughness: 0.2 });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = snapshot.pos[i][0];
+    mesh.position.y = snapshot.pos[i][1];
+    scene.add(mesh);
+    const subMeshes = [];
+    for (let j=0; j<snapshot.sub_inst[i].length; j++) {{
+      const sAmp = snapshot.sub_inst[i][j];
+      const sGeom = new THREE.SphereGeometry(0.5 + Math.abs(sAmp)*0.3, 12, 12);
+      const sMat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
+      const sMesh = new THREE.Mesh(sGeom, sMat);
+      sMesh.position.x = mesh.position.x + (Math.random()-0.5)*4;
+      sMesh.position.y = mesh.position.y + (Math.random()-0.5)*4;
+      scene.add(sMesh);
+      subMeshes.push(sMesh);
     }}
+    nodes.push({{ mesh: mesh, subs: subMeshes, amp: amp }});
+  }}
 }})();
 
-const controls=new THREE.OrbitControls(camera,renderer.domElement);
-controls.enablePan=true;
-controls.enableZoom=true;
-controls.autoRotate=false;
+// --- add DM grid ---
+drawDMGrid(snapshot.dm_grid);
 
-let t=0;
-function animate(){{
-    requestAnimationFrame(animate);
-    for(let i=0;i<nodes.length;i++) {{
-        const n=nodes[i];
-        const baseAmp=snapshot.node_amp[i];
-        const glow=1.0+0.12*Math.sin(t*2.5+i);
-        n.mesh.scale.set(glow*(1+Math.abs(baseAmp)),glow*(1+Math.abs(baseAmp)),glow*(1+Math.abs(baseAmp)));
-        n.mesh.material.emissiveIntensity=0.2+0.6*Math.abs(Math.sin(t*1.5+i));
-        for(let j=0;j<n.subs.length;j++) {{
-            const s=n.subs[j];
-            const flick=0.7+0.6*Math.abs(Math.sin(t*4+i+j));
-            s.scale.set(flick,flick,flick);
-        }}
+// --- controls ---
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enablePan = true;
+controls.enableZoom = true;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.6;
+
+// --- animation loop ---
+let t = 0;
+function animate() {{
+  requestAnimationFrame(animate);
+  t += 0.02;
+  for (let i=0; i<nodes.length; i++) {{
+    const n = nodes[i];
+    const pulse = 1.0 + 0.25*Math.sin(t*2.0 + i);
+    n.mesh.scale.set(pulse, pulse, pulse);
+    n.mesh.material.emissiveIntensity = 0.6 + 0.4*Math.sin(t*3.0 + i);
+    for (let j=0; j<n.subs.length; j++) {{
+      const s = n.subs[j];
+      const flick = 0.9 + 0.5*Math.sin(t*5.0 + i + j);
+      s.scale.set(flick, flick, flick);
     }}
-    t+=0.02;
-    controls.update();
-    renderer.render(scene,camera);
+  }}
+  controls.update();
+  renderer.render(scene, camera);
 }}
 animate();
 
-window.addEventListener('resize',()=>{{
-    renderer.setSize(window.innerWidth*0.95,window.innerHeight*0.85);
-    camera.aspect=window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
+// --- responsive resize ---
+window.addEventListener('resize', () => {{
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }});
 </script>
 </body>
 </html>
 """
-
-components.html(html, height=800, scrolling=True)
+components.html(html, height=800, scrolling=False)
 
 # ---------------------------
 # Metrics + Charts
