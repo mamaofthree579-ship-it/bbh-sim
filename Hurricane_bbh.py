@@ -1,232 +1,190 @@
 import streamlit as st
-import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
-import io, math, time, base64
+import numpy as np
+import io, math, time, wave, struct, os
 
-st.set_page_config(layout="wide", page_title="BH Anatomy — Bilinear Remap (Fixed)")
+st.set_page_config(page_title="Black Hole Anatomy — Preview", layout="wide")
 
-st.title("🔭 Black Hole Anatomy — Bilinear Remapping (edge-case fix)")
+st.title("🔭 Black Hole Anatomy — Animated Preview + Ambient Sound")
+st.markdown(
+    "This preview generates a short animated GIF of a rotating hotspot + accretion disk "
+    "and optionally synthesizes an ambient 'vortex+storm' audio to accompany the visual."
+)
 
-# --- Controls
-col1, col2 = st.columns([1, 2])
-with col1:
-    st.markdown("### Controls")
-    mass_solar = st.slider("Mass (M☉)", min_value=1e3, max_value=1e8, value=4_300_000.0, step=1_000.0, format="%.0f")
-    spin = st.slider("Spin asymmetry (visual)", min_value=0.0, max_value=1.0, value=0.35, step=0.01)
-    lensing_strength = st.slider("Lensing strength", 0.0, 4.0, 1.0, step=0.05)
-    hotspot_speed = st.slider("Hotspot speed", 0.0, 2.0, 0.9, step=0.01)
-    visual_scale = st.slider("Visual scale (zoom)", 0.6, 2.2, 1.0, step=0.05)
-    show_disk = st.checkbox("Show accretion disk", value=True)
-    show_hotspot = st.checkbox("Show hotspot & trail", value=True)
-    show_ring_overlay = st.checkbox("Enhance photon ring", value=True)
-    play_audio = st.checkbox("Enable ambient audio", value=False)
-
-# --- Derived numbers
-G = 6.67430e-11
-c = 2.99792458e8
-M_kg = mass_solar * 1.98847e30
-r_s = 2 * G * M_kg / (c**2)
+# ---- Controls ----
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.markdown("### Physical numbers")
-    st.write(f"Mass: **{mass_solar:,.0f} M☉**  ({M_kg:.3e} kg)")
-    st.write(f"Schwarzschild radius rₛ ≈ **{r_s:.3e} m**")
-
-# --- Image dims
-BASE = 720
-WIDTH = max(200, int(BASE * visual_scale))
-HEIGHT = max(200, int(BASE * visual_scale))
-CENTER_X = WIDTH // 2
-CENTER_Y = HEIGHT // 2
-
-rng = np.random.RandomState(42)
-
-# --- Starfield
-def make_starfield(w, h, n_stars=600, nebula=False):
-    img = Image.new("RGB", (w, h), (5, 2, 10))
-    draw = ImageDraw.Draw(img)
-    xs = rng.uniform(0, w, size=n_stars)
-    ys = rng.uniform(0, h, size=n_stars)
-    mags = rng.uniform(0.35, 1.0, size=n_stars)
-    for x, y, m in zip(xs, ys, mags):
-        r = max(1, int(1.2 * m * visual_scale))
-        val = int(200 * m)
-        draw.ellipse([x - r, y - r, x + r, y + r], fill=(val, val, val))
-    img = img.filter(ImageFilter.GaussianBlur(radius=0.6 * visual_scale))
-    if nebula:
-        neb = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        nd = ImageDraw.Draw(neb)
-        for i in range(4):
-            rx = rng.randint(0, w)
-            ry = rng.randint(0, h)
-            color = (150 + rng.randint(0, 100), 90 + rng.randint(0, 90), 220, int(12 + 24 * rng.rand()))
-            rad = int(120 * visual_scale * rng.rand() + 80 * visual_scale)
-            nd.ellipse([rx - rad, ry - rad, rx + rad, ry + rad], fill=color)
-        img = Image.alpha_composite(img.convert("RGBA"), neb).convert("RGB")
-    return img
-
-# --- Accretion disk painting
-def paint_accretion_disk(base_img, center, inner_r, outer_r, color=(255,180,80)):
-    w, h = base_img.size
-    disk = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(disk)
-    cx, cy = center
-    rings = int((outer_r - inner_r) / 3) + 10
-    for i in range(rings):
-        r = inner_r + (outer_r - inner_r) * (i / (rings - 1))
-        alpha = int(6 + 140 * (1 - (i / rings))**1.6)
-        col = (color[0], color[1], color[2], max(2, alpha))
-        d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=col, width=max(1, int(2 * visual_scale)))
-    disk = disk.filter(ImageFilter.GaussianBlur(radius=2.2 * visual_scale))
-    return Image.alpha_composite(base_img.convert("RGBA"), disk).convert("RGB")
-
-# --- Hotspot painter
-def paint_hotspot(base_img, center, angle, radius, color=(255,220,170)):
-    w, h = base_img.size
-    hs = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(hs)
-    cx, cy = center
-    hx = cx + math.cos(angle) * radius
-    hy = cy + math.sin(angle) * radius * 0.62
-    trail_len = 8
-    for k in range(trail_len):
-        t = k / trail_len
-        rr = max(1, int((5.6 - k*0.5) * visual_scale))
-        a = int(190 * (1 - t)**1.8 * 0.7)
-        col = (color[0], color[1], color[2], a)
-        tx = cx + math.cos(angle - t * 0.18) * (radius - k * (radius * 0.05))
-        ty = cy + math.sin(angle - t * 0.18) * (radius * 0.62 - k * (radius * 0.02))
-        d.ellipse([tx - rr, ty - rr, tx + rr, ty + rr], fill=col)
-    d.ellipse([hx - 6*visual_scale, hy - 6*visual_scale, hx + 6*visual_scale, hy + 6*visual_scale],
-              fill=(255, 220, 160, 255))
-    return Image.alpha_composite(base_img.convert("RGBA"), hs).convert("RGB")
-
-# --- Bilinear remap with epsilon clipping to avoid out-of-bounds
-def bilinear_remap(src_img, rs_physical, lensing_strength=1.0, spin=0.0):
-    w, h = src_img.size
-    src = np.asarray(src_img).astype(np.float32)
-    xs = np.linspace(-1.0, 1.0, w)
-    ys = np.linspace(-1.0, 1.0, h)
-    xv, yv = np.meshgrid(xs, ys)
-    r = np.sqrt(xv**2 + yv**2) + 1e-12
-    theta = np.arctan2(yv, xv)
-
-    a = (rs_physical / (1.0 + rs_physical)) * (lensing_strength * 0.5)
-
-    # mapping (tunable)
-    r_src = r / (1.0 + a / (r + 1e-12))
-    theta_src = theta - 0.25 * spin * (1.0 - np.exp(-r*8.0))
-
-    x_src = r_src * np.cos(theta_src)
-    y_src = r_src * np.sin(theta_src)
-
-    fx = (x_src + 1.0) * 0.5 * (w - 1)
-    fy = (y_src + 1.0) * 0.5 * (h - 1)
-
-    # IMPORTANT FIX: clamp fx/fy into [0, w-1 - eps] to avoid floor producing w/h
-    eps = 1e-6
-    fx = np.nan_to_num(fx, nan=0.0, posinf=w-1-eps, neginf=0.0)
-    fy = np.nan_to_num(fy, nan=0.0, posinf=h-1-eps, neginf=0.0)
-    fx = np.clip(fx, 0.0, w - 1 - eps)
-    fy = np.clip(fy, 0.0, h - 1 - eps)
-
-    x0 = np.floor(fx).astype(np.int32)
-    x1 = x0 + 1
-    y0 = np.floor(fy).astype(np.int32)
-    y1 = y0 + 1
-
-    # ensure in bounds after floor + 1
-    x0 = np.clip(x0, 0, w - 1)
-    x1 = np.clip(x1, 0, w - 1)
-    y0 = np.clip(y0, 0, h - 1)
-    y1 = np.clip(y1, 0, h - 1)
-
-    wx = fx - x0
-    wy = fy - y0
-
-    Ia = src[y0, x0, :]
-    Ib = src[y0, x1, :]
-    Ic = src[y1, x0, :]
-    Id = src[y1, x1, :]
-
-    Iab = Ia * (1 - wx[..., None]) + Ib * (wx[..., None])
-    Icd = Ic * (1 - wx[..., None]) + Id * (wx[..., None])
-    I = Iab * (1 - wy[..., None]) + Icd * (wy[..., None])
-
-    # optional small photon-sphere brightness bump
-    if show_ring_overlay:
-        boost_val = np.clip((0.25 - np.abs(r - 0.175)) * 2.0, 0, 0.9) * lensing_strength
-        I = np.clip(I * (1.0 + boost_val[..., None]), 0, 255)
-
-    return Image.fromarray(I.astype(np.uint8))
-
-# --- Build base scene
-base = make_starfield(WIDTH, HEIGHT, n_stars=int(520 * visual_scale), nebula=True)
-disk_inner = max(16 * visual_scale, 6 * visual_scale)
-disk_outer = max(200 * visual_scale, 120 * visual_scale)
-
-if show_disk:
-    base = paint_accretion_disk(base, (CENTER_X, CENTER_Y), disk_inner, disk_outer)
-
-angle_now = (time.time() * hotspot_speed) % (2 * math.pi)
-if show_hotspot:
-    base = paint_hotspot(base, (CENTER_X, CENTER_Y), angle_now, radius=(disk_inner + disk_outer) * 0.52)
-
-scaled_rs = (r_s / (1.0 + r_s)) * 1e-7 * (mass_solar / 1e6)
-lensed = bilinear_remap(base, scaled_rs, lensing_strength=lensing_strength, spin=spin)
-
-if show_ring_overlay:
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    ring_r = int(0.175 * WIDTH)
-    ring_w = max(1, int(3 * visual_scale))
-    od.ellipse([CENTER_X-ring_r, CENTER_Y-ring_r, CENTER_X+ring_r, CENTER_Y+ring_r],
-               outline=(255,220,180, int(32 * lensing_strength)), width=ring_w)
-    lensed = Image.alpha_composite(lensed.convert("RGBA"), overlay).convert("RGB")
+    st.subheader("Visual controls")
+    canvas_w = st.slider("Canvas width (px)", 480, 1200, 920, step=64)
+    canvas_h = int(canvas_w * 0.46)
+    hotspot_speed = st.slider("Hotspot angular speed (visual)", 0.01, 0.16, 0.026, step=0.002)
+    trail_strength = st.slider("Trail length (frames)", 0, 24, 8, step=1)
+    disk_rings = st.slider("Accretion disk rings", 6, 60, 28, step=1)
+    horizon_color = st.color_picker("Horizon color (visual)", "#2f0050")
+    disk_accent = st.color_picker("Disk accent", "#ffb24a")
+    frames = st.slider("GIF frames", 12, 64, 28, step=4)
+    duration_s = st.slider("GIF length (seconds)", 1, 6, 2, step=1)
 
 with col2:
-    st.markdown("### Visual preview")
-    st.image(lensed, use_column_width=True)
-    st.markdown("---")
-    st.markdown("Photon sphere proxy shown. Bilinear remap clipped to avoid indexing edge-case.")
+    st.subheader("Audio")
+    synth_audio = st.checkbox("Generate ambient audio (vortex + storm)", value=True)
+    audio_duration = st.slider("Audio duration (s)", 1.0, 8.0, 3.0, step=0.5)
+    audio_loudness = st.slider("Audio loudness (0.0 - 1.0)", 0.0, 1.0, 0.28, step=0.02)
 
-# --- Simple ambient audio (optional) ---
-def lowpass_fft(sig, sr, cutoff=800.0):
-    N = sig.shape[0]
-    fft = np.fft.rfft(sig)
-    freqs = np.fft.rfftfreq(N, 1/sr)
-    fft[freqs > cutoff] = 0
-    out = np.fft.irfft(fft, n=N)
-    return out
+st.markdown("---")
 
-def make_ambient_audio(duration_s=4.0, sr=22050, mass_scale=1.0, spin=0.5):
-    t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False)
-    base = 18.0 * (1.0 / (1.0 + math.log10(max(1e3, mass_scale)) / 6.0))
-    f1 = base * (1.0 + 0.6 * (1 - spin))
-    sweep = np.sin(2 * np.pi * (f1 + 40.0 * (t / duration_s)**2) * t)
-    swirl = 0.5 * np.sin(2 * np.pi * 3.0 * t) * np.cos(2 * np.pi * 0.2 * t)
-    rng_local = np.random.RandomState(12345)
-    noise = rng_local.normal(scale=0.7, size=t.shape)
-    noise_lp = lowpass_fft(noise, sr, cutoff=600.0)
-    sig = 0.75 * sweep + 0.40 * swirl + 0.12 * noise_lp
-    env = np.minimum(1.0, 1.0 - 0.6 * (t / duration_s))
-    sig *= env
-    sig = sig / (np.max(np.abs(sig)) + 1e-12) * 0.85
-    stereo = np.vstack([sig, sig]).T
-    mem = io.BytesIO()
-    try:
-        import soundfile as sf
-        sf.write(mem, stereo, sr, subtype='PCM_16', format='WAV')
-        mem.seek(0)
-        return mem
-    except Exception:
-        return None
+# ---- Helper: draw single frame ----
+def draw_frame(w, h, angle, horizon_r=70, hotspot_phase=0.0,
+               horizon_col="#2f0050", disk_accent="#ffb24a",
+               rings=28, trail_positions=None):
+    im = Image.new("RGBA", (w, h), (3, 2, 6, 255))
+    draw = ImageDraw.Draw(im, "RGBA")
 
-if play_audio:
-    st.markdown("---")
-    st.markdown("### Ambient audio")
-    audio_buf = make_ambient_audio(duration_s=4.0, sr=22050, mass_scale=mass_solar, spin=spin)
-    if audio_buf:
-        st.audio(audio_buf.read(), format='audio/wav')
+    cx, cy = w // 2, h // 2
+    # background radial subtle
+    bg = Image.new("RGBA", (w, h), (0,0,0,0))
+    bg_draw = ImageDraw.Draw(bg)
+    # soft vignette by drawing ellipses
+    for i, alpha in enumerate([6, 8, 10, 12]):
+        r = max(w, h) * (0.5 + i*0.04)
+        bbox = [cx - r, cy - r, cx + r, cy + r]
+        bg_draw.ellipse(bbox, fill=(5,3,10,alpha))
+    im = Image.alpha_composite(im, bg)
+
+    # accretion disk rings
+    for i in range(rings):
+        rr = horizon_r + 8 + i * ( (w*0.22) / max(1, rings) )
+        alpha = 4 + i * 2
+        color = tuple(int(disk_accent.lstrip("#")[j:j+2], 16) for j in (0,2,4))
+        draw.ellipse((cx-rr, cy-rr, cx+rr, cy+rr),
+                     outline=(color[0], color[1], color[2], min(160, alpha)),
+                     width=1)
+
+    # event horizon (filled with subtle purple instead of pure black)
+    hc = tuple(int(horizon_col.lstrip("#")[j:j+2], 16) for j in (0,2,4))
+    draw.ellipse((cx-horizon_r, cy-horizon_r, cx+horizon_r, cy+horizon_r),
+                 fill=(hc[0], hc[1], hc[2], 255))
+
+    # inner black core (slightly darker to allow hotspot glow to pass 'behind' visually)
+    core_r = int(horizon_r * 0.84)
+    draw.ellipse((cx-core_r, cy-core_r, cx+core_r, cy+core_r),
+                 fill=(0,0,0,255))
+
+    # hotspot (orbiting light blob) + trail
+    orb_radius = int(horizon_r * 1.57)
+    hx = cx + math.cos(angle + hotspot_phase) * orb_radius
+    hy = cy + math.sin(angle + hotspot_phase) * (orb_radius * 0.32)
+    # draw trail positions (faded)
+    if isinstance(trail_positions, list):
+        for idx, (tx, ty) in enumerate(trail_positions):
+            alpha = int(10 + (idx / max(1, len(trail_positions)-1)) * 160)
+            r = max(1, 6 - idx*0.5)
+            draw.ellipse((tx-r, ty-r, tx+r, ty+r), fill=(255,200,150,alpha))
+    # hotspot core
+    draw.ellipse((hx-6, hy-6, hx+6, hy+6), fill=(255,220,153,255))
+
+    # a subtle jet cone above
+    draw.rectangle((cx-5, 0, cx+5, cy-120), fill=(120,200,255,20))
+
+    # finally, slight gaussian blur for atmosphere, then sharpen
+    im = im.filter(ImageFilter.GaussianBlur(radius=0.8))
+    return im
+
+# ---- Generate GIF helper ----
+def make_gif_bytes(w, h, frames, duration_s, speed, trail_len,
+                   horizon_col, disk_accent, rings):
+    imgs = []
+    trail_buffer = []
+    for i in range(frames):
+        t = i / frames
+        angle = i * (2 * math.pi / frames) * (speed * 10.0)
+        # maintain trail buffer of recent hotspot positions
+        orb_radius = int(70 * (w / 920) * 1.57)
+        cx, cy = w // 2, h // 2
+        hx = cx + math.cos(angle) * orb_radius
+        hy = cy + math.sin(angle) * (orb_radius * 0.32)
+        trail_buffer.insert(0, (hx, hy))
+        if len(trail_buffer) > trail_len:
+            trail_buffer = trail_buffer[:trail_len]
+        im = draw_frame(w, h, angle, horizon_r=int(70*(w/920)),
+                        hotspot_phase=0, horizon_col=horizon_col,
+                        disk_accent=disk_accent, rings=rings,
+                        trail_positions=list(trail_buffer))
+        imgs.append(im.convert("P", palette=Image.ADAPTIVE))
+    # save GIF to bytes
+    bio = io.BytesIO()
+    imgs[0].save(bio, format="GIF", save_all=True, append_images=imgs[1:],
+                 duration=max(20, int(duration_s*1000/len(imgs))), loop=0, optimize=True)
+    bio.seek(0)
+    return bio.getvalue()
+
+# ---- Audio synthesis helper (vortex + filtered noise) ----
+def synthesize_ambient_wav(duration=3.0, sr=44100, loudness=0.28, spin=0.5):
+    t = np.linspace(0, duration, int(sr*duration), endpoint=False)
+    # low vortex: slow sine + small FM (sweep)
+    base_freq = 20 + spin*10  # low fundamental
+    sweep = base_freq + (np.sin(t * 0.2) * (6 + 8*spin))
+    vortex = 0.9 * np.sin(2*np.pi * (sweep * t + 0.2*np.sin(2*np.pi*0.5*t)))
+    # filtered wind noise: generate white noise and single-pole lowpass filter
+    noise = np.random.normal(0, 1.0, size=t.shape)
+    # simple one-pole lowpass (rc-like)
+    rc = 1.0 / (2 * math.pi * (40 + 120*spin))
+    alpha = (1.0 / sr) / (rc + (1.0 / sr))
+    filt = np.zeros_like(noise)
+    for i in range(1, len(noise)):
+        filt[i] = filt[i-1] + alpha * (noise[i] - filt[i-1])
+    wind = filt * np.hanning(len(t)) * 0.8
+    # gentle pulsing amplitude linked to hotspot (simulate passing hot region)
+    pulse = 0.3 + 0.7 * (0.5*(1 + np.sin(2*np.pi*(0.6 + 0.4*spin) * t)))
+    out = (0.6 * vortex + 0.9 * wind) * pulse
+    # Normalize to 16-bit range
+    out = out / (np.max(np.abs(out)) + 1e-9)
+    out = out * (loudness * 0.9)
+    # convert to 16-bit PCM
+    pcm = np.int16(out * 32767)
+    # write WAV to bytes
+    bio = io.BytesIO()
+    with wave.open(bio, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(pcm.tobytes())
+    bio.seek(0)
+    return bio.getvalue()
+
+# ---- UI actions ----
+col_vis, col_out = st.columns([1, 1])
+with col_vis:
+    if st.button("Generate Animated Preview (GIF)"):
+        with st.spinner("Rendering GIF..."):
+            gif_bytes = make_gif_bytes(canvas_w, canvas_h, frames, duration_s,
+                                       hotspot_speed, trail_strength,
+                                       horizon_color, disk_accent, disk_rings)
+            st.session_state["last_gif"] = gif_bytes
+            st.success("GIF rendered — preview below.")
+
+    if "last_gif" in st.session_state:
+        st.image(st.session_state["last_gif"], use_column_width=True)
     else:
-        st.info("Audio unavailable in this environment (soundfile not installed).")
+        st.info("No preview yet — click **Generate Animated Preview (GIF)**")
+
+with col_out:
+    if synth_audio:
+        if st.button("Synthesize Ambient Audio (WAV)"):
+            with st.spinner("Generating audio..."):
+                wav_bytes = synthesize_ambient_wav(duration=audio_duration,
+                                                   loudness=audio_loudness,
+                                                   spin=float(spin_input if (spin_input := st.session_state.get('spin_input')) else 0.5) )
+                st.session_state["last_wav"] = wav_bytes
+                st.success("Audio synthesized — play below.")
+        if "last_wav" in st.session_state:
+            st.audio(st.session_state["last_wav"], format="audio/wav")
+        else:
+            st.info("No audio yet — click **Synthesize Ambient Audio (WAV)**")
+    else:
+        st.info("Audio is disabled. Check the 'Generate ambient audio' checkbox to enable.")
+
+st.markdown("---")
+st.caption("Implementation note: this app produces a GIF preview (safe & stable in Streamlit) and an optional synthesized WAV. "
+           "If you want true real-time interactive animation, we can next add a WebGL-based front end (Plotly/three.js) or an HTML canvas with live JS — but those require a different embedding approach in Streamlit.")
