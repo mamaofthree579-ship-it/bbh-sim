@@ -44,7 +44,7 @@ html_template = r"""
 
   function startWhenReady() {{
     if (typeof THREE === 'undefined') {{
-      document.getElementById('debug').innerText = '⏳ Waiting for Three.js...';
+      document.getElementById('debug').innerText = '⏳ Waiting for multiverse/three.js...';
       setTimeout(startWhenReady, 200);
       return;
     }}
