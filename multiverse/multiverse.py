@@ -4,27 +4,25 @@ import numpy as np
 import pandas as pd
 import json
 import time
-import math
 
 # ---------------------------
 # Streamlit Page Config
 # ---------------------------
-st.set_page_config(page_title="Fractal Conscious Cosmos — Research v4", layout="wide")
-st.title("Fractal Conscious Cosmos — Harmonic Simulation Environment")
+st.set_page_config(page_title="Fractal Conscious Cosmos — Research v5", layout="wide")
+st.title("🌀 Fractal Conscious Cosmos — Harmonic Research Environment")
 
 st.markdown("""
-Interactive model of multiscale coherence, dark-matter diffusion, and fractal harmonic networks.  
-Use sidebar controls to tune the simulation, **Start** to run continuously (if `streamlit-autorefresh` is installed),  
-or **Step** to advance manually. Export logged metrics as CSV.
+This simulation models multiscale coherence, dark-matter diffusion, and fractal harmonic networks.  
+Use sidebar controls to adjust parameters, **Step** to manually advance, or **Start** for continuous mode (requires `streamlit-autorefresh`).  
+You can export data snapshots and metric histories for later analysis.
 """)
 
 # ---------------------------
-# Session Initialization
+# Initialization
 # ---------------------------
 def reset_sim(seed=None):
     rng = np.random.default_rng(seed if seed is not None else int(time.time() % 1e9))
-    N = st.session_state.N
-    M = st.session_state.M
+    N, M = st.session_state.N, st.session_state.M
     st.session_state.pos = rng.uniform(-1, 1, (N, 2)) * 40.0
     st.session_state.omegas = rng.uniform(0.2, 2.0, (N, M)) * (2 * np.pi) * st.session_state.freq_scale
     st.session_state.amps = rng.uniform(0.3, 1.0, (N, M))
@@ -55,7 +53,7 @@ def init_session():
 init_session()
 
 # ---------------------------
-# Simulation Core
+# Core simulation functions
 # ---------------------------
 def compute_inst_amplitudes(t):
     omegas, amps, phases = st.session_state.omegas, st.session_state.amps, st.session_state.phases
@@ -102,11 +100,18 @@ def step_sim(steps=1):
                 "dm_density": dm_density
             }])
         ], ignore_index=True)
+        st.session_state.metrics.append({
+            "t": float(st.session_state.time),
+            "mean_amp": mean_amp,
+            "kuramoto_R": R,
+            "phase_var": phase_var,
+            "dm_density": dm_density
+        })
     return st.session_state.log.tail(1)
 
 def create_snapshot():
     amps, node_phase, inst = compute_inst_amplitudes(st.session_state.time)
-    snap = {
+    return {
         "time": float(st.session_state.time),
         "N": int(st.session_state.N),
         "M": int(st.session_state.M),
@@ -116,60 +121,66 @@ def create_snapshot():
         "sub_inst": inst.tolist(),
         "dm_grid": (st.session_state.grid / np.nanmax(st.session_state.grid)).tolist()
     }
-    return snap
 
 # ---------------------------
-# Sidebar Controls
+# Sidebar controls
 # ---------------------------
 with st.sidebar:
-    st.header("Simulation Controls & Data")
+    st.header("🎛 Simulation Controls & Data")
     st.session_state.N = st.number_input("Nodes (N)", 6, 200, st.session_state.N)
     st.session_state.M = st.number_input("Subnodes per Node (M)", 1, 20, st.session_state.M)
     st.session_state.K = st.slider("Global Coupling (K)", 0.0, 2.0, float(st.session_state.K), 0.01)
     st.session_state.freq_scale = st.slider("Frequency Scale", 0.1, 3.0, float(st.session_state.freq_scale), 0.01)
     st.session_state.dt = st.number_input("Time Step (dt)", 0.001, 0.1, st.session_state.dt, 0.001)
-    st.session_state.steps_per_update = st.number_input("Steps per Refresh", 1, 200, st.session_state.steps_per_update)
     st.session_state.grid_size = st.number_input("Dark Matter Grid Size", 16, 256, st.session_state.grid_size)
     st.session_state.D = st.slider("DM Diffusion (D)", 0.0, 1.0, float(st.session_state.D), 0.01)
     st.session_state.alpha = st.slider("DM Decay (α)", 0.0, 0.05, float(st.session_state.alpha), 0.0005)
 
     st.markdown("---")
-    col1, col2 = st.columns(2)
-    if col1.button("Step"):
+    c1, c2 = st.columns(2)
+    if c1.button("Step"):
         result = step_sim(st.session_state.steps_per_update)
-        st.success(f"Step completed — time={st.session_state.time:.3f}s")
-    if col2.button("Reset (Random)"):
+        st.success(f"Advanced — t = {st.session_state.time:.3f}s")
+    if c2.button("Reset Simulation"):
         reset_sim()
-        st.warning("Simulation reset.")
-    st.markdown("---")
+        st.warning("Simulation reset complete.")
 
-    run_toggle = st.checkbox("Start / Stop Continuous Run", value=st.session_state.run)
+    st.markdown("---")
+    run_toggle = st.checkbox("Start Continuous Run", value=st.session_state.run)
     st.session_state.run = run_toggle
 
+    st.markdown("---")
+    st.subheader("📊 Data Export")
+    if st.button("📥 Export Metrics (CSV)"):
+        if st.session_state.metrics:
+            df = pd.DataFrame(st.session_state.metrics)
+            st.download_button("Download Metrics CSV", df.to_csv(index=False), "metrics.csv")
+        else:
+            st.warning("No metrics available yet.")
+    if st.button("📷 Export Snapshot (JSON)"):
+        snap = create_snapshot()
+        st.download_button("Download Snapshot JSON", json.dumps(snap, indent=2), "snapshot.json")
+
 # ---------------------------
-# Optional Auto-Refresh
+# Auto-refresh (optional)
 # ---------------------------
-use_autorefresh = False
 try:
     from streamlit_autorefresh import st_autorefresh
-    use_autorefresh = True
-except Exception:
-    pass
-
-if use_autorefresh:
-    refresh_count = st_autorefresh(interval=800, limit=None, key="auto_refresh")
     if st.session_state.run:
+        st_autorefresh(interval=800, limit=None, key="refresh")
         step_sim(st.session_state.steps_per_update)
-elif st.session_state.run:
-    st.info("Auto-run active but 'streamlit-autorefresh' not installed. Press 'Step' manually.")
+except Exception:
+    if st.session_state.run:
+        st.info("Install `streamlit-autorefresh` for live updates.")
 
 # ---------------------------
-# Visualization Snapshot
+# Visualization
 # ---------------------------
 snapshot = create_snapshot()
 snapshot_json = json.dumps(snapshot)
 
-html = f"""<!doctype html>
+html = f"""
+<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -255,22 +266,18 @@ function animate() {{
   renderer.render(scene,camera);
 }}
 animate();
-window.addEventListener('resize',()=>{{
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-}});
 </script>
 </body>
-</html>"""
+</html>
+"""
 
 components.html(html, height=850, scrolling=False)
 
 # ---------------------------
-# Metrics Display
+# Metrics & Log Display
 # ---------------------------
-st.subheader("Research Metrics & Logs")
+st.subheader("📈 Research Metrics")
 if not st.session_state.log.empty:
     st.dataframe(st.session_state.log.tail(10))
 else:
-    st.info("No metrics yet — press 'Step' to advance the simulation.")
+    st.info("No metrics yet — press 'Step' to start data logging.")
