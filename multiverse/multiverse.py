@@ -160,8 +160,8 @@ if use_autorefresh:
 elif st.session_state.run:
     st.info("Auto-run requested")
     
-# --- 3D Visualizer (antialias fix, mobile safe) ---
-st.subheader("3D Visualizer — Fixed Renderer (antialias defined)")
+# --- 3D Visualizer ---
+st.subheader("3D Visualizer — Fixed Renderer")
 
 try:
     _ = snapshot
