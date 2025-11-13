@@ -55,32 +55,6 @@ def init_session():
 init_session()
 
 # ---------------------------
-# Sidebar Controls
-# ---------------------------
-with st.sidebar:
-    st.header("Simulation Controls & Data")
-    st.session_state.N = st.number_input("Nodes (N)", 6, 200, st.session_state.N)
-    st.session_state.M = st.number_input("Subnodes per Node (M)", 1, 20, st.session_state.M)
-    st.session_state.K = st.slider("Global Coupling (K)", 0.0, 2.0, float(st.session_state.K), 0.01)
-    st.session_state.freq_scale = st.slider("Frequency Scale", 0.1, 3.0, float(st.session_state.freq_scale), 0.01)
-    st.session_state.dt = st.number_input("Time Step (dt)", 0.001, 0.1, st.session_state.dt, 0.001)
-    st.session_state.steps_per_update = st.number_input("Steps per Refresh", 1, 200, st.session_state.steps_per_update)
-    st.session_state.grid_size = st.number_input("Dark Matter Grid Size", 16, 256, st.session_state.grid_size)
-    st.session_state.D = st.slider("DM Diffusion (D)", 0.0, 1.0, float(st.session_state.D), 0.01)
-    st.session_state.alpha = st.slider("DM Decay (α)", 0.0, 0.05, float(st.session_state.alpha), 0.0005)
-
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    if col1.button("Step"):
-        step_sim(steps=st.session_state.steps_per_update) if 'step_sim' in globals() else None
-    if col2.button("Reset (Random)"):
-        reset_sim()
-    st.markdown("---")
-
-    run_toggle = st.checkbox("Start / Stop Continuous Run", value=st.session_state.run)
-    st.session_state.run = run_toggle
-
-# ---------------------------
 # Simulation Core
 # ---------------------------
 def compute_inst_amplitudes(t):
@@ -128,6 +102,7 @@ def step_sim(steps=1):
                 "dm_density": dm_density
             }])
         ], ignore_index=True)
+    return st.session_state.log.tail(1)
 
 def create_snapshot():
     amps, node_phase, inst = compute_inst_amplitudes(st.session_state.time)
@@ -142,6 +117,34 @@ def create_snapshot():
         "dm_grid": (st.session_state.grid / np.nanmax(st.session_state.grid)).tolist()
     }
     return snap
+
+# ---------------------------
+# Sidebar Controls
+# ---------------------------
+with st.sidebar:
+    st.header("Simulation Controls & Data")
+    st.session_state.N = st.number_input("Nodes (N)", 6, 200, st.session_state.N)
+    st.session_state.M = st.number_input("Subnodes per Node (M)", 1, 20, st.session_state.M)
+    st.session_state.K = st.slider("Global Coupling (K)", 0.0, 2.0, float(st.session_state.K), 0.01)
+    st.session_state.freq_scale = st.slider("Frequency Scale", 0.1, 3.0, float(st.session_state.freq_scale), 0.01)
+    st.session_state.dt = st.number_input("Time Step (dt)", 0.001, 0.1, st.session_state.dt, 0.001)
+    st.session_state.steps_per_update = st.number_input("Steps per Refresh", 1, 200, st.session_state.steps_per_update)
+    st.session_state.grid_size = st.number_input("Dark Matter Grid Size", 16, 256, st.session_state.grid_size)
+    st.session_state.D = st.slider("DM Diffusion (D)", 0.0, 1.0, float(st.session_state.D), 0.01)
+    st.session_state.alpha = st.slider("DM Decay (α)", 0.0, 0.05, float(st.session_state.alpha), 0.0005)
+
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    if col1.button("Step"):
+        result = step_sim(st.session_state.steps_per_update)
+        st.success(f"Step completed — time={st.session_state.time:.3f}s")
+    if col2.button("Reset (Random)"):
+        reset_sim()
+        st.warning("Simulation reset.")
+    st.markdown("---")
+
+    run_toggle = st.checkbox("Start / Stop Continuous Run", value=st.session_state.run)
+    st.session_state.run = run_toggle
 
 # ---------------------------
 # Optional Auto-Refresh
@@ -161,14 +164,11 @@ elif st.session_state.run:
     st.info("Auto-run active but 'streamlit-autorefresh' not installed. Press 'Step' manually.")
 
 # ---------------------------
-# Snapshot for Visualization
+# Visualization Snapshot
 # ---------------------------
 snapshot = create_snapshot()
 snapshot_json = json.dumps(snapshot)
 
-# ---------------------------
-# HTML / Three.js Visualizer
-# ---------------------------
 html = f"""<!doctype html>
 <html>
 <head>
@@ -267,7 +267,7 @@ window.addEventListener('resize',()=>{{
 components.html(html, height=850, scrolling=False)
 
 # ---------------------------
-# Metrics and Logs
+# Metrics Display
 # ---------------------------
 st.subheader("Research Metrics & Logs")
 if not st.session_state.log.empty:
