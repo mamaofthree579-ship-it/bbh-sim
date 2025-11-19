@@ -8,7 +8,14 @@ st.title("🪐 Quantum Black Hole — Anatomy Simulator (Interactive)")
 # Sidebar controls (these also seed the embedded canvas simulation)
 with st.sidebar:
     st.header("Simulation controls")
-    mass = st.slider("Mass (M☉, visual scale)", min_value=1e3, max_value=1e8, value=4_300_000, step=1000, format="%d")
+    mass = st.slider(
+        "Mass (M☉, visual scale)",
+        min_value=1000,              # int
+        max_value=100_000_000,       # int
+        value=4_300_000,             # int
+        step=1000,                   # int
+        format="%d"
+    )
     spin = st.slider("Spin (a*)", 0.0, 0.99, 0.5, step=0.01)
     hotspot_speed = st.slider("Hotspot angular speed", 0.01, 0.2, 0.026, step=0.002)
     hotspot_trail = st.slider("Hotspot trail length", 2, 12, 6, step=1)
@@ -17,17 +24,7 @@ with st.sidebar:
     jet_activity = st.slider("Jet particle rate", 0, 200, 40, step=5)
     audio_on = st.checkbox("Enable immersive sound (stereo)", value=True)
     quality = st.selectbox("Render quality (performance)", ["Balanced", "High (more particles)", "Low (faster)"], index=0)
-    # package settings
-    settings = dict(
-        mass=float(mass),
-        spin=float(spin),
-        hotspot_speed=float(hotspot_speed),
-        hotspot_trail=int(hotspot_trail),
-        disk_thickness=float(disk_thickness),
-        lensing_strength=float(lensing_strength),
-        jet_activity=int(jet_activity),
-        audio_on=bool(audio_on),
-        quality=str(quality),
+
     )
 
 # Provide quick description
