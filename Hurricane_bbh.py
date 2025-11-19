@@ -481,7 +481,7 @@ function step(){{
   const now = performance.now();
   let dt = Math.min(40, now - lastTime); // ms
   lastTime = now;
-  if(paused) {{ raf = requestAnimationFrame(step); return; }}
+  if(paused) raf = :requestAnimationFrame(step); return,
 
   // motion blur: fade previous frame with globalAlpha
   ctx.globalCompositeOperation = 'source-over';
