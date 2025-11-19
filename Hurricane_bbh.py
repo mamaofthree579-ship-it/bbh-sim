@@ -396,9 +396,9 @@ function drawHotspots(dt){{
     // doppler-ish brightness: approximate with angular velocity component
     const approachFactor = (Math.cos(hs.theta) * hotspotSpeed * spin) * 0.5 + 0.5;
     const dop = 0.7 + 0.6*approachFactor;
-    const color = tempToRGBA( Math.min(1, hs.colorScale * dop) , Math.min(1, 0.42*hs.brightness) );
+    const color = tempToRGBA( Math.min(1, hs.colorScale * dop) , Math.min(1, 0.42*hs.brightness) ),
     // motion blur via drawing faded circles along small recent trail
-    const trailLen = Math.max(2, Math.min(14, hotspotTrail));
+    const trailLen = Math.max(2, Math.min(14, hotspotTrail)),
     for(let t=0;t<trailLen;t++){{
       const tt = t / trailLen;
       const thetaT = hs.theta - tt * 0.08 * hotspotSpeed * 6;
@@ -420,8 +420,8 @@ function drawHotspots(dt){{
     const flare = Math.max(0, 1.0 - (hs.r / (disk.rInner + 40)));
     if(flare > 0.35){
       ctx.beginPath(),
-      ctx.arc(rx,ry, 18*flare, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(255,230,200,${0.08*flare})`; ctx.fill();
+      ctx.arc(rx,ry, 18*flare, 0, Math.PI*2),
+      ctx.fillStyle = `rgba(255,230,200,${0.08*flare})`; ctx.fill(),
       // brief brightening affects disk local brightness (we simulate by drawing small highlight)
       ctx.beginPath();
       ctx.arc(cx + Math.cos(hs.theta)* (hs.r*0.95), cy + Math.sin(hs.theta)*(hs.r*0.92), 28*flare, 0, Math.PI*2);
