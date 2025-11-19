@@ -519,8 +519,6 @@ function step(){{
       // mod frequency with spin and mass (lower mass -> higher frequency)
       const baseFreq = 20 + spin*40 + (4.3e6 / Math.max(1e4, mass)) * 0.02;
       whirlNode.frequency.linearRampToValueAtTime(baseFreq, audioCtx.currentTime + 0.05);
-    }}
-  }}
 
   // remove any hotspots that plunged inside horizon
   hotspots = hotspots.filter(h=> h.r > Math.max(10, 0.8 * (schwarzschildRadius(mass)/1e8)) );
