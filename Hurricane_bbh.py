@@ -198,7 +198,7 @@ function schwarzschildRadius(Msol) {{
 function dopplerFactor(beta, cosTheta) {{
   // beta = v/c, cosTheta = cos(angle to observer)
   return Math.sqrt((1 - beta)/(1 + beta)) ** -1 * (1.0); // simplified mapping; use approximate
-}
+}}
 
 /* Color helper: map temperature-like to RGB (cool->hot) */
 function tempToRGBA(t, alpha=1.0) {{
