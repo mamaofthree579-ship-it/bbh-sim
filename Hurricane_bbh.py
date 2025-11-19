@@ -225,7 +225,7 @@ function sampleDiskPoints(n) {{
     pts.push({{ r, theta, z }});
   }}
   return {{ pts, rInner, rOuter }};
-}
+}}
 
 /* ---------- Hotspots ---------- */
 class Hotspot {{
