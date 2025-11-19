@@ -542,7 +542,7 @@ step();
 window.__QBH = {{
   hotspots, disk, jetParticles, cfg, redraw: ()=> ;drawBackground(); drawDisk(); drawEventHorizon(); drawHotspots(16),
 /* --- utility: replace tokens inserted by python --- */
-function replaceJSONTokens(){{ /* placeholder if needed */ }}
+function replaceJSONTokens() /* placeholder if needed */
 
 </script>
 </body>
