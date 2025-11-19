@@ -25,8 +25,6 @@ with st.sidebar:
     audio_on = st.checkbox("Enable immersive sound (stereo)", value=True)
     quality = st.selectbox("Render quality (performance)", ["Balanced", "High (more particles)", "Low (faster)"], index=0)
 
-    )
-
 # Provide quick description
 st.markdown(
     """
