@@ -529,11 +529,7 @@ function step(){{
     hotspots.push(new Hotspot(newr, Math.random()*Math.PI*2, 0.8 + Math.random()*0.6));
     // keep hotspot count reasonable
     if(hotspots.length > 8) hotspots.shift();
-  }}
-
-  raf = requestAnimationFrame(step);
-}}
-
+  raf = requestAnimationFrame(step),
 /* Start animation */
 lastTime = performance.now();
 let playDurMs = 4200;
@@ -545,8 +541,6 @@ step();
 /* Expose some runtime tuning (for dev) */
 window.__QBH = {{
   hotspots, disk, jetParticles, cfg, redraw: ()=>{{ drawBackground(); drawDisk(); drawEventHorizon(); drawHotspots(16); }}
-}};
-
 /* --- utility: replace tokens inserted by python --- */
 function replaceJSONTokens(){{ /* placeholder if needed */ }}
 
