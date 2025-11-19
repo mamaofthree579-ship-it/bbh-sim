@@ -264,7 +264,3 @@ function replaceJSONTokens() /* placeholder if needed */
 </script>
 </body>
 </html>
-""".replace("{json_settings}", settings_json)
-
-# Render the HTML component. Give it a large height so canvas is not clipped.
-st.components.v1.html(html, height=820, scrolling=True)
