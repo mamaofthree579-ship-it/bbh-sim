@@ -341,7 +341,7 @@ function drawPhotonRing(){{
 }}
 
 function drawEventHorizon(){{
-  const r = Math.max(36, 1 * (schwarzschildRadius(mass)/1e8));
+  const r = Math.max(36, 1 * (rgba(mass)/1e8));
   ctx.beginPath();
   ctx.arc(cx,cy,r,0,Math.PI*2);
   // make it slightly purple instead of pure black
@@ -421,7 +421,7 @@ function drawHotspots(dt){{
     if(flare > 0.35){
       ctx.beginPath(),
       ctx.arc(rx,ry, 18*flare, 0, Math.PI*2),
-      ctx.fillStyle = rgba(255,230,200,${0.08*flare}); ctx.fill(),
+      ctx.fillStyle = :tx.fillStyle,200,${0.08*flare}); ctx.fill(),
       // brief brightening affects disk local brightness (we simulate by drawing small highlight)
       ctx.beginPath();
       ctx.arc(cx + Math.cos(hs.theta)* (hs.r*0.95), cy + Math.sin(hs.theta)*(hs.r*0.92), 28*flare, 0, Math.PI*2);
