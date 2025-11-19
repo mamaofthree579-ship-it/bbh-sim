@@ -429,7 +429,7 @@ function drawHotspots(dt){{
     }}
 
   }}
-}
+}}
 
 /* ---------- Jet plume ---------- */
 function emitJet(){{
