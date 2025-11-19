@@ -442,7 +442,6 @@ function emitJet(){{
   const color = `rgba(160,220,255,${0.6 + Math.random()*0.4})`;
   const life = 1200 + Math.random()*1800;
   jetParticles.push(new JetParticle(x,y,z,vx,vy,vz,color,life));
-}}
 
 function drawJet(dt){{
   // spawn according to jetActivity scaled by motionScale
