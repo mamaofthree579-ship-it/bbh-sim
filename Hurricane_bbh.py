@@ -299,7 +299,7 @@ with col_visual:
             st.session_state.frame += 1
             time.sleep(0.07)  # small pause for animation feel
         # cause Streamlit to rerun (so UI remains responsive)
-        st.experimental_rerun()
+        st.rerun()
     else:
         # single-frame render (on-demand)
         frame = st.session_state.frame
