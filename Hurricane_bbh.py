@@ -419,7 +419,7 @@ function drawHotspots(dt){{
     // flare on pericenter (if r small)
     const flare = Math.max(0, 1.0 - (hs.r / (disk.rInner + 40)));
     if(flare > 0.35){
-      ctx.beginPath();
+      ctx.beginPath(),
       ctx.arc(rx,ry, 18*flare, 0, Math.PI*2);
       ctx.fillStyle = `rgba(255,230,200,${0.08*flare})`; ctx.fill();
       // brief brightening affects disk local brightness (we simulate by drawing small highlight)
