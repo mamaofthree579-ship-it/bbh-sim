@@ -174,7 +174,7 @@ with col2:
 st.markdown("---")
 st.markdown("Made with ❤️ — Real-time astrophysical visualization engine")
 
-// jet-disk interaction flash: if particle near disk inner radius and alpha high => small flash
+# jet-disk interaction flash: if particle near disk inner radius and alpha high => small flash
     const d2 = Math.hypot(p.x - cx, p.y - cy);
     if(d2 < disk.rInner*1.2 && alpha > 0.65 && Math.random() < 0.02){{
       // small radial flash
