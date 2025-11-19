@@ -317,7 +317,7 @@ async function initAudio(){{
 }}
 
 function stopAllAudio(){{
-  try{{ if(audioCtx) audioCtx.close(); }}catch(e){console.log(e);}
+  try{{ if(audioCtx) audioCtx.close(); }}catch(e){console.log(e)}
   audioCtx = null; masterGain=null; cloudNode=null; whirlNode=null; panner=null; harmonicGain=null;
 }}
 
