@@ -427,9 +427,6 @@ function drawHotspots(dt){{
       ctx.arc(cx + Math.cos(hs.theta)* (hs.r*0.95), cy + Math.sin(hs.theta)*(hs.r*0.92), 28*flare, 0, Math.PI*2);
       ctx.strokeStyle = `rgba(255,200,160,${0.03*flare})`; ctx.lineWidth=2*flare; ctx.stroke();
 
-  }}
-}}
-
 /* ---------- Jet plume ---------- */
 function emitJet(){{
   // occasionally emit a particle from near center up along +/- y axis
