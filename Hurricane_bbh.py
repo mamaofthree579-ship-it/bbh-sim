@@ -268,12 +268,3 @@ function replaceJSONTokens() /* placeholder if needed */
 
 # Render the HTML component. Give it a large height so canvas is not clipped.
 st.components.v1.html(html, height=820, scrolling=True)
-
-# Footer / README link
-st.markdown(
-    """
-    **Next steps**
-    - If you'd like, I will: (A) add a compact event-chirp generator linked to the Events tab, (B) wire the time-dilation calculators into per-hotspot cooling, or (C) export frames as PNG sequence for high-quality renders.
-    - Tell me which and I'll update the app.
-    """
-)
