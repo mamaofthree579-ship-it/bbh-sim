@@ -464,10 +464,7 @@ function drawJet(dt){{
       ctx.beginPath();
       ctx.arc(cx,cy, 22 + Math.random()*30, 0, Math.PI*2);
       ctx.fillStyle = `rgba(255,220,160,${0.06 + Math.random()*0.08})`; ctx.fill();
-    }}
-  }}
-}
-
+    
 /* ---------- Summary graphs (small, lightweight) ---------- */
 function drawSummaryMini(progress=0){{
   // subtle pulse ring showing inspiral progress
@@ -477,7 +474,6 @@ function drawSummaryMini(progress=0){{
   ctx.strokeStyle = 'rgba(120,200,255,' + (0.03 + 0.06*progress) + ')';
   ctx.lineWidth = 1 + 3*progress;
   ctx.stroke();
-}}
 
 /* ---------- Main loop ---------- */
 let raf = null;
