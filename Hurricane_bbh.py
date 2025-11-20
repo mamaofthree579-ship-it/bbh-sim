@@ -1,283 +1,277 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import io, json, wave, struct, base64, math
-from datetime import datetime
+import plotly.graph_objects as go
+import io, wave, struct, math, time
 
-st.set_page_config(page_title="Black Hole Simulator", layout="wide")
+st.set_page_config(layout="wide", page_title="Black Hole Anatomy — Advanced", page_icon="🕳️")
 
-# --- UI: Left controls / Right preview ---
-st.title("🌌 Black Hole Anatomy & Sound Studio")
+st.title("🔭 Black Hole Anatomy — Advanced Visualizer (Version 3)")
+st.markdown(
+    "A 3D visual of a black hole (purple core), accretion disk rings, and a rotating hotspot. "
+    "Use the controls to tune mass, spin, trail length, and animation speed. "
+    "Play a hurricane+whirlpool-like audio texture synthesized on the fly."
+)
 
-left, right = st.columns([1, 2])
-
-with left:
+# ---- Sidebar controls ----
+with st.sidebar:
     st.header("Controls")
-
-    # Physical / visual mapping (for display only)
-    mass = st.slider("Mass (visual scale, M☉)", min_value=1e3, max_value=1e8, value=4_300_000.0, step=1000.0, format="%d")
-    # Note: mass here is purely visual scaling; we keep it float for safety
-    hotspot_speed = st.slider("Hotspot speed (motion)", 0.0, 2.0, 0.26, step=0.01)
-    trail_length = st.slider("Hotspot trail length", 1, 13, 6, step=1)
-    disk_color = st.color_picker("Accretion disk accent color", "#ffb452")
-    show_stars = st.checkbox("Show starfield (off recommended)", value=False)
-    disk_thickness = st.slider("Disk thickness (visual)", 1, 60, 24, step=1)
-
+    mass = st.slider("Mass (M☉) — visual scale", min_value=1_000, max_value=1_000_000_00, value=4_300_000, step=1_000, format="%d")
+    spin = st.slider("Spin a* (0 — 1)", 0.0, 1.0, 0.5, step=0.01)
+    trail_len = st.slider("Hotspot trail length (points)", min_value=4, max_value=60, value=12, step=1)
+    anim_speed = st.slider("Animation speed (affects frame duration)", 0.2, 3.0, 1.0, step=0.1)
+    rings = st.slider("Accretion disk ring count (visual)", 6, 40, 18, step=1)
+    hotspot_size = st.slider("Hotspot size (visual px)", 4, 24, 8, step=1)
     st.markdown("---")
-    st.subheader("Audio / Sound")
-    audio_choice = st.selectbox("Sound to generate", ["None", "Chirp (merger-like)", "Whirlpool+Hurricane (ambient)"])
-    audio_duration = st.slider("Audio duration (s)", 0.8, 8.0, 3.0, step=0.1)
-    audio_gain = st.slider("Audio gain (0.0 - 1.0)", 0.0, 1.0, 0.28, step=0.01)
+    st.markdown("**Audio texture**")
+    audio_dur = st.slider("Audio duration (s)", 1.0, 8.0, 3.0, step=0.5)
+    audio_strength = st.slider("Audio intensity (0.0 quiet — 1.0 loud)", 0.0, 1.0, 0.6, step=0.05)
 
+# ---- Derived visual params ----
+# We keep the actual physical radii for info, but visualize at normalized scale so spheres remain visible.
+G = 6.67430e-11
+c = 2.99792458e8
+M_sun = 1.98847e30
+M_kg = mass * M_sun
+r_s = 2 * G * M_kg / c**2  # physical Schwarzschild radius (m) -- for display only
+
+# Visual radii (normalized for plotting)
+horizon_r = 1.0            # normalized
+photon_sphere_r = 1.5      # normalized multiplier
+disk_inner = 1.15
+disk_outer = 3.6
+
+# Animation frame count (full rotation)
+NFRAMES = 72
+
+# Build accretion disk points (rings)
+def make_disk_rings(cx=0, cy=0, cz=0, inner=disk_inner, outer=disk_outer, n_rings=18, pts_per_ring=120):
+    rings_traces = []
+    radii = np.linspace(inner, outer, n_rings)
+    for r in radii:
+        theta = np.linspace(0, 2*np.pi, pts_per_ring)
+        x = cx + r * np.cos(theta)
+        y = cy + r * np.sin(theta)
+        # give a small vertical warp for visual interest
+        z = cz + 0.03 * np.sin(4*theta) * (outer - r) / (outer - inner + 1e-6)
+        rings_traces.append((x, y, z))
+    return rings_traces
+
+disk_rings = make_disk_rings(n_rings=rings, pts_per_ring=160)
+
+# Create a smooth central "purple sphere" mesh (approx) using parametric param
+def sphere_mesh(radius=0.98, u_res=30, v_res=30, color='#3b0066'):
+    u = np.linspace(0, 2*np.pi, u_res)
+    v = np.linspace(0, np.pi, v_res)
+    uu, vv = np.meshgrid(u, v)
+    x = radius * np.cos(uu) * np.sin(vv)
+    y = radius * np.sin(uu) * np.sin(vv)
+    z = radius * np.cos(vv)
+    return x, y, z
+
+sx, sy, sz = sphere_mesh(radius=horizon_r * 0.98, u_res=28, v_res=18)
+
+# Hotspot path (circle with slight vertical wobble influenced by spin)
+def hotspot_positions(nframes=NFRAMES, radius=2.2, wobble=0.12, spin_offset=0.0):
+    angles = np.linspace(0, 2*np.pi, nframes, endpoint=False)
+    xs = radius * np.cos(angles + spin_offset)
+    ys = radius * np.sin(angles + spin_offset)
+    zs = wobble * np.sin(angles * (1 + spin*2.0))
+    return xs, ys, zs
+
+xs_hot, ys_hot, zs_hot = hotspot_positions(NFRAMES, radius=(1.9 + 1.2*spin), wobble=0.18, spin_offset=0.0)
+
+# Prepare frames for Plotly animation
+frames = []
+for fi in range(NFRAMES):
+    # hotspot current position
+    hx = xs_hot[fi]
+    hy = ys_hot[fi]
+    hz = zs_hot[fi]
+    # trail: collect previous trail_len points (wrap-around)
+    idxs = [(fi - k) % NFRAMES for k in range(trail_len)][::-1]  # oldest first
+    trail_x = [xs_hot[i] for i in idxs]
+    trail_y = [ys_hot[i] for i in idxs]
+    trail_z = [zs_hot[i] for i in idxs]
+    # make small trail marker sizes decreasing
+    trail_sizes = [max(2, hotspot_size * (0.2 + 0.8*(i+1)/len(trail_x))) for i in range(len(trail_x))]
+
+    frame_data = []
+    # hotspot scatter (as single point) - trace index 1 in base figure will be replaced by frames
+    frame_data.append(go.Scatter3d(x=[hx], y=[hy], z=[hz],
+                                   mode='markers',
+                                   marker=dict(size=hotspot_size, color='rgb(255,220,160)', opacity=0.95),
+                                   name='Hotspot'))
+    # trail scatter
+    frame_data.append(go.Scatter3d(x=trail_x, y=trail_y, z=trail_z,
+                                   mode='markers',
+                                   marker=dict(size=trail_sizes, color='rgba(255,220,180,0.65)'),
+                                   name='Trail'))
+    # small dynamic ring ripple (weak)
+    ripple_r = 1.0 + 0.9 * (fi / NFRAMES)
+    theta = np.linspace(0, 2*np.pi, 80)
+    rx = ripple_r * np.cos(theta)
+    ry = ripple_r * np.sin(theta)
+    rz = 0.02 * np.sin(8*theta + fi*0.12)
+    frame_data.append(go.Scatter3d(x=rx, y=ry, z=rz, mode='lines',
+                                   line=dict(color='rgba(255,200,160,0.06)', width=2), name='Ripple'))
+    frames.append(go.Frame(data=frame_data, name=f'frame{fi}'))
+
+# Build base (static) traces: central sphere (as surface), disk rings (lines)
+fig = go.Figure()
+
+# central purple sphere (use surface trace)
+fig.add_trace(go.Surface(x=sx, y=sy, z=sz,
+                         colorscale=[[0, 'rgb(44,0,70)'], [1, 'rgb(90,20,140)']],
+                         showscale=False,
+                         opacity=0.95,
+                         lighting=dict(ambient=0.6, diffuse=0.6, specular=0.4, roughness=0.9),
+                         name='Event Horizon (visual)'))
+
+# accretion rings (lines)
+for (rx, ry, rz) in disk_rings:
+    fig.add_trace(go.Scatter3d(x=rx, y=ry, z=rz, mode='lines',
+                               line=dict(color='rgba(255,180,80,0.12)', width=1),
+                               hoverinfo='skip', showlegend=False))
+
+# add a faint axis-free layout
+fig.update_layout(scene=dict(
+    xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
+    aspectmode='auto',
+    bgcolor='rgba(0,0,0,0)'
+))
+
+# Add placeholder traces for hotspot + trail + ripple which frames will replace (use initial frame 0)
+initial_frame_data = frames[0].data
+for d in initial_frame_data:
+    # add each trace with same order so frames replace them in place
+    fig.add_trace(d)
+
+# Attach frames
+fig.frames = frames
+
+# Add Plotly animation buttons (Play/Pause) and configure frame duration from animation speed slider
+frame_duration_ms = int(80 / anim_speed)  # mapping: larger speed -> shorter frame duration
+play_button = dict(type="buttons",
+                   showactive=False,
+                   y=1,
+                   x=0.1,
+                   xanchor="right",
+                   yanchor="top",
+                   pad=dict(t=10, r=10),
+                   buttons=[
+                       dict(label="Play",
+                            method="animate",
+                            args=[None, dict(frame=dict(duration=frame_duration_ms, redraw=True),
+                                             transition=dict(duration=0),
+                                             fromcurrent=True,
+                                             mode='immediate')]),
+                       dict(label="Pause",
+                            method="animate",
+                            args=[[None], dict(frame=dict(duration=0, redraw=False),
+                                               mode='immediate',
+                                               transition=dict(duration=0))])
+                   ])
+
+fig.update_layout(updatemenus=[play_button],
+                  margin=dict(l=0, r=0, t=40, b=0),
+                  paper_bgcolor='rgba(0,0,0,0)',
+                  title=f"Black Hole Visual — Mass: {mass:,} M☉ · spin a*={spin:.2f}",
+                  showlegend=False)
+
+# add a frame slider (Plotly's built in)
+steps = []
+for i in range(NFRAMES):
+    step = dict(method="animate",
+                args=[[f'frame{i}'], dict(frame=dict(duration=frame_duration_ms, redraw=True),
+                                          mode='immediate')],
+                label=str(i))
+    steps.append(step)
+sliders = [dict(active=0, pad={"t": 50}, steps=steps, currentvalue={"prefix":"Frame: "})]
+fig.update_layout(sliders=sliders)
+
+# render Plotly figure in Streamlit
+col1, col2 = st.columns([2, 1])
+with col1:
+    st.subheader("3D Visual")
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
+    st.caption("Use Play button (above) to animate. Speed slider changes frame timing when re-rendered.")
+
+with col2:
+    st.subheader("Model Info & Controls")
+    st.write(f"**Mass (M☉):** {mass:,}")
+    st.write(f"**Schwarzschild radius (physical):** {r_s:.3e} m")
+    st.write(f"**Normalized visual horizon radius:** {horizon_r:.2f}")
+    st.write(f"**Spin (a*):** {spin:.2f}")
+    st.write(f"**Hotspot trail length:** {trail_len}")
+    st.write(f"**Accretion rings (visual):** {rings}")
+    st.write(f"**Animation speed:** {anim_speed:.2f} (higher = faster)")
     st.markdown("---")
-    st.subheader("Actions")
-    render_btn = st.button("Render Animation")
-    gen_audio_btn = st.button("Generate Audio")
-    export_btn = st.button("Export params+waveform")
+    st.markdown("**Interactivity**")
+    st.write("Change controls in the sidebar then click **Refresh Visual** to regenerate animation timing & assets.")
 
-    st.markdown("---")
-    st.caption("Tip: press Render Animation, then Generate Audio (if desired). Audio will appear as a playable WAV player below.")
+# A refresh button to re-generate figure with new frame_duration (Plotly uses frame duration baked into figure)
+if st.button("Refresh Visual"):
+    # Recompute frame duration and re-render (we simply rerun the app which regenerates fig above
+    st.experimental_rerun()
 
-with right:
-    st.header("Preview")
-    preview_area = st.empty()
-    audio_area = st.empty()
-    info_area = st.empty()
-
-# --- Helpers: wave generation (write PCM16 WAV to bytes) ---
-def float_to_pcm16_bytes(samples: np.ndarray, gain=0.3, samplerate=44100):
+# ------------------------------
+# Audio synthesis: hurricane + whirlpool-like texture
+# ------------------------------
+def synth_hurricane_whirlpool(duration_s=3.0, sr=22050, intensity=0.6, mass_scale=1.0, spin_val=0.5):
     """
-    Convert float32 samples (-1..1) to PCM16 bytes in-memory.
+    Synthesize a layered texture:
+    - low-frequency swirling base (sweep)
+    - filtered noise for 'whirlpool'
+    - amplitude modulation and slow tremor (hurricane-like)
+    Returns bytes (WAV) and sample rate.
     """
-    # clip and scale
-    samples = np.asarray(samples, dtype=np.float32)
-    samples = samples * float(gain)
-    samples = np.clip(samples, -1.0, 1.0)
-    int_samples = (samples * 32767.0).astype(np.int16)
+    t = np.linspace(0, duration_s, int(sr*duration_s), endpoint=False)
+    # base sweep: slow rising sine (like base rumble)
+    f0 = 8.0 * (0.5 + 0.5*(spin_val))  # low base freq
+    f1 = 220.0 * (0.6 + 0.8*(mass_scale/4_300_000))  # mass influences high end a little
+    sweep = np.sin(2*np.pi*(f0*t + (f1-f0)/(2*duration_s) * t**2))  # quadratic chirp-like sweep
 
-    buf = io.BytesIO()
-    with wave.open(buf, 'wb') as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)  # 16-bit
-        wf.setframerate(samplerate)
-        wf.writeframes(int_samples.tobytes())
-    buf.seek(0)
-    return buf.read()
-
-# --- Chirp generator (exponential sweep) ---
-def generate_chirp_audio(duration=3.0, f_start=20.0, f_end=2000.0, samplerate=44100, gain=0.28):
-    N = int(duration * samplerate)
-    t = np.linspace(0, duration, N, endpoint=False)
-    # exponential sweep formula
-    if f_start <= 0: f_start = 0.1
-    K = duration / np.log(f_end / f_start)
-    instantaneous_phase = 2 * np.pi * K * (f_start * (np.exp(t / K) - 1.0))
-    sig = np.sin(instantaneous_phase)
-    # envelope
-    env = np.sin(np.pi * t / duration) ** 0.9
-    samples = sig * env
-    return float_to_pcm16_bytes(samples, gain=gain, samplerate=samplerate)
-
-# --- Whirlpool + Hurricane ambient generator (synth + colored noise) ---
-def generate_whirlpool_hurricane(duration=3.0, samplerate=44100, gain=0.28):
-    N = int(duration * samplerate)
-    t = np.linspace(0, duration, N, endpoint=False)
-
-    # Low-frequency rotating core (like a whirlpool)
-    core_freq = 4.0  # low hum
-    core = 0.5 * np.sin(2 * np.pi * core_freq * t)
-
-    # Sweeping turbulent component (a slow frequency sweep)
-    sweep = np.sin(2 * np.pi * (20.0 + 80.0 * (t / duration)) * t * 0.5)
-
-    # Colored noise: pink-ish via filtering white noise in frequency domain
-    wn = np.random.normal(0, 1, N)
-    # simple 1/f filter by dividing FFT bins by sqrt(freq)
-    fft = np.fft.rfft(wn)
-    freqs = np.fft.rfftfreq(N, 1.0/samplerate)
-    # avoid divide by zero
-    freqs[0] = freqs[1] if len(freqs) > 1 else 1.0
-    fft_filtered = fft / np.sqrt(freqs)
-    pink = np.fft.irfft(fft_filtered, n=N)
+    # whirlpool: filtered noise shaped by 1/f envelope + bandpass-ish amplitude
+    white = np.random.normal(0, 1.0, t.shape)
+    # simple 1/f shaping by cumulative sum (integral) and highpass subtract
+    pink = np.cumsum(white)
     pink = pink / (np.max(np.abs(pink)) + 1e-9)
+    # bandpass component by modulating with low frequency sine
+    whirl = pink * (0.3 + 0.7 * np.sin(2*np.pi*0.7*t + 1.2*spin_val))
 
-    # amplitude envelope: strong at middle, taper at edges
-    env = (np.sin(np.pi * t / duration)) ** 1.2
-    samples = 0.6 * core + 0.35 * sweep + 0.8 * 0.8 * pink
-    samples *= env
-    # mild distortion & normalization
-    samples = samples / (np.max(np.abs(samples)) + 1e-9)
-    return float_to_pcm16_bytes(samples, gain=gain, samplerate=samplerate)
+    # hurricane turbulence: amplitude modulation
+    trem = 0.6 + 0.4 * np.sin(2*np.pi*0.25*t + 0.6*spin_val)  # slow large-scale modulation
 
-# --- Animation renderer (non-blocking) ---
-def render_bh_animation(frames=120, hotspot_speed=0.26, trail_len=6, disk_color="#ffb452",
-                        show_stars=False, disk_thickness=24, mass_visual=4_300_000.0, fps=30):
-    """
-    Create an in-memory GIF showing:
-    - accretion rings
-    - rotating hotspot with trail
-    - optional subtle starfield in background (off by default)
-    Returns: GIF bytes
-    """
-    # visual scale param mapping (purely aesthetic)
-    scale = np.clip(np.log10(max(mass_visual, 1000.0)) - 2.0, 0.6, 6.0)
+    # combine with weights
+    audio = (0.7 * sweep + 0.9 * whirl * 0.6) * trem
 
-    fig, ax = plt.subplots(figsize=(6, 6), facecolor='black')
-    ax.set_facecolor('black')
-    ax.set_xlim(-2 * scale, 2 * scale)
-    ax.set_ylim(-2 * scale, 2 * scale)
-    ax.set_aspect('equal')
-    ax.axis('off')
+    # gentle lowpass / taper (fade out)
+    fade = np.ones_like(t)
+    fade[int(0.85*len(t)):] = np.linspace(1.0, 0.0, len(t) - int(0.85*len(t)))
+    audio = audio * fade
 
-    # precompute ring radii
-    horizon_R = 0.6 * scale
-    ring_radii = [horizon_R + 0.2 + (i * (disk_thickness / 60.0)) for i in range(20)]
+    # normalize and apply intensity
+    audio = audio / (np.max(np.abs(audio)) + 1e-9)
+    audio = audio * float(np.clip(intensity, 0.0, 1.0)) * 0.9
 
-    # objects to draw
-    rings_lines = [ax.plot([], [], lw=1, solid_capstyle='round', color=disk_color, alpha=0.12)[0] for _ in ring_radii]
-    hotspot_point, = ax.plot([], [], 'o', color='#ffd9b3', markersize=8)
-    trail_line, = ax.plot([], [], '-', color='#ffd9b3', alpha=0.6, lw=2)
-    star_pts = None
-    if show_stars:
-        # place faint points around edges — not inside horizon (simple radial mask)
-        Nstars = 120
-        angles = np.random.rand(Nstars) * 2 * np.pi
-        rs = np.random.uniform(horizon_R + 0.6*scale, 1.9*scale, Nstars)
-        xs = rs * np.cos(angles)
-        ys = rs * np.sin(angles)
-        star_pts = ax.scatter(xs, ys, s=np.random.uniform(3, 8, Nstars), c='white', alpha=0.6)
+    # convert to 16-bit PCM
+    pcm = np.int16(audio * 32767)
+    # write WAV bytes with wave module
+    bio = io.BytesIO()
+    with wave.open(bio, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(pcm.tobytes())
+    bio.seek(0)
+    return bio, sr
 
-    trail_xs, trail_ys = [], []
+# Play audio button
+if st.button("Play Hurricane/Whirlpool Audio"):
+    st.info("Generating audio... (synthesizing in memory)")
+    bio, sr = synth_hurricane_whirlpool(duration_s=audio_dur, sr=22050, intensity=audio_strength, mass_scale=mass, spin_val=spin)
+    st.audio(bio.read(), format="audio/wav", start_time=0)
+    st.success("Playing (streaming via browser).")
 
-    def init():
-        for ln in rings_lines:
-            ln.set_data([], [])
-        hotspot_point.set_data([], [])
-        trail_line.set_data([], [])
-        return rings_lines + [hotspot_point, trail_line] + ([star_pts] if star_pts is not None else [])
-
-    def update(i):
-        # time angle (controls hotspot)
-        angle = i * (hotspot_speed * 0.12 + 0.02)
-        # hotspot orbit radius (visual)
-        hx = (horizon_R + 0.9 * scale) * math.cos(angle)
-        hy = (horizon_R + 0.9 * scale) * math.sin(angle * 0.86)  # elliptical wobble
-
-        # rings
-        for idx, r in enumerate(ring_radii):
-            theta = np.linspace(0, 2 * np.pi, 180)
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
-            # slight brightness modulation to give motion impression
-            alpha = 0.006 + (idx / len(ring_radii)) * 0.012 + 0.02 * math.sin(i * 0.08 + idx)
-            rings_lines[idx].set_data(x, y)
-            rings_lines[idx].set_alpha(alpha)
-
-        # hotspot trail
-        trail_xs.insert(0, hx)
-        trail_ys.insert(0, hy)
-        if len(trail_xs) > trail_len:
-            trail_xs.pop()
-            trail_ys.pop()
-        hotspot_point.set_data(hx, hy)
-        trail_line.set_data(trail_xs, trail_ys)
-        # trail fade handled by alpha; matplotlib can't do per-point alpha easily without LineCollection; keep simple
-
-        return rings_lines + [hotspot_point, trail_line]
-
-    # create animation and save to GIF into buffer
-    ani = animation.FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, interval=1000/fps, repeat=False)
-    buf = io.BytesIO()
-    try:
-        ani.save(buf, writer='pillow', fps=fps)
-    except Exception as e:
-        # fallback: render frames manually and save (less efficient)
-        frames_list = []
-        for idx in range(frames):
-            update(idx)
-            buf_frame = io.BytesIO()
-            fig.canvas.draw()
-            img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            w, h = fig.canvas.get_width_height()
-            img = img.reshape((h, w, 3))
-            import PIL.Image as Image
-            pil = Image.fromarray(img)
-            frames_list.append(pil.convert("P"))
-        if frames_list:
-            frames_list[0].save(buf, format="GIF", save_all=True, append_images=frames_list[1:], loop=0, duration=int(1000/fps))
-    buf.seek(0)
-    plt.close(fig)
-    return buf.read()
-
-# --- Main actions: render GIF & audio generation ---
-gif_bytes = None
-if render_btn:
-    with st.spinner("Rendering animation — this returns quickly, please wait..."):
-        gif_bytes = render_bh_animation(frames=140, hotspot_speed=hotspot_speed, trail_len=trail_length,
-                                       disk_color=disk_color, show_stars=show_stars, disk_thickness=disk_thickness,
-                                       mass_visual=mass, fps=30)
-        preview_area.image(gif_bytes, use_column_width=True)
-        info_area.markdown(f"**Rendered:** {datetime.utcnow().isoformat()} UTC  \nMass (visual) = {int(mass):,} M☉ — hotspot speed {hotspot_speed:.2f} — trail {trail_length}")
-else:
-    preview_area.info("Click **Render Animation** to produce the visualization GIF.")
-
-# audio generation
-if gen_audio_btn:
-    if audio_choice == "None":
-        audio_area.info("No audio selected.")
-    else:
-        with st.spinner("Generating audio..."):
-            if audio_choice == "Chirp (merger-like)":
-                # generate chirp params loosely tied to mass and visual spin
-                f0 = 20 + (hotspot_speed * 8.0)
-                f1 = 400 + (np.clip(np.log10(mass + 1.0), 3.0, 8.0) - 3.0) * 200.0
-                wav_bytes = generate_chirp_audio(duration=audio_duration, f_start=f0, f_end=f1, gain=audio_gain)
-                audio_area.audio(wav_bytes, format="audio/wav")
-                audio_area.markdown(f"Chirp generated: {f0:.1f} Hz → {f1:.1f} Hz, {audio_duration:.2f}s")
-            else:
-                wav_bytes = generate_whirlpool_hurricane(duration=audio_duration, gain=audio_gain)
-                audio_area.audio(wav_bytes, format="audio/wav")
-                audio_area.markdown(f"Whirlpool+Hurricane ambient, {audio_duration:.2f}s")
-
-# export params + waveform (if generated)
-if export_btn:
-    # build payload: params + (if audio recently generated) sample snippet (we can't always attach huge arrays)
-    payload = {
-        "timestamp_utc": datetime.utcnow().isoformat(),
-        "params": {
-            "mass_visual": mass,
-            "hotspot_speed": hotspot_speed,
-            "trail_length": trail_length,
-            "disk_color": disk_color,
-            "show_stars": show_stars,
-            "disk_thickness": disk_thickness,
-            "audio_choice": audio_choice,
-            "audio_duration_s": audio_duration,
-            "audio_gain": audio_gain
-        }
-    }
-    # if audio was generated in this session as wav_bytes, include base64 snippet
-    # (Note: for simplicity we attach only last generated audio in memory if present)
-    try:
-        if 'wav_bytes' in locals() and wav_bytes:
-            payload['audio_base64'] = base64.b64encode(wav_bytes[:20000]).decode('ascii')  # partial preview
-    except Exception:
-        pass
-
-    blob = json.dumps(payload, indent=2)
-    bbuf = io.BytesIO(blob.encode('utf-8'))
-    st.download_button("Download JSON", data=bbuf, file_name="bbh_sim_params.json", mime="application/json")
-    st.success("Export prepared.")
-
-# display short help and diagnostics
-with st.expander("About / Notes (click)"):
-    st.markdown("""
-    - **Visual scaling**: mass slider here controls an aesthetic visual scale; it does not run GR field equations.
-    - **Audio**: the chirp is a pedagogical exponential sweep inspired by PN scaling; the ambient sound is a mix of low-frequency hum + colored noise.
-    - **No infinite loops**: the renderer uses FuncAnimation with a finite number of frames; Streamlit will not hang.
-    - **Tuning**: increase trail length for longer trails, or hotspot speed to make the hotspot orbit faster.
-    - **Stars**: turned off by default to avoid occlusion; enable only for context.
-    """)
-
-st.caption("Built for iterative exploration — tell me which physics you want wired to visuals next (time dilation, decay overlays, or event merger binding).")
+st.markdown("---")
+st.caption("Notes: This visualization is a pedagogical/visual model (toy physics). The audio is a synthesized texture inspired by hurricane/whirlpool dynamics — not a literal recording of spacetime.")
