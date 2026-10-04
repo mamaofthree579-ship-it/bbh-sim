@@ -187,7 +187,6 @@ snapshot = {
     "dm_grid": (st.session_state.grid / (np.nanmax(st.session_state.grid) + 1e-9)).tolist()
 }
 
-# We pass a clean JSON structure to string concatenation to avoid literal bracket parsing issues
 json_data = json.dumps(snapshot)
 
 html_payload = f"""
@@ -272,7 +271,7 @@ html_payload = f"""
             
             const mesh = new THREE.Mesh(g, m);
             
-            // FIXED: Extracted via explicit object lookups to dodge bracket-truncation issues
+            // FIXED: Explicitly extracted the X index [0] and Y index [1] from the 2D coordinate array
             const nodeCoords = snapshot.pos[i];
             mesh.position.x = nodeCoords[0];
             mesh.position.y = nodeCoords[1];
@@ -305,6 +304,7 @@ html_payload = f"""
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
+
 
 
 
