@@ -194,7 +194,7 @@ html_payload = f"""
     <meta charset="utf-8">
     <title>Fractal Cosmos Visualizer</title>
     <style>
-        body {{ margin: 0; background: radial-gradient(circle at center, #001022 0%, #000 100%); overflow: hidden; }}
+        html, body {{ margin: 0; padding: 0; background-color: #000a12; overflow: hidden; width: 100%; height: 100%; }}
         #overlay {{ position: absolute; top: 10px; left: 10px; color: #0ff; font-family: monospace; text-shadow: 0 0 10px #0ff; z-index: 10; }}
     </style>
 </head>
@@ -204,14 +204,19 @@ html_payload = f"""
     <script>
         const snapshot = {json.dumps(snapshot)};
         const scene = new THREE.Scene();
+        
+        // Enforce explicit background color inside the Three.js scene environment
+        scene.background = new THREE.Color(0x000a12);
+        
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
         camera.position.z = 100;
         
-        const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
+        const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: false }});
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
         
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+        scene.add(ambientLight);
         
         // Render Dark Matter Grid Plane
         const s = snapshot.dm_grid.length;
@@ -226,28 +231,31 @@ html_payload = f"""
                 img.data[idx] = 30 + 220*v;
                 img.data[idx+1] = 10 + 90*v;
                 img.data[idx+2] = 80 + 120*(1-v);
-                img.data[idx+3] = 180;
+                img.data[idx+3] = 200;
             }}
         }}
         ctx.putImageData(img,0,0);
         const tex = new THREE.CanvasTexture(canvas);
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.55}}));
-        plane.position.set(0,0,-10);
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.65}}));
+        plane.position.set(0,0,-5);
         scene.add(plane);
 
-        // Render Nodes (with correct dimension arrays restored)
+        // Render Nodes
         const nodes = [];
         for(let i=0; i<snapshot.N; i++) {{
             const amp = snapshot.node_amp[i];
             const hue = (snapshot.node_phase[i] + Math.PI)/(2*Math.PI);
             const col = new THREE.Color().setHSL(hue, 1, 0.5);
-            const g = new THREE.SphereGeometry(1.2 + 2*Math.abs(amp), 16, 16);
+            
+            const g = new THREE.SphereGeometry(1.5 + 2.5*Math.abs(amp), 16, 16);
             const m = new THREE.MeshBasicMaterial({{color:col}});
             const mesh = new THREE.Mesh(g, m);
             
-            // RESTORED: Dimensional properties properly referenced
+            // FIXED: Isolate explicit multidimensional array indices [0] and [1]
             mesh.position.x = snapshot.pos[i][0];
             mesh.position.y = snapshot.pos[i][1];
+            mesh.position.z = 0;
+            
             scene.add(mesh);
             nodes.push(mesh);
         }}
@@ -257,17 +265,24 @@ html_payload = f"""
             requestAnimationFrame(animate);
             animateTime += 0.02;
             nodes.forEach((n, i) => {{
-                const scale = 1 + 0.2 * Math.sin(animateTime * 3 + i);
+                const scale = 1 + 0.15 * Math.sin(animateTime * 3 + i);
                 n.scale.set(scale, scale, scale);
             }});
             renderer.render(scene, camera);
         }}
         animate();
+
+        window.addEventListener('resize', () => {{
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }});
     </script>
 </body>
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
+
 
 st.subheader("📈 Research Metrics")
 if not st.session_state.log.empty:
