@@ -215,11 +215,9 @@ html_payload = f"""
         document.body.appendChild(renderer.domElement);
         
         // --- ILLUMINATION SYSTEM ---
-        // Brighter background fill
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         
-        // Front-facing key light to give spheres structural volume and high visibility
         const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
         keyLight.position.set(0, 0, 100).normalize();
         scene.add(keyLight);
@@ -251,32 +249,27 @@ html_payload = f"""
         for(let i=0; i<snapshot.N; i++) {{
             const amp = snapshot.node_amp[i];
             
-            // Explicitly classify into 3 clean frequency zones
             let col = new THREE.Color();
             if (i % 3 === 0) {{
-                // Zone 1: Magenta / Deep Pink (Low Frequency)
-                col.setHex(0xff007f); 
+                col.setHex(0xff007f); // Zone 1: Magenta / Deep Pink
             }} else if (i % 3 === 1) {{
-                // Zone 2: Bright Electric Cyan (Mid Frequency)
-                col.setHex(0x00f3ff); 
+                col.setHex(0x00f3ff); // Zone 2: Bright Electric Cyan
             }} else {{
-                // Zone 3: Radioactive Neon Green (High Frequency)
-                col.setHex(0x39ff14); 
+                col.setHex(0x39ff14); // Zone 3: Radioactive Neon Green
             }}
             
             const g = new THREE.SphereGeometry(1.5 + 2.5*Math.abs(amp), 16, 16);
-            
-            // Switch to MeshStandardMaterial and give it emissive properties so it glows
             const m = new THREE.MeshStandardMaterial({{
                 color: col,
                 roughness: 0.2,
                 metalness: 0.1,
                 emissive: col,
-                emissiveIntensity: 0.4  // Self-illumination baseline
+                emissiveIntensity: 0.4
             }});
             
             const mesh = new THREE.Mesh(g, m);
             
+            // FIXED: Explicitly pull indices [0] and [1] from the position sub-arrays
             mesh.position.x = snapshot.pos[i][0];
             mesh.position.y = snapshot.pos[i][1];
             mesh.position.z = 0;
@@ -292,8 +285,6 @@ html_payload = f"""
             nodes.forEach((n, i) => {{
                 const scale = 1 + 0.15 * Math.sin(animateTime * 3 + i);
                 n.scale.set(scale, scale, scale);
-                
-                // Pulsate the emissive intensity rhythmically to show life
                 n.material.emissiveIntensity = 0.3 + 0.3 * Math.sin(animateTime * 2 + i);
             }});
             renderer.render(scene, camera);
@@ -310,6 +301,7 @@ html_payload = f"""
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
+
 
 
 
