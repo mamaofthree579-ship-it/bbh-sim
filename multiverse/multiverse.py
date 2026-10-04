@@ -187,6 +187,9 @@ snapshot = {
     "dm_grid": (st.session_state.grid / (np.nanmax(st.session_state.grid) + 1e-9)).tolist()
 }
 
+# We pass a clean JSON structure to string concatenation to avoid literal bracket parsing issues
+json_data = json.dumps(snapshot)
+
 html_payload = f"""
 <!doctype html>
 <html>
@@ -194,7 +197,7 @@ html_payload = f"""
     <meta charset="utf-8">
     <title>Fractal Cosmos Visualizer</title>
     <style>
-        html, body {{ margin: 0; padding: 0; background-color: #000a12; overflow: hidden; width: 100%; height: 100%; }}
+        html, body {{ margin: 0; padding: 0; background-color: #020710; overflow: hidden; width: 100%; height: 100%; }}
         #overlay {{ position: absolute; top: 10px; left: 10px; color: #0ff; font-family: monospace; text-shadow: 0 0 10px #0ff; z-index: 10; }}
     </style>
 </head>
@@ -202,7 +205,7 @@ html_payload = f"""
     <div id="overlay">t = {snapshot['time']:.3f} s</div>
     <script src="https://jsdelivr.net"></script>
     <script>
-        const snapshot = {json.dumps(snapshot)};
+        const snapshot = {json_data};
         const scene = new THREE.Scene();
         
         scene.background = new THREE.Color(0x020710);
@@ -214,8 +217,8 @@ html_payload = f"""
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
         
-        // --- ILLUMINATION SYSTEM ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Lighting System
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
         
         const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -244,18 +247,18 @@ html_payload = f"""
         plane.position.set(0,0,-5);
         scene.add(plane);
 
-        // --- HARMONIC COLOR ORGANIZATION ---
+        // Render Nodes
         const nodes = [];
         for(let i=0; i<snapshot.N; i++) {{
             const amp = snapshot.node_amp[i];
             
             let col = new THREE.Color();
             if (i % 3 === 0) {{
-                col.setHex(0xff007f); // Zone 1: Magenta / Deep Pink
+                col.setHex(0xff007f); // Low Frequency Zone (Magenta)
             }} else if (i % 3 === 1) {{
-                col.setHex(0x00f3ff); // Zone 2: Bright Electric Cyan
+                col.setHex(0x00f3ff); // Mid Frequency Zone (Cyan)
             }} else {{
-                col.setHex(0x39ff14); // Zone 3: Radioactive Neon Green
+                col.setHex(0x39ff14); // High Frequency Zone (Neon Green)
             }}
             
             const g = new THREE.SphereGeometry(1.5 + 2.5*Math.abs(amp), 16, 16);
@@ -264,14 +267,15 @@ html_payload = f"""
                 roughness: 0.2,
                 metalness: 0.1,
                 emissive: col,
-                emissiveIntensity: 0.4
+                emissiveIntensity: 0.5
             }});
             
             const mesh = new THREE.Mesh(g, m);
             
-            // FIXED: Explicitly pull indices [0] and [1] from the position sub-arrays
-            mesh.position.x = snapshot.pos[i][0];
-            mesh.position.y = snapshot.pos[i][1];
+            // FIXED: Extracted via explicit object lookups to dodge bracket-truncation issues
+            const nodeCoords = snapshot.pos[i];
+            mesh.position.x = nodeCoords[0];
+            mesh.position.y = nodeCoords[1];
             mesh.position.z = 0;
             
             scene.add(mesh);
@@ -301,6 +305,7 @@ html_payload = f"""
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
+
 
 
 
