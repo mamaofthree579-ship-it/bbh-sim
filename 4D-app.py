@@ -192,3 +192,49 @@ else:
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
+
+# =============================================================================
+# EXTENSION TABS: MULTI-GALAXY MERGER GRID INTERACTIVE MODULE
+# =============================================================================
+
+# Add this block inside your main Streamlit script layout under a new tab or condition
+if sector == "1. Galactic Disk & SPH Grid Solver":
+    st.markdown("---")
+    st.subheader("💥 Multi-Galaxy Merger Field Superposition Engine")
+    st.markdown("Interact with the spatial layout coordinates of two colliding cores to watch how their 4D compression fields intersect.")
+    
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        dist_x = st.slider("Core Separation Distance along X-axis (kpc)", 0.0, 40.0, 15.0, 1.0)
+        weight_ratio = st.slider("Mass/Information Ratio (Core 2 / Core 1)", 0.1, 2.0, 1.0, 0.1)
+        
+    with col_m2:
+        # Resolve discrete overlapping grids
+        N_m = 100
+        dx_m = 0.5
+        mid_m = N_m // 2
+        
+        x_m = np.linspace(-25, 25, N_m)
+        y_m = np.linspace(-25, 25, N_m)
+        X_m, Y_m = np.meshgrid(x_m, y_m)
+        
+        # Core Position Matrix
+        c1_x, c1_y = -dist_x / 2.0, 0.0
+        c2_x, c2_y = dist_x / 2.0, 0.0
+        
+        # Calculate 4D hyperspherical projections onto the 2D plane slice (z=0, w=0)
+        r_c1 = np.sqrt((X_m - c1_x)**2 + (Y_m - c1_y)**2 + 0.1**2)
+        r_c2 = np.sqrt((X_m - c2_x)**2 + (Y_m - c2_y)**2 + 0.1**2)
+        
+        # Superimpose volumetric compression states (chi ∝ 1/r)
+        chi_composite = ((4.0 * I_0) / (3.0 * r_c1)) + weight_ratio * ((4.0 * I_0) / (3.0 * r_c2))
+        alpha_composite = np.abs(-eta * kappa * chi_composite)
+        
+        # Plot structural contours
+        fig_m, ax_m = plt.subplots(figsize=(6, 4))
+        cp = ax_m.contourf(X_m, Y_m, alpha_composite, cmap='magma', levels=30)
+        fig_m.colorbar(cp, label='Anomalous Acceleration Profile Magnitude')
+        ax_m.set_title('Superimposed Geometric Stress Fields')
+        ax_m.set_xlabel('Spatial Width X (kpc)')
+        ax_m.set_ylabel('Spatial Height Y (kpc)')
+        st.pyplot(fig_m)
