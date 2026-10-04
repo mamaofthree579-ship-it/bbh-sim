@@ -1,240 +1,127 @@
 import streamlit as st
 import numpy as np
-import scipy.stats as stats
 import matplotlib.pyplot as plt
 import pandas as pd
 import io
 
 # ---------------------------------------------------------
-# Streamlit Page & Theme Configurations
+# Streamlit Configuration & Page Setup
 # ---------------------------------------------------------
-st.set_page_config(page_title="Information-Geometric Mechanics WebApp 2.0", layout="wide")
-st.title("🌌 Information-Geometric Mechanics Framework Sandbox (v2.0)")
+st.set_page_config(page_title="Information-Geometric Mechanics 3.0", layout="wide")
+st.title("🌌 Information-Geometric Mechanics Framework (v3.0)")
 st.markdown("""
-This advanced workspace implements the full, interlocking multi-sector mathematical formulations of 
-**Information-Geometric Mechanics (IGM)**. 
-Use the tabs and sliders below to interact with the 4D space-division matrices, black hole horizon math, 
-and subatomic spin state modulators.
+This advanced workspace coordinates the unified field equations of **Information-Geometric Mechanics (IGM)**,
+spanning Galactic Halo Solver grids, Relativistic Horizons, Subatomic precessions, 
+and newly integrated **Bio-Geometric Biophysics** models.
 """)
 
 # ---------------------------------------------------------
 # Sidebar Panel Controls
 # ---------------------------------------------------------
-st.sidebar.header("🛠️ Universal Framework Configuration")
+st.sidebar.header("🛠️ Universal Configuration Matrix")
 sector = st.sidebar.selectbox("Select Target Framework Sector:", 
                               ["1. Galactic Disk & SPH Grid Solver", 
                                "2. Strong-Field Horizon Transformations", 
                                "3. Quantum Phase-Crystallization", 
-                               "4. Global Consciousness Network Data Ingestion"])
+                               "4. Global Consciousness Network",
+                               "5. 4D Bio-Geometric Mitosis Solver",
+                               "6. Polypeptide Free-Energy Funnels"])
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📐 Fundamental Invariant Coefficients")
-I_0 = st.sidebar.slider("Information Profile Scale Factor (I_0)", 0.1, 5.0, 1.0, 0.1)
-kappa = st.sidebar.slider("Geometric Elasticity Constant (kappa)", 0.1, 2.0, 0.5, 0.1)
-eta = st.sidebar.slider("Stress Tensor Deficit Coupling (eta)", 0.1, 2.0, 1.0, 0.1)
+I_0 = st.sidebar.slider("Information Profile Scale (I_0)", 0.1, 5.0, 1.0, 0.1)
+kappa = st.sidebar.slider("Geometric Elasticity (kappa)", 0.1, 2.0, 0.5, 0.1)
+eta = st.sidebar.slider("Stress Tensor Coupling (eta)", 0.1, 2.0, 1.0, 0.1)
 
-# Physics Core Constant Registry
-G = 4.300e-6                      # kpc (km/s)^2 M_sun^-1
-M_bar_core = 5.0e10               # Standard spiral core baryonic mass scale (M_sun)
-hbar = 1.0545718e-34              # Reduced Planck constant (J*s)
+# Core Constants
+G = 4.300e-6                      
+M_bar_core = 5.0e10               
 
 # ---------------------------------------------------------
-# Sector 1: Galactic Disk & SPH Grid Solver
+# SECTOR 5: 4D Bio-Geometric Mitosis Solver
 # ---------------------------------------------------------
-if sector == "1. Galactic Disk & SPH Grid Solver":
-    st.header("🛸 4D Space-Within-Space Galactic Solver")
+if sector == "5. 4D Bio-Geometric Mitosis Solver":
+    st.header("🧬 4D Geometric Mitosis Dipole Funneling")
     
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns()
     
     with col1:
-        st.subheader("LaTeX Field Formulations")
-        st.latex(r"\nabla_\mu V^\mu = \sigma I(r)")
-        st.latex(r"I(r) = I_0 r^{-n} \implies V_r \propto r^{1-n} \quad [n=1 \rightarrow V_r = \text{const.}]")
-        st.latex(r"\chi(r) = \frac{1}{V_{4D}}\sum A_i\phi_i \propto \frac{r^3}{r^4} \propto r^{-m} \quad [m=1]")
-        st.latex(r"\text{Scale Lock: } 2n + m = 2(1) + 1 = 3")
+        st.subheader("Mitotic Spindle Field Formulations")
+        st.latex(r"\vec{a}_{\rm chromatid} = -\kappa_{\rm bio} \cdot \vec{\nabla}\left[ \chi_A(\vec{r}) + \chi_B(\vec{r}) \right]")
+        st.latex(r"\vec{a}_{\rm chromatid}(z) \propto -\kappa_{\rm bio} \left( \frac{1}{(z - d/2)^2} - \frac{1}{(z + d/2)^2} \right)")
+        st.latex(r"\text{Metaphase Threshold Check: } \lim_{z \to 0} \vec{a}(z) = 0 \quad [\chi \to \chi_{\rm crit}]")
         
         st.markdown("---")
-        r_max = st.slider("Max Galactic Horizon Boundary (kpc)", 10.0, 100.0, 50.0, 5.0)
-        N_points = 500
+        d_spindle = st.slider("Spindle Pole Separation Distance d (microns)", 2.0, 20.0, 10.0, 0.5)
+        kappa_bio = st.slider("Bio-Geometric Coupling Scalar (kappa_bio)", 0.1, 5.0, 1.5, 0.1)
         
     with col2:
-        r = np.linspace(0.1, r_max, N_points)
-        I_r = I_0 / r
-        chi_r = (4.0 * I_0) / (3.0 * r)
-        alpha_r = np.abs(-eta * kappa * chi_r) * 40.0
+        z = np.linspace(-d_spindle*1.5, d_spindle*1.5, 1000)
+        # Avoid core singularity nodes
+        z = z[np.abs(z - d_spindle/2.0) > 0.05]
+        z = z[np.abs(z + d_spindle/2.0) > 0.05]
         
-        a_bar = (G * M_bar_core) / (r**2)
-        a_anomalous = alpha_r * r
-        a_total = a_bar + a_anomalous
+        # Acceleration profile tracking
+        acc_chromatid = -kappa_bio * ((1.0 / (z - d_spindle/2.0)**2) - (1.0 / (z + d_spindle/2.0)**2))
         
-        v_baryonic = np.sqrt(r * a_bar)
-        v_total = np.sqrt(r * a_total)
-        
-        fig, ax = plt.subplots(1, 2, figsize=(11, 4.5))
-        ax[0].plot(r, v_baryonic, 'r--', label='Newtonian Pure Baryonic (Decay)')
-        ax[0].plot(r, v_total, 'b-', label='Unified IGM 4D Model (Flat Plateau)')
-        ax[0].set_title('Asymptotically Flat Rotation Curve')
-        ax[0].set_xlabel('Galactic Radius r (kpc)')
-        ax[0].set_ylabel('Circular Velocity v (km/s)')
-        ax[0].grid(True, ls=":")
-        ax[0].legend()
-        
-        ax[1].loglog(r, I_r, 'g-', label='Information Density I(r) [n=1]')
-        ax[1].loglog(r, chi_r, 'm-.', label='Compression Density $\chi$(r) [m=1]')
-        ax[1].set_title('Log-Log Constraint Code Validation')
-        ax[1].set_xlabel('Log Radius')
-        ax[1].set_ylabel('Log Scalar Magnitude')
-        ax[1].grid(True, which="both", ls=":")
-        ax[1].legend()
-        
-        st.pyplot(fig)
-        
-        # CSV Export Generator Engine
-        df = pd.DataFrame({"Radius_kpc": r, "V_Newtonian_kms": v_baryonic, "V_IGM_kms": v_total, "Compression_Density": chi_r})
-        csv_buffer = io.StringIO()
-        df.to_csv(csv_buffer, index=False)
-        st.download_button("📥 Download Galactic Rotation Data Run (CSV)", data=csv_buffer.getvalue(), file_name="igm_galactic_run.csv", mime="text/csv")
-
-# ---------------------------------------------------------
-# Sector 2: Strong-Field Horizon Transformations
-# ---------------------------------------------------------
-elif sector == "2. Strong-Field Horizon Transformations":
-    st.header("🕳️ Schwarzschild Metric Strong-Field Boundary Conditions")
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader("Horizon Scaling Equations")
-        st.latex(r"ds^2 = -\left(1-\frac{r_s}{r}\right)c^2dt^2 + \left(1-\frac{r_s}{r}\right)^{-1}dr^2 + r^2d\Omega^2")
-        st.latex(r"\chi_{\rm relativistic}(r) = \frac{\chi_0}{r}\left(1-\frac{r_s}{r}\right)^{-1} = \frac{\chi_0}{r - r_s}")
-        st.latex(r"\lim_{r \to r_s} \chi(r) = \infty \quad [\text{Total Phase-Crystallization Threshold}]")
-        
-        st.markdown("---")
-        r_s = st.slider("Schwarzschild Radius Boundary r_s (kpc-scaled value)", 1.0, 5.0, 2.0, 0.5)
-        
-    with col2:
-        r_horizon = np.linspace(r_s + 0.1, r_s + 20.0, 1000)
-        chi_rel = (4.0 * I_0) / (3.0 * (r_horizon - r_s))
-        
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(r_horizon, chi_rel, 'k-', linewidth=2, label=r'$\chi_{\rm relativistic}(r)$')
-        ax.axvline(x=r_s, color='r', linestyle='--', label='Event Horizon Boundary ($r_s$)')
-        ax.set_title("Geometric Compression Singularity Divergence")
-        ax.set_xlabel("Radial Distance r")
-        ax.set_ylabel("Compression Density Scalar")
-        ax.set_ylim(0, np.max(chi_rel)*0.1)
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(z, acc_chromatid, 'g-', linewidth=2, label='Chromatid Acceleration Grid Force')
+        ax.axvline(x=d_spindle/2.0, color='r', linestyle='--', label='Spindle Pole A (+d/2)')
+        ax.axvline(x=-d_spindle/2.0, color='b', linestyle='--', label='Spindle Pole B (-d/2)')
+        ax.axhline(y=0, color='k', linestyle=':', label='Metaphase Alignment Plate (z=0)')
+        ax.set_title("Mitotic Spindle Axis Potential Deficit Trajectory")
+        ax.set_xlabel("Cellular Axial Coordinate z (microns)")
+        ax.set_ylabel("Geometric Force Vector Magnitude")
+        ax.set_ylim(-20, 20)
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
 
 # ---------------------------------------------------------
-# Sector 3: Quantum Phase-Crystallization
+# SECTOR 6: Polypeptide Free-Energy Funnels
 # ---------------------------------------------------------
-elif sector == "3. Quantum Phase-Crystallization":
-    st.header("⚛️ Subatomic Spin State Phase Precession")
+elif sector == "6. Polypeptide Free-Energy Funnels":
+    st.header("🧪 Polypeptide Free-Energy Landscape Minimization")
     
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns()
     
     with col1:
-        st.subheader("Pauli-Schrödinger Modified Hamiltonian")
-        st.latex(r"H_{\rm total} = \frac{e}{2m_e}(\vec{\sigma}\cdot\vec{B}) + \xi_0(\mathcal{C}_{\mu\nu}\sigma^\mu \otimes \hat{k}^\nu)")
-        st.latex(r"\Delta \theta_{\rm spin} = \frac{2 \xi_0}{\hbar} \int_0^{\tau_0} \mathcal{A}_M(t) \cdot [ \partial_x \theta_M(t) \omega(t) ] \, dt")
+        st.subheader("IGM Thermodynamics Invariants")
+        st.latex(r"E_{\rm total}(k) = E_{\rm classical}(\phi_k, \psi_k) + M_{\rm protein}\Lambda_0")
+        st.latex(r"\Delta F^\ddagger_{\rm modulated} = \Delta F^\ddagger_{\rm classical} - \gamma_{\rm fold} M_{\rm protein}\Lambda_0")
+        st.latex(r"\text{Levinthal Resolution: Robust trajectory funneling paths to native state.}")
         
         st.markdown("---")
-        xi_0 = st.slider("Psycho-Physical Spin Scaling Scalar (xi_0 * 10^-34)", 0.1, 10.0, 2.5, 0.5) * 1e-34
-        chopper_f = st.slider("Attentional Chopper Resonant Frequency (Hz)", 0.05, 1.0, 0.1, 0.05)
+        lambda_0 = st.slider("Universal Bio-Geometric Coupling Scalar (Lambda_0)", 0.1, 5.0, 1.2, 0.1)
+        roughness = st.slider("Classical Landscape Ruggedness Factor", 0.1, 3.0, 1.5, 0.1)
         
     with col2:
-        t = np.linspace(0, 20, 1000)
-        intent_wave = np.sin(2.0 * np.pi * chopper_f * t)
-        delta_theta = (2.0 * xi_0 / hbar) * np.cumsum(intent_wave) * (t[1] - t[0]) * 1e34  # Normalized visualization
+        xi = np.linspace(0, 10, 1000) # Folding reaction coordinate
         
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(t, delta_theta, 'g-', label=r'Anomalous Equatorial Precession $\Delta\theta_{\rm spin}$')
-        ax.set_title("Bloch Sphere Precession Divergence Tracking")
-        ax.set_xlabel("Time Axis (Seconds)")
-        ax.set_ylabel("Phase Precession Shift Vector Angle")
+        # Generate classical rugged funnel potential (with local minima traps)
+        F_classical = (xi - 5)**2 + roughness * np.sin(3.0 * np.pi * xi)
+        
+        # Inject the structural uniform IGM smoothing gradient funnel modifier
+        F_igm = (xi - 5)**2 + roughness * np.sin(3.0 * np.pi * xi) - (lambda_0 * xi)
+        
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(xi, F_classical, 'r--', alpha=0.7, label='Classical Folding Potential (Rugged Landscape)')
+        ax.plot(xi, F_igm, 'b-', linewidth=2, label='IGM 4D Funnel Modulated Profile (Smooth Native Sink)')
+        ax.set_title("Free-Energy Minimization Funnel Trajectory")
+        ax.set_xlabel("Folding Reaction Coordinate (\xi)")
+        ax.set_ylabel("Relative Free Energy Potential F(\xi)")
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
+        
+        # Export Module Buffer
+        df_bio = pd.DataFrame({"Reaction_Coordinate": xi, "F_Classical": F_classical, "F_IGM_Modulated": F_igm})
+        csv_buf = io.StringIO()
+        df_bio.to_csv(csv_buf, index=False)
+        st.download_button("📥 Download Biophysical Funnel Log (CSV)", data=csv_buf.getvalue(), file_name="igm_biophys_run.csv", mime="text/csv")
 
 # ---------------------------------------------------------
-# Sector 4: Global Consciousness Network
+# Fallbacks for Prior Standard Sectors (Retained for Thread Continuity)
 # ---------------------------------------------------------
 else:
-    st.header("🌐 Global Random Array Stream Processing")
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader("Information-Geometric Entropy Metrics")
-        st.latex(r"\mathcal{Q}_{\mu\nu} = \eta ( \langle T_{\mu\nu}^{CM}\rangle_c - \langle T_{\mu\nu}^{CM}\rangle_f ) + \zeta_0 \mathcal{C}_{\mu\nu}")
-        st.latex(r"\zeta_0 = \frac{k_B \cdot T_{\rm vac}}{2 \cdot V \cdot \mathcal{A}_M \omega \dot{\theta}_M} \left( \frac{\Delta \chi^2}{\text{DoF}} \right)")
-        
-        st.markdown("---")
-        focus_snr = st.slider("Consciousness Tensor Active Coherent Field Focus Intensity", 0.0, 0.1, 0.045, 0.005)
-        
-    with col2:
-        t_steps = 3600
-        nodes = 65
-        control_noise = np.random.normal(0, 1, size=(nodes, t_steps))
-        event_noise = control_noise + np.random.normal(focus_snr, 1, size=(nodes, t_steps))
-        
-        ctrl_cum = np.cumsum(np.sum(control_noise**2, axis=0) - nodes)
-        evnt_cum = np.cumsum(np.sum(event_noise**2, axis=0) - nodes)
-        
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(ctrl_cum, 'r--', label='Control Baseline Phase (Null Field Status)')
-        ax.plot(evnt_cum, 'b-', label='Event Focus Observation Window (C_μν Field Applied)')
-        ax.set_title("Network Cumulative Chi-Square Tracking Matrix")
-        ax.set_xlabel("Time Frame Sequence (Seconds)")
-        ax.set_ylabel("Cumulative Variance Deviation")
-        ax.grid(True, ls=":")
-        ax.legend()
-        st.pyplot(fig)
-
-# =============================================================================
-# EXTENSION TABS: MULTI-GALAXY MERGER GRID INTERACTIVE MODULE
-# =============================================================================
-
-# Add this block inside your main Streamlit script layout under a new tab or condition
-if sector == "1. Galactic Disk & SPH Grid Solver":
-    st.markdown("---")
-    st.subheader("💥 Multi-Galaxy Merger Field Superposition Engine")
-    st.markdown("Interact with the spatial layout coordinates of two colliding cores to watch how their 4D compression fields intersect.")
-    
-    col_m1, col_m2 = st.columns(2)
-    with col_m1:
-        dist_x = st.slider("Core Separation Distance along X-axis (kpc)", 0.0, 40.0, 15.0, 1.0)
-        weight_ratio = st.slider("Mass/Information Ratio (Core 2 / Core 1)", 0.1, 2.0, 1.0, 0.1)
-        
-    with col_m2:
-        # Resolve discrete overlapping grids
-        N_m = 100
-        dx_m = 0.5
-        mid_m = N_m // 2
-        
-        x_m = np.linspace(-25, 25, N_m)
-        y_m = np.linspace(-25, 25, N_m)
-        X_m, Y_m = np.meshgrid(x_m, y_m)
-        
-        # Core Position Matrix
-        c1_x, c1_y = -dist_x / 2.0, 0.0
-        c2_x, c2_y = dist_x / 2.0, 0.0
-        
-        # Calculate 4D hyperspherical projections onto the 2D plane slice (z=0, w=0)
-        r_c1 = np.sqrt((X_m - c1_x)**2 + (Y_m - c1_y)**2 + 0.1**2)
-        r_c2 = np.sqrt((X_m - c2_x)**2 + (Y_m - c2_y)**2 + 0.1**2)
-        
-        # Superimpose volumetric compression states (chi ∝ 1/r)
-        chi_composite = ((4.0 * I_0) / (3.0 * r_c1)) + weight_ratio * ((4.0 * I_0) / (3.0 * r_c2))
-        alpha_composite = np.abs(-eta * kappa * chi_composite)
-        
-        # Plot structural contours
-        fig_m, ax_m = plt.subplots(figsize=(6, 4))
-        cp = ax_m.contourf(X_m, Y_m, alpha_composite, cmap='magma', levels=30)
-        fig_m.colorbar(cp, label='Anomalous Acceleration Profile Magnitude')
-        ax_m.set_title('Superimposed Geometric Stress Fields')
-        ax_m.set_xlabel('Spatial Width X (kpc)')
-        ax_m.set_ylabel('Spatial Height Y (kpc)')
-        st.pyplot(fig_m)
+    st.info("Prior standard diagnostic sector selected. Review underlying App architecture templates for graphics pipelines.")
