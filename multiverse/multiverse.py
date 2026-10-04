@@ -189,39 +189,44 @@ snapshot = {
 
 json_data = json.dumps(snapshot)
 
-html_payload = f"""
+# We use a clean block string and replace place tokens to prevent f-string bracket corruption
+html_payload = """
 <!doctype html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>Fractal Cosmos Visualizer</title>
     <style>
-        html, body {{ margin: 0; padding: 0; background-color: #020710; overflow: hidden; width: 100%; height: 100%; }}
-        #overlay {{ position: absolute; top: 10px; left: 10px; color: #0ff; font-family: monospace; text-shadow: 0 0 10px #0ff; z-index: 10; }}
+        html, body { margin: 0; padding: 0; background-color: #020710; overflow: hidden; width: 100%; height: 100%; }
+        #overlay { position: absolute; top: 10px; left: 10px; color: #0ff; font-family: monospace; text-shadow: 0 0 10px #0ff; z-index: 10; }
     </style>
 </head>
 <body>
-    <div id="overlay">t = {snapshot['time']:.3f} s</div>
+    <div id="overlay">t = __TIME__ s</div>
+    <script src="https://jsdelivr.net"></script>
     <script src="https://jsdelivr.net"></script>
     <script>
-        const snapshot = {json_data};
+        const snapshot = __JSON_DATA__;
         const scene = new THREE.Scene();
-        
         scene.background = new THREE.Color(0x020710);
         
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
-        camera.position.z = 100;
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        // Adjusted camera to comfortably sit back and capture the -40 to +40 spread grid
+        camera.position.set(0, 0, 140);
         
-        const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: false }});
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
         
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        
         // Lighting System
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
         
         const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        keyLight.position.set(0, 0, 100).normalize();
+        keyLight.position.set(0, 50, 100);
         scene.add(keyLight);
         
         // Render Dark Matter Grid Plane
@@ -230,80 +235,82 @@ html_payload = f"""
         canvas.width = s; canvas.height = s;
         const ctx = canvas.getContext('2d');
         const img = ctx.createImageData(s, s);
-        for (let y=0; y<s; y++) {{
-            for (let x=0; x<s; x++) {{
+        for (let y = 0; y < s; y++) {
+            for (let x = 0; x < s; x++) {
                 const v = Math.max(0, Math.min(1, snapshot.dm_grid[y][x]));
-                const idx = (y*s+x)*4;
-                img.data[idx] = 20 + 150*v;
-                img.data[idx+1] = 10 + 60*v;
-                img.data[idx+2] = 50 + 90*(1-v);
+                const idx = (y * s + x) * 4;
+                img.data[idx] = 20 + 150 * v;
+                img.data[idx+1] = 10 + 60 * v;
+                img.data[idx+2] = 50 + 90 * (1 - v);
                 img.data[idx+3] = 200;
-            }}
-        }}
-        ctx.putImageData(img,0,0);
+            }
+        }
+        ctx.putImageData(img, 0, 0);
         const tex = new THREE.CanvasTexture(canvas);
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.4}}));
-        plane.position.set(0,0,-5);
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.4 }));
+        plane.position.set(0, 0, -5);
         scene.add(plane);
 
-        // Render Nodes
+        // Render Nodes with precise JavaScript structural tracking
         const nodes = [];
-        for(let i=0; i<snapshot.N; i++) {{
+        for (let i = 0; i < snapshot.N; i++) {
             const amp = snapshot.node_amp[i];
-            
             let col = new THREE.Color();
-            if (i % 3 === 0) {{
-                col.setHex(0xff007f); // Low Frequency Zone (Magenta)
-            }} else if (i % 3 === 1) {{
-                col.setHex(0x00f3ff); // Mid Frequency Zone (Cyan)
-            }} else {{
-                col.setHex(0x39ff14); // High Frequency Zone (Neon Green)
-            }}
             
-            const g = new THREE.SphereGeometry(1.5 + 2.5*Math.abs(amp), 16, 16);
-            const m = new THREE.MeshStandardMaterial({{
+            if (i % 3 === 0) {
+                col.setHex(0xff007f); // Low Frequency Zone (Magenta)
+            } else if (i % 3 === 1) {
+                col.setHex(0x00f3ff); // Mid Frequency Zone (Cyan)
+            } else {
+                col.setHex(0x39ff14); // High Frequency Zone (Neon Green)
+            }
+            
+            const g = new THREE.SphereGeometry(1.5 + 2.5 * Math.abs(amp), 16, 16);
+            const m = new THREE.MeshStandardMaterial({
                 color: col,
                 roughness: 0.2,
                 metalness: 0.1,
                 emissive: col,
                 emissiveIntensity: 0.5
-            }});
+            });
             
             const mesh = new THREE.Mesh(g, m);
             
-            // FIXED: Explicitly extracted the X index [0] and Y index [1] from the 2D coordinate array
-            const nodeCoords = snapshot.pos[i];
-            mesh.position.x = nodeCoords[0];
-            mesh.position.y = nodeCoords[1];
+            // Explicit safely escaped array assignments mapping X and Y plane indices
+            mesh.position.x = snapshot.pos[i][0];
+            mesh.position.y = snapshot.pos[i][1];
             mesh.position.z = 0;
             
             scene.add(mesh);
             nodes.push(mesh);
-        }}
+        }
 
         let animateTime = 0;
-        function animate() {{
+        function animate() {
             requestAnimationFrame(animate);
             animateTime += 0.02;
-            nodes.forEach((n, i) => {{
+            nodes.forEach((n, i) => {
                 const scale = 1 + 0.15 * Math.sin(animateTime * 3 + i);
                 n.scale.set(scale, scale, scale);
                 n.material.emissiveIntensity = 0.3 + 0.3 * Math.sin(animateTime * 2 + i);
-            }});
+            });
+            controls.update();
             renderer.render(scene, camera);
-        }}
+        }
         animate();
 
-        window.addEventListener('resize', () => {{
+        window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }});
+        });
     </script>
 </body>
 </html>
-"""
+""".replace("__TIME__", f"{snapshot['time']:.3f}").replace("__JSON_DATA__", json_data)
+
 components.html(html_payload, height=850, scrolling=False)
+
 
 
 
