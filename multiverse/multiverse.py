@@ -205,8 +205,7 @@ html_payload = f"""
         const snapshot = {json.dumps(snapshot)};
         const scene = new THREE.Scene();
         
-        // Enforce explicit background color inside the Three.js scene environment
-        scene.background = new THREE.Color(0x000a12);
+        scene.background = new THREE.Color(0x020710);
         
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
         camera.position.z = 100;
@@ -215,8 +214,15 @@ html_payload = f"""
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
         
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+        // --- ILLUMINATION SYSTEM ---
+        // Brighter background fill
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
+        
+        // Front-facing key light to give spheres structural volume and high visibility
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        keyLight.position.set(0, 0, 100).normalize();
+        scene.add(keyLight);
         
         // Render Dark Matter Grid Plane
         const s = snapshot.dm_grid.length;
@@ -228,30 +234,49 @@ html_payload = f"""
             for (let x=0; x<s; x++) {{
                 const v = Math.max(0, Math.min(1, snapshot.dm_grid[y][x]));
                 const idx = (y*s+x)*4;
-                img.data[idx] = 30 + 220*v;
-                img.data[idx+1] = 10 + 90*v;
-                img.data[idx+2] = 80 + 120*(1-v);
+                img.data[idx] = 20 + 150*v;
+                img.data[idx+1] = 10 + 60*v;
+                img.data[idx+2] = 50 + 90*(1-v);
                 img.data[idx+3] = 200;
             }}
         }}
         ctx.putImageData(img,0,0);
         const tex = new THREE.CanvasTexture(canvas);
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.65}}));
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.4}}));
         plane.position.set(0,0,-5);
         scene.add(plane);
 
-        // Render Nodes
+        // --- HARMONIC COLOR ORGANIZATION ---
         const nodes = [];
         for(let i=0; i<snapshot.N; i++) {{
             const amp = snapshot.node_amp[i];
-            const hue = (snapshot.node_phase[i] + Math.PI)/(2*Math.PI);
-            const col = new THREE.Color().setHSL(hue, 1, 0.5);
+            
+            // Explicitly classify into 3 clean frequency zones
+            let col = new THREE.Color();
+            if (i % 3 === 0) {{
+                // Zone 1: Magenta / Deep Pink (Low Frequency)
+                col.setHex(0xff007f); 
+            }} else if (i % 3 === 1) {{
+                // Zone 2: Bright Electric Cyan (Mid Frequency)
+                col.setHex(0x00f3ff); 
+            }} else {{
+                // Zone 3: Radioactive Neon Green (High Frequency)
+                col.setHex(0x39ff14); 
+            }}
             
             const g = new THREE.SphereGeometry(1.5 + 2.5*Math.abs(amp), 16, 16);
-            const m = new THREE.MeshBasicMaterial({{color:col}});
+            
+            // Switch to MeshStandardMaterial and give it emissive properties so it glows
+            const m = new THREE.MeshStandardMaterial({{
+                color: col,
+                roughness: 0.2,
+                metalness: 0.1,
+                emissive: col,
+                emissiveIntensity: 0.4  // Self-illumination baseline
+            }});
+            
             const mesh = new THREE.Mesh(g, m);
             
-            // FIXED: Isolate explicit multidimensional array indices [0] and [1]
             mesh.position.x = snapshot.pos[i][0];
             mesh.position.y = snapshot.pos[i][1];
             mesh.position.z = 0;
@@ -267,6 +292,9 @@ html_payload = f"""
             nodes.forEach((n, i) => {{
                 const scale = 1 + 0.15 * Math.sin(animateTime * 3 + i);
                 n.scale.set(scale, scale, scale);
+                
+                // Pulsate the emissive intensity rhythmically to show life
+                n.material.emissiveIntensity = 0.3 + 0.3 * Math.sin(animateTime * 2 + i);
             }});
             renderer.render(scene, camera);
         }}
@@ -282,6 +310,7 @@ html_payload = f"""
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
+
 
 
 st.subheader("📈 Research Metrics")
