@@ -189,7 +189,6 @@ snapshot = {
 
 json_data = json.dumps(snapshot)
 
-# We use a clean block string and replace place tokens to prevent f-string bracket corruption
 html_payload = """
 <!doctype html>
 <html>
@@ -211,7 +210,6 @@ html_payload = """
         scene.background = new THREE.Color(0x020710);
         
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-        // Adjusted camera to comfortably sit back and capture the -40 to +40 spread grid
         camera.position.set(0, 0, 140);
         
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -251,7 +249,7 @@ html_payload = """
         plane.position.set(0, 0, -5);
         scene.add(plane);
 
-        // Render Nodes with precise JavaScript structural tracking
+        // Render Nodes
         const nodes = [];
         for (let i = 0; i < snapshot.N; i++) {
             const amp = snapshot.node_amp[i];
@@ -276,9 +274,10 @@ html_payload = """
             
             const mesh = new THREE.Mesh(g, m);
             
-            // Explicit safely escaped array assignments mapping X and Y plane indices
-            mesh.position.x = snapshot.pos[i][0];
-            mesh.position.y = snapshot.pos[i][1];
+            // SAFE FIX: Using .at() handles coordinate arrays without breaking our chat formatting tags
+            const nodeCoords = snapshot.pos.at(i);
+            mesh.position.x = nodeCoords.at(0);
+            mesh.position.y = nodeCoords.at(1);
             mesh.position.z = 0;
             
             scene.add(mesh);
@@ -310,6 +309,7 @@ html_payload = """
 """.replace("__TIME__", f"{snapshot['time']:.3f}").replace("__JSON_DATA__", json_data)
 
 components.html(html_payload, height=850, scrolling=False)
+
 
 
 
