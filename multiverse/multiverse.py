@@ -212,62 +212,57 @@ html_payload = f"""
         
         scene.add(new THREE.AmbientLight(0xffffff, 0.8));
         
-                // Render Dark Matter Grid Plane
+        // Render Dark Matter Grid Plane
         const s = snapshot.dm_grid.length;
         const canvas = document.createElement('canvas');
         canvas.width = s; canvas.height = s;
         const ctx = canvas.getContext('2d');
         const img = ctx.createImageData(s, s);
-        for (let y=0; y<s; y++) {
-            for (let x=0; x<s; x++) {
+        for (let y=0; y<s; y++) {{
+            for (let x=0; x<s; x++) {{
                 const v = Math.max(0, Math.min(1, snapshot.dm_grid[y][x]));
                 const idx = (y*s+x)*4;
                 img.data[idx] = 30 + 220*v;
                 img.data[idx+1] = 10 + 90*v;
                 img.data[idx+2] = 80 + 120*(1-v);
                 img.data[idx+3] = 180;
-            }
-        }
+            }}
+        }}
         ctx.putImageData(img,0,0);
         const tex = new THREE.CanvasTexture(canvas);
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:0.55}));
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(160,160), new THREE.MeshBasicMaterial({{map:tex, transparent:true, opacity:0.55}}));
         plane.position.set(0,0,-10);
         scene.add(plane);
 
         // Render Nodes
         const nodes = [];
-        for(let i=0; i<snapshot.N; i++) {
+        for(let i=0; i<snapshot.N; i++) {{
             const amp = snapshot.node_amp[i];
             const hue = (snapshot.node_phase[i] + Math.PI)/(2*Math.PI);
             const col = new THREE.Color().setHSL(hue, 1, 0.5);
             const g = new THREE.SphereGeometry(1.2 + 2*Math.abs(amp), 16, 16);
-            const m = new THREE.MeshBasicMaterial({color:col});
+            const m = new THREE.MeshBasicMaterial({{color:col}});
             const mesh = new THREE.Mesh(g, m);
+            // Ensure 2D position vectors extract index 0 and 1 correctly
             mesh.position.x = snapshot.pos[i][0];
             mesh.position.y = snapshot.pos[i][1];
             scene.add(mesh);
             nodes.push(mesh);
-        }
+        }}
 
         let animateTime = 0;
-        function animate() {
+        function animate() {{
             requestAnimationFrame(animate);
             animateTime += 0.02;
-            nodes.forEach((n, i) => {
+            nodes.forEach((n, i) => {{
                 const scale = 1 + 0.2 * Math.sin(animateTime * 3 + i);
                 n.scale.set(scale, scale, scale);
-            });
+            }});
             renderer.render(scene, camera);
-        }
+        }}
         animate();
     </script>
 </body>
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
-
-st.subheader("📈 Research Metrics")
-if not st.session_state.log.empty:
-    st.dataframe(st.session_state.log.tail(10))
-else:
-    st.info("No metrics yet — press 'Step' to start data logging.")
