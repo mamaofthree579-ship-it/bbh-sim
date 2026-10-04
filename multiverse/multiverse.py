@@ -192,6 +192,7 @@ html_payload = f"""
 <html>
 <head>
     <meta charset="utf-8">
+    <title>Fractal Cosmos Visualizer</title>
     <style>
         body {{ margin: 0; background: radial-gradient(circle at center, #001022 0%, #000 100%); overflow: hidden; }}
         #overlay {{ position: absolute; top: 10px; left: 10px; color: #0ff; font-family: monospace; text-shadow: 0 0 10px #0ff; z-index: 10; }}
@@ -234,7 +235,7 @@ html_payload = f"""
         plane.position.set(0,0,-10);
         scene.add(plane);
 
-        // Render Nodes
+        // Render Nodes (with correct dimension arrays restored)
         const nodes = [];
         for(let i=0; i<snapshot.N; i++) {{
             const amp = snapshot.node_amp[i];
@@ -243,7 +244,8 @@ html_payload = f"""
             const g = new THREE.SphereGeometry(1.2 + 2*Math.abs(amp), 16, 16);
             const m = new THREE.MeshBasicMaterial({{color:col}});
             const mesh = new THREE.Mesh(g, m);
-            // Ensure 2D position vectors extract index 0 and 1 correctly
+            
+            // RESTORED: Dimensional properties properly referenced
             mesh.position.x = snapshot.pos[i][0];
             mesh.position.y = snapshot.pos[i][1];
             scene.add(mesh);
@@ -266,3 +268,9 @@ html_payload = f"""
 </html>
 """
 components.html(html_payload, height=850, scrolling=False)
+
+st.subheader("📈 Research Metrics")
+if not st.session_state.log.empty:
+    st.dataframe(st.session_state.log.tail(10))
+else:
+    st.info("No metrics yet — press 'Step' to start data logging.")
