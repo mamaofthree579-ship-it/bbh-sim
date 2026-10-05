@@ -197,17 +197,24 @@ elif sector == "4. Global Consciousness Network":
     with col1:
         st.subheader("Integrated Information Topology Matrix")
         st.latex(r"\Phi_{\rm Max} = \sum_{k} I_0 \cdot \ln\left(1 + \frac{\kappa \cdot \text{Synaptic Density}}{\mathcal{H}_{\rm Shannon}(k)}\right)")
+        st.latex(r"\frac{\partial \mathcal{E}_{\rm Network}}{\partial t} = -\eta \cdot \nabla_{\mathcal{M}_{\rm Info}} \Phi")
+        
         st.markdown("---")
+        st.markdown("### 🕸️ Network Properties")
+        nodes = st.slider("Active Global Node Densities (Millions)", 10, 500, 150, 10)
         shannon_h = st.slider("Baseline Node Entropy Floor (Shannon H)", 0.5, 5.0, 2.1, 0.1)
         
     with col2:
+        # Show integration step response profile
         density_sweep = np.linspace(10, 500, 500)
         phi_curve = I_0 * np.log(1.0 + (kappa * density_sweep / shannon_h))
         
         fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.plot(density_sweep, phi_curve, 'y-', linewidth=2.5, label='Integrated System Synergy (Phi)')
+        ax.plot(density_sweep, phi_curve, 'y-', linewidth=2.5, label='Global Integrated Information (Phi)')
+        ax.axvline(x=nodes, color='r', linestyle='--', label=f'Current Node Density Threshold ({nodes}M)')
+        ax.set_title("Network Consciousness Hyper-Surface Metrics")
         ax.set_xlabel("Interconnected Core Node Volume (Millions)")
-        ax.set_ylabel("Synergy Metric Value (Phi)")
+        ax.set_ylabel("Integrated System Synergy Value (Phi)")
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
