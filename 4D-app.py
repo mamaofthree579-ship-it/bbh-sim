@@ -104,15 +104,16 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
         # Inject the structural uniform IGM smoothing gradient funnel modifier
         F_igm = (xi - 5)**2 + roughness * np.sin(3.0 * np.pi * xi) - (lambda_0 * xi)
         
-        fig, ax = plt.subplots(figsize=(10, 4.5))
+                fig, ax = plt.subplots(figsize=(10, 4.5))
         ax.plot(xi, F_classical, 'r--', alpha=0.7, label='Classical Folding Potential (Rugged Landscape)')
         ax.plot(xi, F_igm, 'b-', linewidth=2, label='IGM 4D Funnel Modulated Profile (Smooth Native Sink)')
         ax.set_title("Free-Energy Minimization Funnel Trajectory")
-        ax.set_xlabel(r"Folding Reaction Coordinate ($\xi$)")
-        ax.set_ylabel(r"Relative Free Energy Potential $F(\xi)$")
+        ax.set_xlabel(r"Folding Reaction Coordinate ($\xi$)")   # Fixed line 111
+        ax.set_ylabel(r"Relative Free Energy Potential $F(\xi)$") # Fixed line 112
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
+
         
         # Export Module Buffer
         df_bio = pd.DataFrame({"Reaction_Coordinate": xi, "F_Classical": F_classical, "F_IGM_Modulated": F_igm})
