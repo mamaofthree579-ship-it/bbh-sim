@@ -183,7 +183,7 @@ elif sector == "3. Quantum Phase-Crystallization":
         t_plot = np.linspace(0, 22, 500)
         mag_smooth = np.cos(omega_drive * t_plot / 2.0) * np.exp(-0.038 * eta * I_0 * t_plot)
         
-        if animate_switch:
+     if animate_switch:
 
 # ---------------------------------------------------------
 # SECTOR 3: Quantum Phase-Crystallization (Automated Fit & Animation)
