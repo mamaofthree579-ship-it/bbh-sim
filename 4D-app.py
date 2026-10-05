@@ -38,10 +38,10 @@ G = 4.300e-6
 M_bar_core = 5.0e10               
 
 # ---------------------------------------------------------
-# SECTOR 1: Galactic Disk & SPH Grid Solver
+# SECTOR 1: Galactic Disk & SPH Grid Solver (Self-Refining Edition)
 # ---------------------------------------------------------
 if sector == "1. Galactic Disk & SPH Grid Solver":
-    st.header("🌌 Galactic Disk Data-Matching Engine")
+    st.header("🌌 Galactic Disk Auto-Optimization Engine")
     
     # Empirical Benchmark Framework (SPARC database metrics for Galaxy NGC 3198)
     empirical_radius = np.array([1.2, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0])
@@ -51,40 +51,57 @@ if sector == "1. Galactic Disk & SPH Grid Solver":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("IGM Halo Constraints")
-        st.latex(r"\rho_{\rm IGM}(r) = \frac{\rho_0}{\left(1 + \frac{r}{r_s}\right)\left(1 + \kappa \cdot \frac{r^2}{r_s^2}\right)}")
-        st.latex(r"V_c^2(r) = \frac{4\pi G \rho_0 r_s^3}{r} \int \frac{\tilde{r}^2 \, d\tilde{r}}{(1+\tilde{r})(1+\kappa \tilde{r}^2)}")
+        st.subheader("IGM Mathematical Invariants")
+        st.latex(r"V_c(r) = V_{\rm baryonic}(r) \cdot \left[1 + (I_0\kappa) \cdot \frac{r}{r+r_s}\right]")
         
         st.markdown("---")
-        r_s = st.slider("Scale Radius r_s (kpc)", 1.0, 30.0, 15.0, 0.5)
+        st.markdown("### 🛠️ Optimization Layer")
         
-        # Calculate your IGM theoretical curve at the empirical data points
-        v_classical_pts = np.sqrt((G * M_bar_core) / (empirical_radius + r_s))
-        v_igm_predict = v_classical_pts * (1.0 + (I_0 * kappa * (empirical_radius / (empirical_radius + r_s))))
+        # Interactive slider for the benchmark scale radius
+        r_s_manual = st.slider("Model Scale Radius r_s (kpc)", 1.0, 40.0, 15.0, 0.5)
         
-        # Calculate Residual Performance Statistics
+        # Inject an active mathematical trigger tool to snap equations to empirical curves
+        if st.button("🚀 Execute Levenberg-Marquardt Fit Calibration"):
+            from scipy.optimize import curve_fit
+            
+            def fit_func(r, r_s_fit, alpha_fit):
+                v_base = np.sqrt((G * M_bar_core) / (r + r_s_fit))
+                return v_base * (1.0 + (alpha_fit * (r / (r + r_s_fit))))
+            
+            try:
+                popt, _ = curve_fit(fit_func, empirical_radius, empirical_velocity, p0=[15.0, 0.5], sigma=velocity_errors)
+                st.success(f"Regression Stabilized! Calculated Ideal r_s: **{popt[0]:.2f} kpc**, Ideal Combined Coefficient (I_0 * kappa): **{popt[1]:.2f}**")
+                st.info("💡 Adjust your sidebar sliders or scale radius to match these coordinates for optimal convergence.")
+            except Exception as e:
+                st.error(f"Optimization Matrix Diverged: {str(e)}")
+
+        # Calculate your active theoretical output profile
+        v_classical_pts = np.sqrt((G * M_bar_core) / (empirical_radius + r_s_manual))
+        v_igm_predict = v_classical_pts * (1.0 + (I_0 * kappa * (empirical_radius / (empirical_radius + r_s_manual))))
+        
+        # Calculate Real-Time Error Fields
         rmse = np.sqrt(np.mean((empirical_velocity - v_igm_predict) ** 2))
-        chi_squared = np.sum(((empirical_velocity - v_igm_predict) / velocity_errors) ** 2)
+        chi_squared = np.sum(((empirical_velocity - v_igm_predict) / velocity_errors) ** 2) / (len(empirical_radius) - 2)
         
-        st.metric(label="📊 Root Mean Square Error (RMSE)", value=f"{rmse:.3f} km/s")
-        st.metric(label="🎯 Chi-Squared (χ²) Residual", value=f"{chi_squared:.2f}")
+        st.metric(label="📊 Live Residual Precision (RMSE)", value=f"{rmse:.3f} km/s")
+        st.metric(label="🎯 Reduced Chi-Squared (χ²_ν)", value=f"{chi_squared:.2f}")
         
-        if rmse < 15.0:
+        if chi_squared < 4.0:
             st.success("✅ Strong Mathematical Convergence Detected!")
         else:
-            st.warning("⚠️ High Residual Variance. Refine Invariant Coefficients.")
+            st.warning("⚠️ High Residual Variance. Calibrate Matrix Constants.")
         
     with col2:
         r_smooth = np.linspace(0.1, 45, 500)
-        v_smooth_classical = np.sqrt((G * M_bar_core) / (r_smooth + r_s))
-        v_smooth_igm = v_smooth_classical * (1.0 + (I_0 * kappa * (r_smooth / (r_smooth + r_s))))
+        v_smooth_classical = np.sqrt((G * M_bar_core) / (r_smooth + r_s_manual))
+        v_smooth_igm = v_smooth_classical * (1.0 + (I_0 * kappa * (r_smooth / (r_smooth + r_s_manual))))
         
         fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.errorbar(empirical_radius, empirical_velocity, yerr=velocity_errors, fmt='ko', label='Empirical Data (NGC 3198)', capsize=3)
-        ax.plot(r_smooth, v_smooth_classical, 'r--', alpha=0.5, label='Baryonic Math Only')
-        ax.plot(r_smooth, v_smooth_igm, 'b-', linewidth=2.0, label='Your IGM Model Fit')
+        ax.errorbar(empirical_radius, empirical_velocity, yerr=velocity_errors, fmt='ko', label='Empirical SPARC Data (NGC 3198)', capsize=3)
+        ax.plot(r_smooth, v_smooth_classical, 'r--', alpha=0.5, label='Baryonic Baseline (Decaying Field)')
+        ax.plot(r_smooth, v_smooth_igm, 'b-', linewidth=2.0, label='Your Metric Tension Fit')
         
-        ax.set_title("Empirical Data Matching vs. IGM Predictive Framework")
+        ax.set_title("Astrophysical Metric Refinement Topology")
         ax.set_xlabel("Galactic Radius r (kpc)")
         ax.set_ylabel("Circular Velocity V_c (km/s)")
         ax.grid(True, ls=":")
