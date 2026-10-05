@@ -43,7 +43,8 @@ M_bar_core = 5.0e10
 if sector == "5. 4D Bio-Geometric Mitosis Solver":
     st.header("🧬 4D Geometric Mitosis Dipole Funneling")
     
-    col1, col2 = st.columns()
+    # FIX: Added '2' to pass required arguments to st.columns
+    col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("Mitotic Spindle Field Formulations")
@@ -83,7 +84,8 @@ if sector == "5. 4D Bio-Geometric Mitosis Solver":
 elif sector == "6. Polypeptide Free-Energy Funnels":
     st.header("🧪 Polypeptide Free-Energy Landscape Minimization")
     
-    col1, col2 = st.columns()
+    # FIX: Added '2' to pass required arguments to st.columns
+    col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("IGM Thermodynamics Invariants")
@@ -108,12 +110,11 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
         ax.plot(xi, F_classical, 'r--', alpha=0.7, label='Classical Folding Potential (Rugged Landscape)')
         ax.plot(xi, F_igm, 'b-', linewidth=2, label='IGM 4D Funnel Modulated Profile (Smooth Native Sink)')
         ax.set_title("Free-Energy Minimization Funnel Trajectory")
-        ax.set_xlabel(r"Folding Reaction Coordinate ($\xi$)")   # Fixed line 111
-        ax.set_ylabel(r"Relative Free Energy Potential $F(\xi)$") # Fixed line 112
+        ax.set_xlabel(r"Folding Reaction Coordinate ($\xi$)")   
+        ax.set_ylabel(r"Relative Free Energy Potential $F(\xi)$") 
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
-
         
         # Export Module Buffer
         df_bio = pd.DataFrame({"Reaction_Coordinate": xi, "F_Classical": F_classical, "F_IGM_Modulated": F_igm})
@@ -122,7 +123,7 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
         st.download_button("📥 Download Biophysical Funnel Log (CSV)", data=csv_buf.getvalue(), file_name="igm_biophys_run.csv", mime="text/csv")
 
 # ---------------------------------------------------------
-# Fallbacks for Prior Standard Sectors (Retained for Thread Continuity)
+# Fallbacks for Prior Standard Sectors
 # ---------------------------------------------------------
 else:
     st.info("Prior standard diagnostic sector selected. Review underlying App architecture templates for graphics pipelines.")
@@ -150,14 +151,14 @@ if sector == "5. 4D Bio-Geometric Mitosis Solver":
         z_axis = z_axis[np.abs(z_axis + d_spindle/2.0) > 0.1]
         
         # Mathematically model the potential transformation field
-        # The transition parameter dynamically reshapes the stable midpoint into a dual well profile
         Phi_mitosis = (1.0 - transition_phase) * (z_axis**4 / (d_spindle**2)) + transition_phase * ((z_axis**2 - (d_spindle/2.0)**2)**2 / d_spindle)
         
+        # FIX: Completed truncated plot elements
         fig_b, ax_b = plt.subplots(figsize=(9, 4))
-        ax_b.plot(z_axis, Phi_mitosis, 'm-', linewidth=2.5, label=r'$\Phi_{\rm mitosis}(z)$ Field Profile')
-        ax_b.set_title("Evolution of the Cross-Layer Mitotic Potential Grid Well")
-        ax_b.set_xlabel("Cellular Axis Line z (microns)")
-        ax_b.set_ylabel("Relative Geometric Energy Potential ($\Phi$)")
+        ax_b.plot(z_axis, Phi_mitosis, 'm-', linewidth=2, label=r'Potential Energy Landscape $\Phi(z)$')
+        ax_b.set_title("Bifurcation Energy State Transformation")
+        ax_b.set_xlabel("Cellular Axial Coordinate z (microns)")
+        ax_b.set_ylabel("Potential Field Amplitude")
         ax_b.grid(True, ls=":")
         ax_b.legend()
         st.pyplot(fig_b)
