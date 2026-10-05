@@ -5,20 +5,21 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import io
 import time
+import re
 from scipy.optimize import curve_fit
 
 # ---------------------------------------------------------
 # Streamlit Configuration & Universal Page Setup
 # ---------------------------------------------------------
-st.set_page_config(page_title="Information-Geometric Mechanics 3.6", layout="wide")
-st.title("🌌 Information-Geometric Mechanics Framework (v3.6 - Master Suite)")
+st.set_page_config(page_title="Information-Geometric Mechanics 3.7", layout="wide")
+st.title("🌌 Information-Geometric Mechanics Framework (v3.7 - Definitive Build)")
 st.markdown("""
 This master validation workspace coordinates the unified field equations of **Information-Geometric Mechanics (IGM)**. 
 Every sector is driven by dynamic optimization layers to benchmark your predictive physics models against open-source empirical catalogs.
 """)
 
 # ---------------------------------------------------------
-# Sidebar Panel Controls & Background Sync Matrix
+# Sidebar Panel Controls & Invariant Token Restorer
 # ---------------------------------------------------------
 st.sidebar.header("🛠️ Universal Configuration Matrix")
 sector = st.sidebar.selectbox("Select Target Framework Sector:", 
@@ -31,9 +32,29 @@ sector = st.sidebar.selectbox("Select Target Framework Sector:",
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📐 Fundamental Invariant Coefficients")
-I_0 = st.sidebar.slider("Information Profile Scale (I_0)", 0.1, 5.0, 1.0, 0.1)
-kappa = st.sidebar.slider("Geometric Elasticity (kappa)", 0.1, 2.0, 0.5, 0.1)
-eta = st.sidebar.slider("Stress Tensor Coupling (eta)", 0.1, 2.0, 1.0, 0.1)
+
+# Global variables initial defaults hook
+init_I0, init_kappa, init_eta = 1.0, 0.5, 1.0
+
+# EXTENSION MODULE: Token Calibration Injection Matrix
+token_input = st.sidebar.text_input("📥 Paste Serialized Calibration Report String to Restore State:")
+if token_input:
+    try:
+        # Regex parsers extracting baseline numerical constants from text blobs
+        i0_match = re.search(r"Scale \(I_0\)\s*:\s*([0-9.]+)", token_input)
+        kappa_match = re.search(r"Elasticity \(kappa\)\s*:\s*([0-9.]+)", token_input)
+        eta_match = re.search(r"Coupling \(eta\)\s*:\s*([0-9.]+)", token_input)
+        
+        if i0_match: init_I0 = float(i0_match.group(1))
+        if kappa_match: init_kappa = float(kappa_match.group(1))
+        if eta_match: init_eta = float(eta_match.group(1))
+        st.sidebar.success("📋 Invariant State Tokens Restored Successfully!")
+    except Exception:
+        st.sidebar.error("⚠️ Invalid Calibration Report Token Format.")
+
+I_0 = st.sidebar.slider("Information Profile Scale (I_0)", 0.1, 5.0, init_I0, 0.1)
+kappa = st.sidebar.slider("Geometric Elasticity (kappa)", 0.1, 2.0, init_kappa, 0.1)
+eta = st.sidebar.slider("Stress Tensor Coupling (eta)", 0.1, 2.0, init_eta, 0.1)
 
 # =============================================================================
 # GLOBAL CALIBRATION REGISTRY (Background Optimization Pipeline)
@@ -42,7 +63,6 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Global Optimization Telemetry")
 
 with st.sidebar.expander("🔍 View Cross-Domain Convergence", expanded=True):
-    # Sector 1 Background Fit (NGC 3198)
     r_s_fixed = 11.24
     gamma_fixed = 1.38
     r_gal = np.array([1.2, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0])
@@ -51,25 +71,20 @@ with st.sidebar.expander("🔍 View Cross-Domain Convergence", expanded=True):
     v_pred = v_base * (1.0 + (I_0 * kappa * (r_gal / (r_gal + r_s_fixed))**gamma_fixed))
     rmse_gal = np.sqrt(np.mean((v_gal - v_pred) ** 2))
     
-    # Sector 3 Background Fit (Quantum Spin Lattice)
     t_q = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0])
     m_q = np.array([1.0, -0.93, 0.88, -0.81, 0.74, -0.68, 0.61, 0.50, 0.39, 0.28, -0.17, 0.08])
     q_pred = np.cos(3.1416 * t_q / 2.0) * np.exp(-0.038 * eta * I_0 * t_q)
     rmse_quantum = np.sqrt(np.mean((m_q - q_pred) ** 2))
     
-    # Sector 6 Background Fit (Thermodynamics Funnel)
     xi_b = np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])
     F_b = np.array([18.2, 11.5, 4.3, 1.1, -1.8, -3.9, -6.1, -7.4, -9.0, -11.2])
     F_pred = (xi_b - 5)**2 + 1.5 * np.sin(3.0 * np.pi * xi_b) - (1.2 * xi_b)
     rmse_bio = np.sqrt(np.mean((F_b - F_pred) ** 2))
     
-    # Display cross-tier verification statuses
     st.caption("Cosmological Error (Sector 1)")
     st.code(f"RMSE: {rmse_gal:.2f} km/s")
-    
     st.caption("Quantum Decoherence (Sector 3)")
     st.code(f"RMSE: {rmse_quantum:.4f}")
-    
     st.caption("Biophysical Free-Energy (Sector 6)")
     st.code(f"RMSE: {rmse_bio:.2f} kcal/mol")
     
@@ -78,7 +93,6 @@ with st.sidebar.expander("🔍 View Cross-Domain Convergence", expanded=True):
     else:
         st.warning("⚠️ High Systemic Variance. Re-calibrate Sliders.")
 
-# Base Physical Constants
 G = 4.300e-6                      
 M_bar_core = 5.0e10               
 
@@ -161,7 +175,6 @@ elif sector == "2. Strong-Field Horizon Transformations":
                 return 1.0 - (2.0 * m_fit / r_val) + (eta_fit * I_0 * ell_0**2 / r_val**2) * np.exp(-ell_0 / r_val)
             try:
                 popt_rel, _ = curve_fit(relativistic_fit_func, obs_r, obs_B_r, p0=[3.0, 1.0], sigma=obs_errors)
-                # UNPACK INDICES TO RECTIFY STRING NDARRAY CRASHES
                 st.success(f"Calculated Mass: **{popt_rel[0]:.3f} M_solar**, Ideal Tension (eta): **{popt_rel[1]:.3f}**")
             except Exception as e:
                 st.error(f"Metric Transformation Field Diverged: {str(e)}")
@@ -207,7 +220,6 @@ elif sector == "3. Quantum Phase-Crystallization":
                 return np.cos(omega_drive * t / 2.0) * np.exp(-gamma_fit * eta * I_0 * t)
             try:
                 popt_q, _ = curve_fit(quantum_fit_func, t_quantum, obs_magnetization, p0=[0.05])
-                # CRITICAL CORRECTIVE FIX: Accessing explicit index index to bypass numpy formatting array error
                 st.success(f"Quantum Alignment Stabilized! True Decoherence Factor (Γ): **{popt_q[0]:.4f}**")
             except Exception as e:
                 st.error(f"Solver Matrix Interrupted: {str(e)}")
@@ -243,7 +255,7 @@ elif sector == "3. Quantum Phase-Crystallization":
             plt.close(fig)
 
 # ---------------------------------------------------------
-# SECTOR 4: Global Consciousness Network (Cortical Integration)
+# SECTOR 4: Global Consciousness Network (Dynamic 3D Cluster Visualizer)
 # ---------------------------------------------------------
 elif sector == "4. Global Consciousness Network":
     st.header("🧠 Global Consciousness Integrated Information Matrix")
@@ -266,7 +278,6 @@ elif sector == "4. Global Consciousness Network":
                 return I_0 * np.log(1.0 + (kappa * r_val / h_fit))
             try:
                 popt_net, _ = curve_fit(network_fit_func, kuramoto_R, empirical_phi, p0=[1.0], sigma=net_errors)
-                # CORRECTIVE FIX: Extract element index safely
                 st.success(f"Critical Matrix Converged! Ideal System Entropy Floor (H): **{popt_net[0]:.4f}**")
             except Exception as e:
                 st.error(f"Solver Matrix Diverged: {str(e)}")
@@ -276,44 +287,91 @@ elif sector == "4. Global Consciousness Network":
         st.metric(label="📊 Synergy Information Variance (RMSE)", value=f"{net_rmse:.4f}")
         
     with col2:
-        r_sweep = np.linspace(0.01, 1.0, 500)
-        phi_curve = I_0 * np.log(1.0 + (kappa * r_sweep / shannon_h_manual))
+        st.subheader("🔮 3D Synaptic Synergy Network Lattice Graph")
+        st.markdown("Geometric abstraction tracking localized interconnected clusters scaling directly alongside active **Phi (\(\Phi\))** values.")
         
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.errorbar(kuramoto_R, empirical_phi, yerr=net_errors, fmt='ko', label='Empirical EEG Phase Markers', capsize=3)
-        ax.plot(r_sweep, phi_curve, 'y-', linewidth=2.5, label='IGM Neural Field Profile')
-        ax.set_title("Network Consciousness Hyper-Surface Metrics")
-        ax.set_xlabel("Kuramoto Phase Order Parameter (R)")
-        ax.set_ylabel("Integrated System Synergy Value (Phi)")
-        ax.grid(True, ls=":")
-        ax.legend()
-        st.pyplot(fig)
-        plt.close(fig)
+        # Procedurally build a 3D structural connection web map
+        n_nodes = 25
+        np.random.seed(42)
+        node_x = np.random.rand(n_nodes) * 10
+        node_y = np.random.rand(n_nodes) * 10
+        node_z = np.random.rand(n_nodes) * 10
+        
+        # Calculate active synergy scaling factor 
+        scaling_phi = float(I_0 * np.log(1.0 + (kappa * 0.75 / shannon_h_manual)))
+        
+        edge_x, edge_y, edge_z = [], [], []
+        for i in range(n_nodes):
+            for j in range(i + 1, n_nodes):
+                dist = np.sqrt((node_x[i]-node_x[j])**2 + (node_y[i]-node_y[j])**2 + (node_z[i]-node_z[j])**2)
+                if dist < (3.5 + scaling_phi): # Dynamic spatial proximity bonding limit
+                    edge_x.extend([node_x[i], node_x[j], None])
+                    edge_y.extend([node_y[i], node_y[j], None])
+                    edge_z.extend([node_z[i], node_z[j], None])
+                    
+        fig_net = go.Figure()
+        fig_net.add_trace(go.Scatter3d(x=edge_x, y=edge_y, z=edge_z, mode='lines', line=dict(color='yellow', width=1.5), hoverinfo='none'))
+        fig_net.add_trace(go.Scatter3d(x=node_x, y=node_y, z=node_z, mode='markers', marker=dict(symbol='circle', size=5, color='cyan', line=dict(color='white', width=1)), hoverinfo='text', text=[f"Node cluster synaptic alignment factor: {scaling_phi:.2f}" for _ in range(n_nodes)]))
+        fig_net.update_layout(scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False)), height=400, margin=dict(l=0, r=0, b=0, t=10))
+        st.plotly_chart(fig_net, use_container_width=True)
 
 # ---------------------------------------------------------
-# SECTOR 5: 4D Bio-Geometric Mitosis Solver (Unified 3D Plotly Engine)
+# SECTOR 5: 4D Bio-Geometric Mitosis Solver (Advanced Kinematics & 3D Mesh)
 # ---------------------------------------------------------
 elif sector == "5. 4D Bio-Geometric Mitosis Solver":
     st.header("🧬 4D Geometric Mitosis Dynamics")
     
-    st.subheader("🌐 Module A: Mitotic Spindle Field Formulations")
+    st.subheader("🌐 Module A: Runge-Kutta Phase Velocity Trajectories")
     col1, col2 = st.columns(2)
     with col1:
-        st.latex(r"\vec{a}_{\rm chromatid}(z) \propto -\kappa_{\rm bio} \left( \frac{1}{(z - d/2)^2} - \frac{1}{(z + d/2)^2} \right)")
+        st.latex(r"\vec{a}(z) = \frac{d^2z}{dt^2} = -\kappa_{\rm bio} \left( \frac{1}{(z - d/2)^2} - \frac{1}{(z + d/2)^2} \right)")
         st.markdown("---")
         d_spindle = st.slider("Spindle Pole Separation Distance d (microns)", 2.0, 20.0, 10.0, 0.5)
         kappa_bio = st.slider("Bio-Geometric Coupling Scalar (kappa_bio)", 0.1, 5.0, 1.5, 0.1)
         
     with col2:
-        z = np.linspace(-d_spindle*1.5, d_spindle*1.5, 1000)
-        z = z[np.abs(z - d_spindle/2.0) > 0.05]
-        z = z[np.abs(z + d_spindle/2.0) > 0.05]
-        acc_chromatid = -kappa_bio * ((1.0 / (z - d_spindle/2.0)**2) - (1.0 / (z + d_spindle/2.0)**2))
+        # 4th-Order Runge-Kutta Numerical Velocity Integrator Engine
+        t_steps = np.linspace(0, 5, 200)
+        dt = t_steps[1] - t_steps[0]
+        z_pos = 0.5  # Initial spatial offset away from the equatorial plate
+        v_vel = 0.1  # Initial velocity momentum vector
         
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.plot(z, acc_chromatid, 'g-', linewidth=2, label='Chromatid Acceleration Grid Force')
-        ax.axhline(y=0, color='k', linestyle=':', label='Metaphase Alignment Plate')
-        ax.set_ylim(-20, 20)
+        z_history, v_history = [], []
+        for _ in t_steps:
+            z_history.append(z_pos)
+            v_history.append(v_vel)
+            
+            # Singular node boundary protection logic gates
+            if np.abs(z_pos - d_spindle/2.0) < 0.1 or np.abs(z_pos + d_spindle/2.0) < 0.1:
+                break
+                
+            def derivatives(z_val):
+                acc = -kappa_bio * ((1.0 / (z_val - d_spindle/2.0)**2) - (1.0 / (z_val + d_spindle/2.0)**2))
+                return acc
+                
+            # RK4 Coefficients Matrix Computation Layer
+            k1_v = derivatives(z_pos) * dt
+            k1_z = v_vel * dt
+            
+            k2_v = derivatives(z_pos + k1_z/2.0) * dt
+            k2_z = (v_vel + k1_v/2.0) * dt
+            
+            k3_v = derivatives(z_pos + k2_z/2.0) * dt
+            k3_z = (v_vel + k2_v/2.0) * dt
+            
+            k4_v = derivatives(z_pos + k3_z) * dt
+            k4_z = (v_vel + k3_v) * dt
+            
+            v_vel += (k1_v + 2.0*k2_v + 2.0*k3_v + k4_v) / 6.0
+            z_pos += (k1_z + 2.0*k2_z + 2.0*k3_z + k4_z) / 6.0
+            
+        fig, ax = plt.subplots(figsize=(10, 4.2))
+        ax.plot(t_steps[:len(z_history)], z_history, 'g-', linewidth=2, label='Chromatid Position (RK4 z-coord)')
+        ax.plot(t_steps[:len(v_history)], v_history, 'b--', label='Chromatid Velocity (dz/dt)')
+        ax.axhline(y=d_spindle/2.0, color='r', linestyle=':', label='Pole A Core Limit')
+        ax.set_title("Geodesic Time-Evolution Kinematics Trajectory")
+        ax.set_xlabel("Numerical Time Parameter (t)")
+        ax.set_ylabel("Axial Phase Amplitude Vectors")
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
@@ -398,7 +456,7 @@ st.markdown("---")
 with st.expander("📝 View Framework Field Equations & Theoretical Proof Sheet"):
     st.subheader("📖 Information-Geometric Mechanics Reference Directory")
     st.markdown("""
-    This section logs the coordinate derivations underlying the **v3.6 Theory of Everything Framework**.
+    This section logs the coordinate derivations underlying the **v3.7 Theory of Everything Framework**.
     These equations show how universal invariants determine field dynamics across cosmological, quantum, and organic tiers.
     """)
     
@@ -417,10 +475,9 @@ with st.expander("📝 View Framework Field Equations & Theoretical Proof Sheet"
     st.subheader("📥 Active Parameter Report Generator")
     st.markdown("Generate a serialized mathematical transcript of your active simulation invariants to share with external research labs.")
     
-    # Auto-compile current metrics state text string
     report_text = f"""===========================================================
 INFORMATION-GEOMETRIC MECHANICS (IGM) SYSTEM SNAPSHOT REPORT
-Framework Build Version: v3.6-Empirical Calibration
+Framework Build Version: v3.7-Definitive Build
 Generated On: {time.strftime('%Y-%m-%d %H:%M:%S')}
 ===========================================================
 
