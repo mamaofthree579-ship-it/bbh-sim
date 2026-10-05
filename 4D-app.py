@@ -125,3 +125,38 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
 # ---------------------------------------------------------
 else:
     st.info("Prior standard diagnostic sector selected. Review underlying App architecture templates for graphics pipelines.")
+
+# =============================================================================
+# EXTENSION: SECTOR 5 - DYNAMIC POTENTIAL WELL BIFURCATION SIMULATOR
+# =============================================================================
+if sector == "5. 4D Bio-Geometric Mitosis Solver":
+    st.markdown("---")
+    st.subheader("🧬 Mitotic Potential Well Pitched Bifurcation Animation")
+    st.markdown("Adjust the cell transition slider to observe the spatial transformation of the geometric potential well.")
+    
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        transition_phase = st.slider("Mitotic Anaphase Transition Index (ξ)", 0.0, 1.0, 0.0, 0.05)
+        st.markdown("""
+        * **ξ = 0.0 (Metaphase):** Central potential well locks chromosomes flawlessly to the equator ($z=0$).
+        * **ξ → 1.0 (Anaphase):** Pitchfork bifurcation occurs. The central layout well splits into two divergent target wells, driving chromatid segregation.
+        """)
+        
+    with col_b2:
+        z_axis = np.linspace(-d_spindle, d_spindle, 500)
+        # Avoid poles
+        z_axis = z_axis[np.abs(z_axis - d_spindle/2.0) > 0.1]
+        z_axis = z_axis[np.abs(z_axis + d_spindle/2.0) > 0.1]
+        
+        # Mathematically model the potential transformation field
+        # The transition parameter dynamically reshapes the stable midpoint into a dual well profile
+        Phi_mitosis = (1.0 - transition_phase) * (z_axis**4 / (d_spindle**2)) + transition_phase * ((z_axis**2 - (d_spindle/2.0)**2)**2 / d_spindle)
+        
+        fig_b, ax_b = plt.subplots(figsize=(9, 4))
+        ax_b.plot(z_axis, Phi_mitosis, 'm-', linewidth=2.5, label=r'$\Phi_{\rm mitosis}(z)$ Field Profile')
+        ax_b.set_title("Evolution of the Cross-Layer Mitotic Potential Grid Well")
+        ax_b.set_xlabel("Cellular Axis Line z (microns)")
+        ax_b.set_ylabel("Relative Geometric Energy Potential ($\Phi$)")
+        ax_b.grid(True, ls=":")
+        ax_b.legend()
+        st.pyplot(fig_b)
