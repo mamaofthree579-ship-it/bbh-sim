@@ -108,7 +108,7 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
         ax.plot(xi, F_classical, 'r--', alpha=0.7, label='Classical Folding Potential (Rugged Landscape)')
         ax.plot(xi, F_igm, 'b-', linewidth=2, label='IGM 4D Funnel Modulated Profile (Smooth Native Sink)')
         ax.set_title("Free-Energy Minimization Funnel Trajectory")
-        ax.set_xlabel("Folding Reaction Coordinate (\xi)")
+        ax.set_xlabel(r"Folding Reaction Coordinate ($\xi$)")
         ax.set_ylabel("Relative Free Energy Potential F(\xi)")
         ax.grid(True, ls=":")
         ax.legend()
