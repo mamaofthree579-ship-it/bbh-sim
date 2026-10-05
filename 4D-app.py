@@ -327,3 +327,35 @@ if sector == "5. 4D Bio-Geometric Mitosis Solver":
         ax_b.grid(True, ls=":")
         ax_b.legend()
         st.pyplot(fig_b)
+
+# =============================================================================
+# EXTENSION: SECTOR 5 - DYNAMIC POTENTIAL WELL BIFURCATION SIMULATOR
+# =============================================================================
+if sector == "5. 4D Bio-Geometric Mitosis Solver":
+    st.markdown("---")
+    st.subheader("🧬 Mitotic Potential Well Pitched Bifurcation Animation")
+    st.markdown("Adjust the cell transition slider to observe the spatial transformation of the geometric potential well.")
+    
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        transition_phase = st.slider("Mitotic Anaphase Transition Index (ξ)", 0.0, 1.0, 0.0, 0.05)
+        st.markdown("""
+        * **ξ = 0.0 (Metaphase):** Central potential well locks chromosomes flawlessly to the equator ($z=0$).
+        * **ξ → 1.0 (Anaphase):** Pitchfork bifurcation occurs. The central layout well splits into two divergent target wells, driving chromatid segregation.
+        """)
+        
+    with col_b2:
+        z_axis = np.linspace(-d_spindle, d_spindle, 500)
+        z_axis = z_axis[np.abs(z_axis - d_spindle/2.0) > 0.1]
+        z_axis = z_axis[np.abs(z_axis + d_spindle/2.0) > 0.1]
+        
+        Phi_mitosis = (1.0 - transition_phase) * (z_axis**4 / (d_spindle**2)) + transition_phase * ((z_axis**2 - (d_spindle/2.0)**2)**2 / d_spindle)
+        
+        fig_b, ax_b = plt.subplots(figsize=(9, 4))
+        ax_b.plot(z_axis, Phi_mitosis, 'm-', linewidth=2, label=r'Potential Energy Landscape $\Phi(z)$')
+        ax_b.set_title("Bifurcation Energy State Transformation")
+        ax_b.set_xlabel("Cellular Axial Coordinate z (microns)")
+        ax_b.set_ylabel("Potential Field Amplitude")
+        ax_b.grid(True, ls=":")
+        ax_b.legend()
+        st.pyplot(fig_b)
