@@ -220,14 +220,18 @@ elif sector == "4. Global Consciousness Network":
         st.pyplot(fig)
 
 # ---------------------------------------------------------
-# SECTOR 5: 4D Bio-Geometric Mitosis Solver (Unified Block)
+# SECTOR 5: 4D Bio-Geometric Mitosis Solver (Fully Restored Dual-Module Block)
 # ---------------------------------------------------------
 elif sector == "5. 4D Bio-Geometric Mitosis Solver":
-    st.header("🧬 4D Geometric Mitosis Dipole Funneling")
+    st.header("🧬 4D Geometric Mitosis Dynamics")
+    
+    # =========================================================================
+    # EXTENSION MODULE A: Mitotic Spindle Force Field Topology
+    # =========================================================================
+    st.subheader("🌐 Module A: Mitotic Spindle Field Formulations")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("Mitotic Spindle Field Formulations")
         st.latex(r"\vec{a}_{\rm chromatid} = -\kappa_{\rm bio} \cdot \vec{\nabla}\left[ \chi_A(\vec{r}) + \chi_B(\vec{r}) \right]")
         st.latex(r"\vec{a}_{\rm chromatid}(z) \propto -\kappa_{\rm bio} \left( \frac{1}{(z - d/2)^2} - \frac{1}{(z + d/2)^2} \right)")
         st.latex(r"\text{Metaphase Threshold Check: } \lim_{z \to 0} \vec{a}(z) = 0 \quad [\chi \to \chi_{\rm crit}]")
@@ -238,6 +242,7 @@ elif sector == "5. 4D Bio-Geometric Mitosis Solver":
         
     with col2:
         z = np.linspace(-d_spindle*1.5, d_spindle*1.5, 1000)
+        # Avoid core singularity nodes explicitly
         z = z[np.abs(z - d_spindle/2.0) > 0.05]
         z = z[np.abs(z + d_spindle/2.0) > 0.05]
         
@@ -255,10 +260,13 @@ elif sector == "5. 4D Bio-Geometric Mitosis Solver":
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
+        plt.close(fig)
 
-    # CONSOLIDATED MODULE LAYER: Placed cleanly inline 
+    # =========================================================================
+    # EXTENSION MODULE B: Pitchfork Bifurcation Simulator
+    # =========================================================================
     st.markdown("---")
-    st.subheader("🧬 Mitotic Potential Well Pitched Bifurcation Animation")
+    st.subheader("🧬 Module B: Mitotic Potential Well Pitched Bifurcation Animation")
     st.markdown("Adjust the cell transition slider to observe the spatial transformation of the geometric potential well.")
     
     col_b1, col_b2 = st.columns(2)
@@ -276,7 +284,7 @@ elif sector == "5. 4D Bio-Geometric Mitosis Solver":
         
         Phi_mitosis = (1.0 - transition_phase) * (z_axis**4 / (d_spindle**2)) + transition_phase * ((z_axis**2 - (d_spindle/2.0)**2)**2 / d_spindle)
         
-        fig_b, ax_b = plt.subplots(figsize=(9, 4))
+        fig_b, ax_b = plt.subplots(figsize=(10, 4.5))
         ax_b.plot(z_axis, Phi_mitosis, 'm-', linewidth=2, label=r'Potential Energy Landscape $\Phi(z)$')
         ax_b.set_title("Bifurcation Energy State Transformation")
         ax_b.set_xlabel("Cellular Axial Coordinate z (microns)")
@@ -284,6 +292,7 @@ elif sector == "5. 4D Bio-Geometric Mitosis Solver":
         ax_b.grid(True, ls=":")
         ax_b.legend()
         st.pyplot(fig_b)
+        plt.close(fig_b)
 
 # ---------------------------------------------------------
 # SECTOR 6: Polypeptide Free-Energy Funnels
