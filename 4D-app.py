@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import pandas as pd
 import io
 import time
@@ -9,8 +9,8 @@ from scipy.optimize import curve_fit
 # ---------------------------------------------------------
 # Streamlit Configuration & Universal Page Setup
 # ---------------------------------------------------------
-st.set_page_config(page_title="Information-Geometric Mechanics 3.5", layout="wide")
-st.title("🌌 Information-Geometric Mechanics Framework (v3.5 - Complete Suite)")
+st.set_page_config(page_title="Information-Geometric Mechanics 3.6", layout="wide")
+st.title("🌌 Information-Geometric Mechanics Framework (v3.6 - Master Suite)")
 st.markdown("""
 This master validation workspace coordinates the unified field equations of **Information-Geometric Mechanics (IGM)**. 
 Every sector is driven by dynamic optimization layers to benchmark your predictive physics models against open-source empirical catalogs.
@@ -42,11 +42,11 @@ M_bar_core = 5.0e10
 # SECTOR 1: Galactic Disk & Multi-Galaxy Analytics Engine
 # ---------------------------------------------------------
 if sector == "1. Galactic Disk & SPH Grid Solver":
-    st.header("🌌 Galactic Disk Multi-Galaxy Benchmarking Suite")
-    st.markdown("Test the predictive stability of your geometric metrics across multiple SPARC galaxy profiles simultaneously [2.1].")
+    st.header("🌌 Multi-Galaxy Empirical Validation Matrix")
+    st.markdown("Testing the universal predictive stability of your geometric metrics across the SPARC catalog.")
     
-    # Unified Multi-Galaxy SPARC Benchmark Repository
-    galaxy_db = {
+    # Expanded Multi-Galaxy SPARC Benchmark Directory
+    galaxy_catalog = {
         "NGC 3198 (Standard Spiral)": {
             "r": np.array([1.2, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0]),
             "v": np.array([92.0, 121.0, 145.0, 153.0, 150.0, 148.0, 149.0, 151.0, 150.0, 149.0, 147.0]),
@@ -56,56 +56,56 @@ if sector == "1. Galactic Disk & SPH Grid Solver":
             "r": np.array([0.5, 1.5, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0]),
             "v": np.array([75.0, 98.0, 112.0, 124.0, 131.0, 133.0, 134.0, 132.0, 131.0]),
             "err": np.array([3.1, 3.8, 4.2, 4.0, 4.5, 4.2, 4.1, 4.6, 4.8])
+        },
+        "UGC 128 (Low Surface Brightness)": {
+            "r": np.array([2.1, 4.3, 8.5, 12.8, 17.0, 21.3, 25.5, 29.8, 34.0]),
+            "v": np.array([40.1, 58.2, 81.4, 99.1, 112.3, 120.4, 125.1, 128.0, 129.5]),
+            "err": np.array([2.5, 3.1, 3.8, 4.0, 4.2, 4.1, 4.5, 4.3, 4.6])
         }
     }
     
-    target_gal = st.selectbox("Select Target Validation Galaxy:", list(galaxy_db.keys()))
-    g_data = galaxy_db[target_gal]
-    
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("IGM Metric Customizations")
-        st.latex(r"V_c(r) = V_{\rm baryonic}(r) \cdot \left[1 + (I_0\kappa) \cdot \left(\frac{r}{r+r_s}\right)^\gamma\right]")
+        st.subheader("📊 Cross-Galaxy Performance Leaderboard")
+        st.markdown("This live scoreboard cross-examines the residual fitness of your active sidebar configurations across all catalog targets simultaneously.")
         
-        gamma = st.slider("Transition Bulge Damping Factor (gamma)", 0.5, 2.5, 1.38, 0.01)
-        r_s_manual = st.slider("Model Scale Radius r_s (kpc)", 1.0, 40.0, 11.24, 0.01)
+        # Build global comparison framework table
+        leaderboard_data = []
+        gamma_fixed = 1.38
+        r_s_fixed = 11.24
         
-        if st.button("🚀 Run Global Levenberg-Marquardt Calibration"):
-            def fit_func(r, r_s_fit, alpha_fit, gamma_fit):
-                v_base = np.sqrt((G * M_bar_core) / (r + r_s_fit))
-                return v_base * (1.0 + alpha_fit * (r / (r + r_s_fit))**gamma_fit)
-            try:
-                popt, _ = curve_fit(fit_func, g_data["r"], g_data["v"], p0=[15.0, 1.0, 1.0], sigma=g_data["err"])
-                st.success(f"Calibration Converged! Ideal r_s: **{popt[0]:.2f}**, Ideal α: **{popt[1]:.2f}**, Ideal γ: **{popt[2]:.2f}**")
-            except Exception as e:
-                st.error(f"Matrix Diverged: {str(e)}")
-
-        v_classical_pts = np.sqrt((G * M_bar_core) / (g_data["r"] + r_s_manual))
-        v_igm_predict = v_classical_pts * (1.0 + (I_0 * kappa * (g_data["r"] / (g_data["r"] + r_s_manual))**gamma))
-        rmse = np.sqrt(np.mean((g_data["v"] - v_igm_predict) ** 2))
-        st.metric(label="📊 Live Residual Precision (RMSE)", value=f"{rmse:.3f} km/s")
+        for name, data in galaxy_catalog.items():
+            v_base = np.sqrt((G * M_bar_core) / (data["r"] + r_s_fixed))
+            v_predict = v_base * (1.0 + (I_0 * kappa * (data["r"] / (data["r"] + r_s_fixed))**gamma_fixed))
+            gal_rmse = np.sqrt(np.mean((data["v"] - v_predict) ** 2))
+            gal_chi = np.sum(((data["v"] - v_predict) / data["err"]) ** 2) / (len(data["r"]) - 2)
+            leaderboard_data.append({"Galaxy System": name, "RMSE (km/s)": f"{gal_rmse:.2f}", "Reduced χ²_ν": f"{gal_chi:.2f}"})
+            
+        st.table(pd.DataFrame(leaderboard_data))
+        
+        st.markdown("---")
+        target_gal = st.selectbox("Select Focus Galaxy for Visual Plotting Mapping:", list(galaxy_catalog.keys()))
+        g_data = galaxy_catalog[target_gal]
         
     with col2:
+        st.subheader("🌌 Target Orbit Tracking")
         r_smooth = np.linspace(0.1, 45, 500)
-        v_smooth_classical = np.sqrt((G * M_bar_core) / (r_smooth + r_s_manual))
-        v_smooth_igm = v_smooth_classical * (1.0 + (I_0 * kappa * (r_smooth / (r_smooth + r_s_manual))**gamma))
+        v_smooth_classical = np.sqrt((G * M_bar_core) / (r_smooth + r_s_fixed))
+        v_smooth_igm = v_smooth_classical * (1.0 + (I_0 * kappa * (r_smooth / (r_smooth + r_s_fixed))**gamma_fixed))
         
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.errorbar(g_data["r"], g_data["v"], yerr=g_data["err"], fmt='ko', label=f'Empirical {target_gal} Logs', capsize=3)
-        ax.plot(r_smooth, v_smooth_classical, 'r--', alpha=0.5, label='Baryonic Profile Only')
-        ax.plot(r_smooth, v_smooth_igm, 'b-', linewidth=2.0, label='Optimized IGM Metric Fit')
-        ax.set_xlabel("Galactic Radius r (kpc)")
-        ax.set_ylabel("Circular Velocity V_c (km/s)")
-        ax.grid(True, ls=":")
-        ax.legend()
-        st.pyplot(fig)
-        plt.close(fig)
+        # Interactive Plotly Curve Mapping
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=g_data["r"], y=g_data["v"], error_y=dict(type='data', array=g_data["err"]), mode='markers', name='Empirical Log Points', marker=dict(color='black')))
+        fig.add_trace(go.Scatter(x=r_smooth, y=v_smooth_classical, mode='lines', name='Baryonic Baseline', line=dict(dash='dash', color='red')))
+        fig.add_trace(go.Scatter(x=r_smooth, y=v_smooth_igm, mode='lines', name='Your Metric Solution', line=dict(color='blue', width=2.5)))
+        fig.update_layout(title=f"Kinematic Overlay: {target_gal}", xaxis_title="Radius r (kpc)", yaxis_title="Velocity V_c (km/s)", legend=dict(x=0.6, y=0.1), height=400, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------------------------
-# SECTOR 2: Strong-Field Horizon Transformations (Exact Formulations)
+# SECTOR 2: Strong-Field Horizon Transformations (Interactive 3D Mesh)
 # ---------------------------------------------------------
 elif sector == "2. Strong-Field Horizon Transformations":
-    st.header("🕳️ Relativistic Horizon Metric Calibration Engine")
+    st.header("🕳️ Relativistic Horizon Metric Calibration & 3D Topology Surface")
     
     obs_r = np.array([1.8, 2.0, 2.2, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0])
     obs_B_r = np.array([-0.18, -0.05, 0.08, 0.19, 0.32, 0.49, 0.59, 0.65, 0.74, 0.79])
@@ -113,43 +113,36 @@ elif sector == "2. Strong-Field Horizon Transformations":
     
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Exact Spherically Symmetric Derivations")
+        st.subheader("Exact Spherically Symmetric Metric Tensor")
         st.latex(r"B(r) = 1 - \frac{2GM}{c^2 r} + \frac{\eta I_0 \ell_0^2}{r^2} \exp\left(-\frac{\ell_0}{r}\right)")
         
-        st.markdown("---")
         mass_bh_manual = st.slider("Black Hole Metric Mass Vector (M)", 1.0, 5.0, 2.85, 0.01)
         ell_0 = st.slider("Invariant Spatial Scalar (ell_0)", 0.1, 3.0, 1.0, 0.1)
         
-        if st.button("🚀 Calculate Optimal Relativistic Metric Strain"):
-            def relativistic_fit_func(r_val, m_fit, eta_fit):
-                return 1.0 - (2.0 * m_fit / r_val) + (eta_fit * I_0 * ell_0**2 / r_val**2) * np.exp(-ell_0 / r_val)
-            try:
-                popt_rel, _ = curve_fit(relativistic_fit_func, obs_r, obs_B_r, p0=[3.0, 1.0], sigma=obs_errors)
-                st.success(f"Converged! Calculated Mass: **{popt_rel[0]:.3f} M_solar**, Ideal Tension (eta): **{popt_rel[1]:.3f}**")
-            except Exception as e:
-                st.error(f"Field Diverged: {str(e)}")
-
         B_r_predict = 1.0 - (2.0 * mass_bh_manual / obs_r) + (eta * I_0 * ell_0**2 / obs_r**2) * np.exp(-ell_0 / obs_r)
         metric_rmse = np.sqrt(np.mean((obs_B_r - B_r_predict) ** 2))
         st.metric(label="📊 Horizon Telemetry Discrepancy (RMSE)", value=f"{metric_rmse:.4f}")
         
     with col2:
-        r_smooth = np.linspace(1.5, 11, 500)
-        B_classical = 1.0 - (2.0 * mass_bh_manual / r_smooth)
-        B_igm = 1.0 - (2.0 * mass_bh_manual / r_smooth) + (eta * I_0 * ell_0**2 / r_smooth**2) * np.exp(-ell_0 / r_smooth)
+        st.subheader("🔮 3D Spacetime Geometric Embedding Surface")
+        st.markdown("Rotate this mesh to inspect the structural smoothness of the coordinate boundary under your tensor correction equations.")
         
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.errorbar(obs_r, obs_B_r, yerr=obs_errors, fmt='ko', label='Empirical Shadow Parameters (EHT)', capsize=3)
-        ax.plot(r_smooth, B_classical, 'k--', alpha=0.6, label='Schwarzschild Baseline')
-        ax.plot(r_smooth, B_igm, 'c-', linewidth=2, label='Your Metric Invariant Solution')
-        ax.axhline(y=0, color='r', linestyle=':', label='Event Horizon Threshold')
-        ax.set_xlabel("Normalized Radial Distance Vector (r)")
-        ax.set_ylabel("Metric Potential Field B(r)")
-        ax.set_ylim(-1.5, 1.2)
-        ax.grid(True, ls=":")
-        ax.legend()
-        st.pyplot(fig)
-        plt.close(fig)
+        # Construct Cartesian spatial embedding coordinate arrays
+        x_mesh = np.linspace(-6, 6, 60)
+        y_mesh = np.linspace(-6, 6, 60)
+        X, Y = np.meshgrid(x_mesh, y_mesh)
+        R = np.sqrt(X**2 + Y**2)
+        
+        # Evaluate localized potential tensor magnitude mapping
+        # Avoid computational singular crash inside center core
+        R_safe = np.where(R < 0.5, 0.5, R)
+        Z_potential = 1.0 - (2.0 * mass_bh_manual / R_safe) + (eta * I_0 * ell_0**2 / R_safe**2) * np.exp(-ell_0 / R_safe)
+        Z_potential = np.clip(Z_potential, -3, 1.2) # Bound gravity wells for display clean
+        
+        fig_3d = go.Figure(data=[go.Surface(z=Z_potential, x=X, y=Y, colorscale='viridis')])
+        fig_3d.update_layout(scene=dict(xaxis_title='X Spatial Space', yaxis_title='Y Spatial Space', zaxis_title='Metric Field Amplitude B(r)', zaxis=dict(range=[-3, 1.5])), height=450, margin=dict(l=0, r=0, b=0, t=30))
+        st.plotly_chart(fig_3d, use_container_width=True)
+
 
 # ---------------------------------------------------------
 # SECTOR 3: Quantum Phase-Crystallization (Automated Fit & Animation)
