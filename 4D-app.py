@@ -338,7 +338,7 @@ if sector == "5. 4D Bio-Geometric Mitosis Solver":
     
     col_b1, col_b2 = st.columns(2)
     with col_b1:
-        transition_phase = st.slider("Mitotic Anaphase Transition Index (ξ)", 0.0, 1.0, 0.0, step=0.05), key="bifurcation_anim_slider")
+        transition_phase = st.slider("Mitotic Anaphase Transition Index (ξ)", 0.0, 1.0, 0.0, step=0.05, key="bifurcation_anim_slider")
         st.markdown("""
         * **ξ = 0.0 (Metaphase):** Central potential well locks chromosomes flawlessly to the equator ($z=0$).
         * **ξ → 1.0 (Anaphase):** Pitchfork bifurcation occurs. The central layout well splits into two divergent target wells, driving chromatid segregation.
