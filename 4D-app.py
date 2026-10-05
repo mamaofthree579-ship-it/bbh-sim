@@ -5,6 +5,7 @@ import pandas as pd
 import io
 import time
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------
 # Streamlit Configuration & Universal Page Setup
