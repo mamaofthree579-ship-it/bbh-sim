@@ -18,7 +18,7 @@ Every sector is driven by dynamic optimization layers to benchmark your predicti
 """)
 
 # ---------------------------------------------------------
-# Sidebar Panel Controls
+# Sidebar Panel Controls & Background Sync Matrix
 # ---------------------------------------------------------
 st.sidebar.header("🛠️ Universal Configuration Matrix")
 sector = st.sidebar.selectbox("Select Target Framework Sector:", 
@@ -35,6 +35,49 @@ I_0 = st.sidebar.slider("Information Profile Scale (I_0)", 0.1, 5.0, 1.0, 0.1)
 kappa = st.sidebar.slider("Geometric Elasticity (kappa)", 0.1, 2.0, 0.5, 0.1)
 eta = st.sidebar.slider("Stress Tensor Coupling (eta)", 0.1, 2.0, 1.0, 0.1)
 
+# =============================================================================
+# GLOBAL CALIBRATION REGISTRY (Background Optimization Pipeline)
+# =============================================================================
+st.sidebar.markdown("---")
+st.sidebar.subheader("📊 Global Optimization Telemetry")
+
+with st.sidebar.expander("🔍 View Cross-Domain Convergence", expanded=True):
+    # Sector 1 Background Fit (NGC 3198)
+    r_s_fixed = 11.24
+    gamma_fixed = 1.38
+    r_gal = np.array([1.2, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0])
+    v_gal = np.array([92.0, 121.0, 145.0, 153.0, 150.0, 148.0, 149.0, 151.0, 150.0, 149.0, 147.0])
+    v_base = np.sqrt((4.300e-6 * 5.0e10) / (r_gal + r_s_fixed))
+    v_pred = v_base * (1.0 + (I_0 * kappa * (r_gal / (r_gal + r_s_fixed))**gamma_fixed))
+    rmse_gal = np.sqrt(np.mean((v_gal - v_pred) ** 2))
+    
+    # Sector 3 Background Fit (Quantum Spin Lattice)
+    t_q = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0])
+    m_q = np.array([1.0, -0.93, 0.88, -0.81, 0.74, -0.68, 0.61, 0.50, 0.39, 0.28, -0.17, 0.08])
+    q_pred = np.cos(3.1416 * t_q / 2.0) * np.exp(-0.038 * eta * I_0 * t_q)
+    rmse_quantum = np.sqrt(np.mean((m_q - q_pred) ** 2))
+    
+    # Sector 6 Background Fit (Thermodynamics Funnel)
+    xi_b = np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])
+    F_b = np.array([18.2, 11.5, 4.3, 1.1, -1.8, -3.9, -6.1, -7.4, -9.0, -11.2])
+    F_pred = (xi_b - 5)**2 + 1.5 * np.sin(3.0 * np.pi * xi_b) - (1.2 * xi_b)
+    rmse_bio = np.sqrt(np.mean((F_b - F_pred) ** 2))
+    
+    # Display cross-tier verification statuses
+    st.caption("Cosmological Error (Sector 1)")
+    st.code(f"RMSE: {rmse_gal:.2f} km/s")
+    
+    st.caption("Quantum Decoherence (Sector 3)")
+    st.code(f"RMSE: {rmse_quantum:.4f}")
+    
+    st.caption("Biophysical Free-Energy (Sector 6)")
+    st.code(f"RMSE: {rmse_bio:.2f} kcal/mol")
+    
+    if rmse_gal < 12.0 and rmse_quantum < 0.25:
+        st.success("🎯 Multi-Tier Invariant Convergence Locked!")
+    else:
+        st.warning("⚠️ High Systemic Variance. Re-calibrate Sliders.")
+
 # Base Physical Constants
 G = 4.300e-6                      
 M_bar_core = 5.0e10               
@@ -46,7 +89,6 @@ if sector == "1. Galactic Disk & SPH Grid Solver":
     st.header("🌌 Multi-Galaxy Empirical Validation Matrix")
     st.markdown("Testing the universal predictive stability of your geometric metrics across the SPARC catalog.")
     
-    # Expanded Multi-Galaxy SPARC Benchmark Directory
     galaxy_catalog = {
         "NGC 3198 (Standard Spiral)": {
             "r": np.array([1.2, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0]),
@@ -71,18 +113,14 @@ if sector == "1. Galactic Disk & SPH Grid Solver":
         st.markdown("This live scoreboard cross-examines the residual fitness of your active sidebar configurations across all catalog targets simultaneously [2.1].")
         
         leaderboard_data = []
-        gamma_fixed = 1.38
-        r_s_fixed = 11.24
-        
         for name, data in galaxy_catalog.items():
-            v_base = np.sqrt((G * M_bar_core) / (data["r"] + r_s_fixed))
-            v_predict = v_base * (1.0 + (I_0 * kappa * (data["r"] / (data["r"] + r_s_fixed))**gamma_fixed))
-            gal_rmse = np.sqrt(np.mean((data["v"] - v_predict) ** 2))
-            gal_chi = np.sum(((data["v"] - v_predict) / data["err"]) ** 2) / (len(data["r"]) - 2)
+            v_base_l = np.sqrt((G * M_bar_core) / (data["r"] + r_s_fixed))
+            v_predict_l = v_base_l * (1.0 + (I_0 * kappa * (data["r"] / (data["r"] + r_s_fixed))**gamma_fixed))
+            gal_rmse = np.sqrt(np.mean((data["v"] - v_predict_l) ** 2))
+            gal_chi = np.sum(((data["v"] - v_predict_l) / data["err"]) ** 2) / (len(data["r"]) - 2)
             leaderboard_data.append({"Galaxy System": name, "RMSE (km/s)": f"{gal_rmse:.2f}", "Reduced χ²_ν": f"{gal_chi:.2f}"})
             
         st.table(pd.DataFrame(leaderboard_data))
-        
         st.markdown("---")
         target_gal = st.selectbox("Select Focus Galaxy for Visual Plotting Mapping:", list(galaxy_catalog.keys()))
         g_data = galaxy_catalog[target_gal]
