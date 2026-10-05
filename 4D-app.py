@@ -1,11 +1,11 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 import pandas as pd
 import io
 import time
 from scipy.optimize import curve_fit
-import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------
 # Streamlit Configuration & Universal Page Setup
@@ -68,9 +68,8 @@ if sector == "1. Galactic Disk & SPH Grid Solver":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("📊 Cross-Galaxy Performance Leaderboard")
-        st.markdown("This live scoreboard cross-examines the residual fitness of your active sidebar configurations across all catalog targets simultaneously.")
+        st.markdown("This live scoreboard cross-examines the residual fitness of your active sidebar configurations across all catalog targets simultaneously [2.1].")
         
-        # Build global comparison framework table
         leaderboard_data = []
         gamma_fixed = 1.38
         r_s_fixed = 11.24
@@ -94,7 +93,6 @@ if sector == "1. Galactic Disk & SPH Grid Solver":
         v_smooth_classical = np.sqrt((G * M_bar_core) / (r_smooth + r_s_fixed))
         v_smooth_igm = v_smooth_classical * (1.0 + (I_0 * kappa * (r_smooth / (r_smooth + r_s_fixed))**gamma_fixed))
         
-        # Interactive Plotly Curve Mapping
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=g_data["r"], y=g_data["v"], error_y=dict(type='data', array=g_data["err"]), mode='markers', name='Empirical Log Points', marker=dict(color='black')))
         fig.add_trace(go.Scatter(x=r_smooth, y=v_smooth_classical, mode='lines', name='Baryonic Baseline', line=dict(dash='dash', color='red')))
@@ -120,30 +118,34 @@ elif sector == "2. Strong-Field Horizon Transformations":
         mass_bh_manual = st.slider("Black Hole Metric Mass Vector (M)", 1.0, 5.0, 2.85, 0.01)
         ell_0 = st.slider("Invariant Spatial Scalar (ell_0)", 0.1, 3.0, 1.0, 0.1)
         
+        if st.button("🚀 Calculate Optimal Relativistic Metric Strain"):
+            def relativistic_fit_func(r_val, m_fit, eta_fit):
+                return 1.0 - (2.0 * m_fit / r_val) + (eta_fit * I_0 * ell_0**2 / r_val**2) * np.exp(-ell_0 / r_val)
+            try:
+                popt_rel, _ = curve_fit(relativistic_fit_func, obs_r, obs_B_r, p0=[3.0, 1.0], sigma=obs_errors)
+                # UNPACK INDICES TO RECTIFY STRING NDARRAY CRASHES
+                st.success(f"Calculated Mass: **{popt_rel[0]:.3f} M_solar**, Ideal Tension (eta): **{popt_rel[1]:.3f}**")
+            except Exception as e:
+                st.error(f"Metric Transformation Field Diverged: {str(e)}")
+
         B_r_predict = 1.0 - (2.0 * mass_bh_manual / obs_r) + (eta * I_0 * ell_0**2 / obs_r**2) * np.exp(-ell_0 / obs_r)
         metric_rmse = np.sqrt(np.mean((obs_B_r - B_r_predict) ** 2))
         st.metric(label="📊 Horizon Telemetry Discrepancy (RMSE)", value=f"{metric_rmse:.4f}")
         
     with col2:
         st.subheader("🔮 3D Spacetime Geometric Embedding Surface")
-        st.markdown("Rotate this mesh to inspect the structural smoothness of the coordinate boundary under your tensor correction equations.")
-        
-        # Construct Cartesian spatial embedding coordinate arrays
         x_mesh = np.linspace(-6, 6, 60)
         y_mesh = np.linspace(-6, 6, 60)
         X, Y = np.meshgrid(x_mesh, y_mesh)
         R = np.sqrt(X**2 + Y**2)
         
-        # Evaluate localized potential tensor magnitude mapping
-        # Avoid computational singular crash inside center core
         R_safe = np.where(R < 0.5, 0.5, R)
         Z_potential = 1.0 - (2.0 * mass_bh_manual / R_safe) + (eta * I_0 * ell_0**2 / R_safe**2) * np.exp(-ell_0 / R_safe)
-        Z_potential = np.clip(Z_potential, -3, 1.2) # Bound gravity wells for display clean
+        Z_potential = np.clip(Z_potential, -3, 1.2)
         
         fig_3d = go.Figure(data=[go.Surface(z=Z_potential, x=X, y=Y, colorscale='viridis')])
         fig_3d.update_layout(scene=dict(xaxis_title='X Spatial Space', yaxis_title='Y Spatial Space', zaxis_title='Metric Field Amplitude B(r)', zaxis=dict(range=[-3, 1.5])), height=450, margin=dict(l=0, r=0, b=0, t=30))
         st.plotly_chart(fig_3d, use_container_width=True)
-
 
 # ---------------------------------------------------------
 # SECTOR 3: Quantum Phase-Crystallization (Automated Fit & Animation)
