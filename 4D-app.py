@@ -109,7 +109,7 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
         ax.plot(xi, F_igm, 'b-', linewidth=2, label='IGM 4D Funnel Modulated Profile (Smooth Native Sink)')
         ax.set_title("Free-Energy Minimization Funnel Trajectory")
         ax.set_xlabel(r"Folding Reaction Coordinate ($\xi$)")
-        ax.set_ylabel("Relative Free Energy Potential F(\xi)")
+        ax.set_ylabel(r"Relative Free Energy Potential $F(\xi)$")
         ax.grid(True, ls=":")
         ax.legend()
         st.pyplot(fig)
