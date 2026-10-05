@@ -182,39 +182,6 @@ elif sector == "3. Quantum Phase-Crystallization":
     with col2:
         t_plot = np.linspace(0, 22, 500)
         mag_smooth = np.cos(omega_drive * t_plot / 2.0) * np.exp(-0.038 * eta * I_0 * t_plot)
-     if animate_switch:
-
-# ---------------------------------------------------------
-# SECTOR 3: Quantum Phase-Crystallization (Automated Fit & Animation)
-# ---------------------------------------------------------
-elif sector == "3. Quantum Phase-Crystallization":
-    st.header("💎 Automated Quantum Time-Crystal Regression & Simulation")
-    
-    t_quantum = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0])
-    obs_magnetization = np.array([1.0, -0.93, 0.88, -0.81, 0.74, -0.68, 0.61, 0.50, 0.39, 0.28, -0.17, 0.08])
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Floquet Boundary Optimization")
-        st.latex(r"\langle \hat{\sigma}^z(t) \rangle = \cos\left(\frac{\omega_{\rm drive} t}{2}\right) \cdot e^{-\Gamma_{\rm true} \cdot \eta I_0 t}")
-        
-        st.markdown("---")
-        omega_drive = st.slider("Drive Frequency Engine (omega_drive)", 1.0, 5.0, 3.1416, 0.001)
-        
-        if st.button("⚡ Solve Quantum Decoherence Path"):
-            def quantum_fit_func(t, gamma_fit):
-                return np.cos(omega_drive * t / 2.0) * np.exp(-gamma_fit * eta * I_0 * t)
-            try:
-                popt_q, _ = curve_fit(quantum_fit_func, t_quantum, obs_magnetization, p0=[0.05])
-                st.success(f"Quantum Alignment Stabilized! True Decoherence Factor (Γ): **{popt_q[0]:.4f}**")
-            except Exception as e:
-                st.error(f"Solver Matrix Interrupted: {str(e)}")
-                
-        animate_switch = st.checkbox("🔄 Initialize Spin Lattice Wave Animation Loop")
-        
-    with col2:
-        t_plot = np.linspace(0, 22, 500)
-        mag_smooth = np.cos(omega_drive * t_plot / 2.0) * np.exp(-0.038 * eta * I_0 * t_plot)
         
         if animate_switch:
             plot_holder = st.empty()
