@@ -167,7 +167,7 @@ elif sector == "3. Quantum Phase-Crystallization":
                 return np.cos(omega_drive * t / 2.0) * np.exp(-gamma_fit * eta * I_0 * t)
             try:
                 popt_q, _ = curve_fit(quantum_fit_func, t_quantum, obs_magnetization, p0=[0.05])
-                st.success(f"Quantum Alignment Stabilized! True Decoherence Factor (Γ): **{popt_q[0]:.4f}**")
+                st.success(f"Quantum Alignment Stabilized! True Decoherence Factor (Γ): **{popt_q:.4f}**")
             except Exception as e:
                 st.error(f"Solver Matrix Interrupted: {str(e)}")
                 
@@ -200,6 +200,11 @@ elif sector == "3. Quantum Phase-Crystallization":
             ax.legend()
             st.pyplot(fig)
             plt.close(fig)
+            
+        df_q = pd.DataFrame({"Normalized_Time": t_plot, "Magnetization_Vector": mag_smooth})
+        csv_q = io.StringIO()
+        df_q.to_csv(csv_q, index=False)
+        st.download_button("📥 Export Subatomic Magnetization Log (CSV)", data=csv_q.getvalue(), file_name="igm_quantum_run.csv", mime="text/csv")
 
 # ---------------------------------------------------------
 # SECTOR 4: Global Consciousness Network (Cortical Integration)
@@ -225,7 +230,7 @@ elif sector == "4. Global Consciousness Network":
                 return I_0 * np.log(1.0 + (kappa * r_val / h_fit))
             try:
                 popt_net, _ = curve_fit(network_fit_func, kuramoto_R, empirical_phi, p0=[1.0], sigma=net_errors)
-                st.success(f"Critical Matrix Converged! Ideal System Entropy Floor (H): **{popt_net[0]:.4f}**")
+                st.success(f"Critical Matrix Converged! Ideal System Entropy Floor (H): **{popt_net:.4f}**")
             except Exception as e:
                 st.error(f"Solver Matrix Diverged: {str(e)}")
 
@@ -249,7 +254,7 @@ elif sector == "4. Global Consciousness Network":
         plt.close(fig)
 
 # ---------------------------------------------------------
-# SECTOR 5: 4D Bio-Geometric Mitosis Solver (Unified Block)
+# SECTOR 5: 4D Bio-Geometric Mitosis Solver (Unified 3D Plotly Engine)
 # ---------------------------------------------------------
 elif sector == "5. 4D Bio-Geometric Mitosis Solver":
     st.header("🧬 4D Geometric Mitosis Dynamics")
@@ -278,22 +283,29 @@ elif sector == "5. 4D Bio-Geometric Mitosis Solver":
         plt.close(fig)
 
     st.markdown("---")
-    st.subheader("🧬 Module B: Mitotic Potential Well Pitched Bifurcation Animation")
+    st.subheader("🔮 Module B: 3D Mitotic Potential Well Pitchfork Bifurcation Mesh")
+    st.markdown("Rotate this landscape to see how adjusting the slider physically morphs the equatorial zone from a stable singular channel into two divergent cellular targets.")
+    
     col_b1, col_b2 = st.columns(2)
     with col_b1:
         transition_phase = st.slider("Mitotic Anaphase Transition Index (ξ)", 0.0, 1.0, 0.0, step=0.05, key="bifurcation_anim_slider")
+        st.markdown("""
+        * **ξ = 0.0 (Metaphase):** A central energetic valley forms, locking chromosome pairings perfectly to the equator ($z=0$).
+        * **ξ → 1.0 (Anaphase):** The valley splits apart, giving rise to two symmetrical energy sinks that pull sister chromatids to opposite poles.
+        """)
         
     with col_b2:
-        z_axis = np.linspace(-d_spindle, d_spindle, 500)
-        z_axis = z_axis[np.abs(z_axis - d_spindle/2.0) > 0.1]
-        z_axis = z_axis[np.abs(z_axis + d_spindle/2.0) > 0.1]
-        Phi_mitosis = (1.0 - transition_phase) * (z_axis**4 / (d_spindle**2)) + transition_phase * ((z_axis**2 - (d_spindle/2.0)**2)**2 / d_spindle)
+        # Construct 3D Potential Well Surface Visualizer
+        y_axis = np.linspace(-d_spindle/2, d_spindle/2, 50)
+        z_axis = np.linspace(-d_spindle, d_spindle, 50)
+        Y_grid, Z_grid = np.meshgrid(y_axis, z_axis)
         
-        fig_b, ax_b = plt.subplots(figsize=(10, 4.5))
-        ax_b.plot(z_axis, Phi_mitosis, 'm-', linewidth=2, label=r'Potential Energy Landscape $\Phi(z)$')
-        ax_b.grid(True, ls=":")
-        st.pyplot(fig_b)
-        plt.close(fig_b)
+        # Modeling the physical bifurcation topology equations
+        Phi_3d = (1.0 - transition_phase) * (Z_grid**4 / (d_spindle**2)) + transition_phase * ((Z_grid**2 - (d_spindle/2.0)**2)**2 / d_spindle) + 0.1 * Y_grid**2
+        
+        fig_bio_3d = go.Figure(data=[go.Surface(z=Phi_3d, x=Y_grid, y=Z_grid, colorscale='magma')])
+        fig_bio_3d.update_layout(scene=dict(xaxis_title='Y (Lateral Space)', yaxis_title='Z (Spindle Axis)', zaxis_title='Potential Amplitude Φ(z)'), height=400, margin=dict(l=0, r=0, b=0, t=30))
+        st.plotly_chart(fig_bio_3d, use_container_width=True)
 
 # ---------------------------------------------------------
 # SECTOR 6: Polypeptide Free-Energy Funnels
@@ -319,46 +331,7 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
                 return (xi_val - 5)**2 + roughness * np.sin(3.0 * np.pi * xi_val) - (lambda_fit * xi_val)
             try:
                 popt_bio, _ = curve_fit(funnel_fit_func, empirical_xi, empirical_F, p0=[1.0], sigma=thermo_errors)
-                st.success(f"Thermodynamic Calibration Stabilized! Ideal Lambda_0: **{popt_bio[0]:.4f}**")
-            except Exception as e:
-                st.error(f"Partition Function Diverged: {str(e)}")
-
-        F_predict = (empirical_xi - 5)**2 + roughness * np.sin(3.0 * np.pi * empirical_xi) - (lambda_0_manual * empirical_xi)
-        bio_rmse = np.sqrt(np.mean((empirical_F - F_predict) ** 2))
-        st.metric(label="📊 Free-Energy Metric Variance (RMSE)", value=f"{bio_rmse:.3f} kcal/mol")
-        
-    with col2:
-        xi_smooth = np.linspace(0, 10, 1000)
-        F_smooth_classical = (xi_smooth - 5)**2 + roughness * np.sin(3.0 * np.pi * xi_smooth)
-        F_smooth_igm = F_smooth_classical - (lambda_0_manual * xi_smooth)
-        
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-
-# ---------------------------------------------------------
-# SECTOR 6: Polypeptide Free-Energy Funnels
-# ---------------------------------------------------------
-elif sector == "6. Polypeptide Free-Energy Funnels":
-    st.header("🧪 Polypeptide Free-Energy Landscape Minimization Engine")
-    
-    empirical_xi = np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])
-    empirical_F = np.array([18.2, 11.5, 4.3, 1.1, -1.8, -3.9, -6.1, -7.4, -9.0, -11.2])
-    thermo_errors = np.array([0.8, 0.7, 0.5, 0.4, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8])
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("IGM Thermodynamics Invariants")
-        st.latex(r"F_{\rm IGM}(\xi) = (\xi - 5)^2 + R \cdot \sin(3\pi\xi) - (\Lambda_0 \cdot \xi)")
-        
-        st.markdown("---")
-        roughness = st.slider("Classical Landscape Ruggedness Factor (R)", 0.1, 3.0, 1.5, 0.1)
-        lambda_0_manual = st.slider("Universal Bio-Geometric Scalar (Lambda_0)", -2.0, 5.0, 1.2, 0.1)
-        
-        if st.button("🚀 Calculate Optimal Native State Funneling"):
-            def funnel_fit_func(xi_val, lambda_fit):
-                return (xi_val - 5)**2 + roughness * np.sin(3.0 * np.pi * xi_val) - (lambda_fit * xi_val)
-            try:
-                popt_bio, _ = curve_fit(funnel_fit_func, empirical_xi, empirical_F, p0=[1.0], sigma=thermo_errors)
-                st.success(f"Thermodynamic Calibration Stabilized! Ideal Lambda_0: **{popt_bio[0]:.4f}**")
+                st.success(f"Thermodynamic Calibration Stabilized! Ideal Lambda_0: **{popt_bio:.4f}**")
             except Exception as e:
                 st.error(f"Partition Function Diverged: {str(e)}")
 
@@ -383,4 +356,27 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
         plt.close(fig)
 
 else:
-    st.info("Framework routing matrix anomaly. Re-select sector selection configuration matrix.")
+    st.info("Routing Matrix Error.")
+
+# =============================================================================
+# UNIFIED REFERENCE SYSTEM: Academic LaTeX Reference Suite
+# =============================================================================
+st.markdown("---")
+with st.expander("📝 View Framework Field Equations & Theoretical Proof Sheet"):
+    st.subheader("📖 Information-Geometric Mechanics Reference Directory")
+    st.markdown("""
+    This section logs the coordinate derivations underlying the **v3.6 Theory of Everything Framework**.
+    These equations show how universal invariants determine field dynamics across cosmological, quantum, and organic tiers.
+    """)
+    
+    st.markdown("#### 1. Cosmology & Galactic Geodesics")
+    st.latex(r"ds^2 = -B(r)c^2dt^2 + A(r)dr^2 + r^2d\Omega^2")
+    st.latex(r"B(r)_{\rm exact} = 1 - \frac{2GM}{c^2 r} + \frac{\eta I_0 \ell_0^2}{r^2} \exp\left(-\frac{\ell_0}{r}\right)")
+    
+    st.markdown("#### 2. Quantum Mechanics & Information Networks")
+    st.latex(r"\Phi_{\rm Max}(R) = I_0 \cdot \ln\left(1 + \frac{\kappa \cdot R(t)}{\mathcal{H}_{\rm Shannon}(R)}\right)")
+    st.latex(r"\langle \hat{\sigma}^z(t) \rangle = \cos\left(\frac{\omega_{\rm drive} t}{2}\right) \cdot \exp\left(-\Gamma \eta I_0 t\right)")
+    
+    st.markdown("#### 3. Biophysical Field Minimization")
+    st.latex(r"\Phi_{\rm mitosis}(z, \xi) = (1-\xi)\frac{z^4}{d^2} + \xi\frac{(z^2 - (d/2)^2)^2}{d} + \zeta y^2")
+    st.info("💡 Researchers can cite these analytical equations and use the CSV export utilities to test this model inside local lab pipelines.")
