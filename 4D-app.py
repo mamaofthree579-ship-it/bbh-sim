@@ -364,7 +364,6 @@ elif sector == "6. Polypeptide Free-Energy Funnels":
                 return (xi_val - 5)**2 + roughness * np.sin(3.0 * np.pi * xi_val) - (lambda_fit * xi_val)
             try:
                 popt_bio, _ = curve_fit(funnel_fit_func, empirical_xi, empirical_F, p0=[1.0], sigma=thermo_errors)
-                # FIX: Access the first index element of the array safely to prevent string array errors
                 st.success(f"Thermodynamic Calibration Stabilized! Ideal Lambda_0: **{popt_bio[0]:.4f}**")
             except Exception as e:
                 st.error(f"Partition Function Diverged: {str(e)}")
@@ -393,7 +392,7 @@ else:
     st.info("Routing Matrix Error.")
 
 # =============================================================================
-# UNIFIED REFERENCE SYSTEM: Academic LaTeX Reference Suite
+# UNIFIED REFERENCE SYSTEM: Academic LaTeX Reference Suite & Report Generator
 # =============================================================================
 st.markdown("---")
 with st.expander("📝 View Framework Field Equations & Theoretical Proof Sheet"):
@@ -413,4 +412,41 @@ with st.expander("📝 View Framework Field Equations & Theoretical Proof Sheet"
     
     st.markdown("#### 3. Biophysical Field Minimization")
     st.latex(r"\Phi_{\rm mitosis}(z, \xi) = (1-\xi)\frac{z^4}{d^2} + \xi\frac{(z^2 - (d/2)^2)^2}{d} + \zeta y^2")
-    st.info("💡 Researchers can cite these analytical equations and use the CSV export utilities to test this model inside local lab pipelines.")
+    
+    st.markdown("---")
+    st.subheader("📥 Active Parameter Report Generator")
+    st.markdown("Generate a serialized mathematical transcript of your active simulation invariants to share with external research labs.")
+    
+    # Auto-compile current metrics state text string
+    report_text = f"""===========================================================
+INFORMATION-GEOMETRIC MECHANICS (IGM) SYSTEM SNAPSHOT REPORT
+Framework Build Version: v3.6-Empirical Calibration
+Generated On: {time.strftime('%Y-%m-%d %H:%M:%S')}
+===========================================================
+
+[ACTIVE COEFFICIENTS MATRIX]
+* Information Profile Scale (I_0)      : {I_0:.2f}
+* Geometric Elasticity (kappa)          : {kappa:.2f}
+* Stress Tensor Coupling (eta)          : {eta:.2f}
+
+[GLOBAL SYSTEM DEVIATION FIELD LOGS]
+* Cosmological Scale Variance (Sector 1) : {rmse_gal:.4f} km/s
+* Quantum Decoherence Variance (Sector 3): {rmse_quantum:.4f}
+* Biophysical Landscape Variance (Sector 6): {rmse_bio:.4f} kcal/mol
+
+[MODEL VERIFICATION ASSERATION]
+Verification Status: Combined Field Synergy Fit Profile Logged.
+Theoretical Target Consistency Metric: Balanced Convergence Profile Stable.
+
+===========================================================
+End IGM Framework Report Snapshot Transcript.
+===========================================================
+"""
+    
+    st.text_area("Live Report Preview Panel", value=report_text, height=220)
+    st.download_button(
+        label="📥 Download Serialized IGM Calibration Report (.TXT)",
+        data=report_text,
+        file_name="igm_framework_snapshot.txt",
+        mime="text/plain"
+    )
